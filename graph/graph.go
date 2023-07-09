@@ -11,14 +11,14 @@ type Origination Node
 
 func WithCapacity(c int) Model {
 	return Model{
-		nodes:   make([]neighbors, 0, c),
-		inEdges: make(map[Node]neighbors, c),
+		nodes:   make([]Neighbors, 0, c),
+		inEdges: make(map[Node]Neighbors, c),
 	}
 }
 
 type Model struct {
-	nodes   []neighbors
-	inEdges map[Node]neighbors
+	nodes   []Neighbors
+	inEdges map[Node]Neighbors
 }
 
 func (g Model) Predecessors(n Node) []Origination {
@@ -54,8 +54,8 @@ func (g Model) canNodeExist(n Node) bool {
 	return 0 <= actualIdx && actualIdx < len(g.nodes)
 }
 
-type neighbors set.Hash[Node]
+type Neighbors set.Hash[Node]
 
-func (n neighbors) Add(i Node) {
+func (n Neighbors) Add(i Node) {
 	(set.Hash[Node])(n).Add(i)
 }

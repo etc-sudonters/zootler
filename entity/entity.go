@@ -1,89 +1,130 @@
 package entity
 
 import (
+	"fmt"
+	"reflect"
+
 	"github.com/etc-sudonters/rando/set"
 )
 
-type Archetype interface {
-	Apply(t Tags)
+// used to fill in the blanks when a component is optional
+var ComponentType reflect.Type
+var OptionalComponent Component
+var OptionalComponentType reflect.Type
+var ModelComponentType reflect.Type
+
+func init() {
+	optional := optionalComponent{}
+	OptionalComponent = Component(optional)
+	OptionalComponentType = reflect.TypeOf(optional)
+	ComponentType = reflect.TypeOf([]Component{}).Elem()
+	ModelComponentType = reflect.TypeOf(Model(0))
 }
 
-type ArchetypeTag TagName
+type optionalComponent struct{}
 
-func (a ArchetypeTag) Apply(t Tags) {
-	t.Apply(TagName(a), nil)
-}
+type ModelName string
+type Model uint
 
-type ArchetypeFunc func(t Tags)
+type Component interface{}
 
-func (a ArchetypeFunc) Apply(t Tags) {
-	a(t)
-}
-
-type Tags map[TagName]interface{}
-
-func (t Tags) Use(a Archetype) Tags {
-	a.Apply(t)
-	return t
-}
-
-func (t Tags) ApplyAll(o Tags) Tags {
-	for k, v := range o {
-		t[k] = v
+func ComponentName(c Component) string {
+	if c == nil {
+		return "nil"
 	}
 
-	return t
+	return fmt.Sprintf("%s", reflect.TypeOf(c).Name())
 }
 
-func (t Tags) Apply(n TagName, i interface{}) Tags {
-	t[n] = i
-	return t
+type View interface {
+	Model() Model
+	/*
+		var e View := ...
+		var s Song
+		if err := e.Get(&s); err != {
+			fmt.Println(s.String())
+		}
+	*/
+	Get(interface{}) error
+	Add(Component) error
+	Remove(Component) error
 }
 
-func (t Tags) RemoveAll(ns ...TagName) Tags {
-	for _, n := range ns {
-		delete(t, n)
+type Pool interface {
+	Queryable
+	Manager
+}
+
+type Queryable interface {
+	Query(...Selector) ([]View, error)
+}
+
+type Manager interface {
+	All() set.Hash[Model]
+	Create() (View, error)
+	Delete(View) error
+}
+
+type Selector interface {
+	Component() reflect.Type
+	Select(set.Hash[Model], map[Model]Component) map[Model]Component
+}
+
+type Includeable interface {
+	Component | *Component
+}
+
+type DebugSelector struct {
+	Debug func(string, ...any)
+	Selector
+}
+
+func (d DebugSelector) Component() reflect.Type {
+	target := d.Selector.Component()
+	d.Debug("selecting against %s\n", NiceTypeName(target))
+	return target
+}
+
+func (d DebugSelector) Select(currentGeneration set.Hash[Model], nextGenerationParents map[Model]Component) map[Model]Component {
+	d.Debug("current generation %+v\n", currentGeneration)
+	d.Debug("next generation parents %+v\n", set.FromMap(nextGenerationParents))
+	nextGeneration := d.Selector.Select(currentGeneration, nextGenerationParents)
+	d.Debug("next generation %+v", nextGeneration)
+	return nextGeneration
+}
+
+type Include[T Includeable] struct {
+	t T
+}
+
+func (i Include[T]) Component() reflect.Type {
+	return reflect.TypeOf(i.t)
+}
+
+func (i Include[T]) Select(
+	currentGeneration set.Hash[Model], nextGenerationParents map[Model]Component,
+) map[Model]Component {
+	maximumNextGenerationPopulation := len(currentGeneration)
+	if len(currentGeneration) > len(nextGenerationParents) {
+		maximumNextGenerationPopulation = len(nextGenerationParents)
 	}
-	return t
+
+	nextGeneration := make(map[Model]Component, maximumNextGenerationPopulation)
+
+	for parent, component := range nextGenerationParents {
+		if currentGeneration.Exists(parent) {
+			nextGeneration[parent] = component
+		}
+	}
+
+	return nextGeneration
 }
 
-func (t Tags) Remove(n TagName) Tags {
-	delete(t, n)
-	return t
-}
+func NiceTypeName(t reflect.Type) string {
+	if t.Kind() != reflect.Pointer {
+		return t.Name()
+	}
 
-type TagName string
-
-type membership map[TagName]set.Hash[Id]
-
-type Id int
-
-type View struct {
-	Id   Id
-	Tags Tags
-}
-
-func (v *View) Use(a Archetype) *View {
-	v.Tags.Use(a)
-	return v
-}
-
-func (v *View) Apply(n TagName, i interface{}) *View {
-	v.Tags.Apply(n, i)
-	return v
-}
-
-func (v *View) ApplyAll(o Tags) *View {
-	v.Tags.ApplyAll(o)
-	return v
-}
-
-func (v *View) Remove(n TagName) *View {
-	v.Tags.Remove(n)
-	return v
-}
-
-func (v *View) RemoveAll(ns ...TagName) *View {
-	v.Tags.RemoveAll(ns...)
-	return v
+	t = t.Elem()
+	return fmt.Sprintf("&%s", t.Name())
 }

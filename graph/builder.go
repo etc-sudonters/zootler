@@ -10,8 +10,8 @@ type Builder struct {
 
 func (b *Builder) AddNode() Node {
 	newId := Node(len(b.G.nodes))
-	b.G.nodes = append(b.G.nodes, make(neighbors))
-	b.G.inEdges[newId] = make(neighbors)
+	b.G.nodes = append(b.G.nodes, make(Neighbors))
+	b.G.inEdges[newId] = make(Neighbors)
 	return newId
 }
 
