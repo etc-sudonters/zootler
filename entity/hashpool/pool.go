@@ -74,7 +74,7 @@ func (p *Pool) Create() (entity.View, error) {
 	return p.createEasy(), nil
 }
 
-func (p *Pool) Query(qs ...entity.Selector) ([]entity.View, error) {
+func (p *Pool) Query(basePopulation entity.Component, qs ...entity.Selector) ([]entity.View, error) {
 	if len(qs) == 0 {
 		p.debug("no queries")
 		return nil, nil
@@ -85,25 +85,25 @@ func (p *Pool) Query(qs ...entity.Selector) ([]entity.View, error) {
 		return nil, nil
 	}
 
+	basePopType := reflect.ValueOf(basePopulation).Type()
 	population := map[entity.Model]componentBucket{}
 
-	// first generation is the entire population
-	for member, component := range p.membership[entity.ModelComponentType] {
-		population[member] = componentBucket{
-			entity.ModelComponentType: component,
+	// first generation spawns, this is some subset of the total population
+	{
+		needed := basePopType
+		members, ok := p.membership[needed]
+		if !ok {
+			return nil, fmt.Errorf("unknown component: %s", entity.NiceTypeName(needed))
+		}
+
+		p.debug("parthenogenesis generation: %+v", members)
+
+		for member, component := range members {
+			population[member] = componentBucket{
+				needed: component,
+			}
 		}
 	}
-
-	if population == nil {
-		p.debug("nil population!")
-	}
-
-	p.debug("starting with total population: %+v", p.membership[entity.ModelComponentType])
-	p.addToPopulation(
-		population,
-		entity.ModelComponentType,
-		p.membership[entity.ModelComponentType],
-	)
 
 	for _, q := range qs {
 		needed := q.Component()

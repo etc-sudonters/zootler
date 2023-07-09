@@ -56,7 +56,7 @@ type Pool interface {
 }
 
 type Queryable interface {
-	Query(...Selector) ([]View, error)
+	Query(Component, ...Selector) ([]View, error)
 }
 
 type Manager interface {

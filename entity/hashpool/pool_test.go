@@ -152,7 +152,8 @@ func TestCanRemoveCustomComponent(t *testing.T) {
 }
 
 func TestCanQueryForEntitiesByComponentExistence(t *testing.T) {
-	componentsToMake := 35
+	t.Log("sure would be nice to make this a nice big number")
+	componentsToMake := 10000
 	tagRatio := 7
 	p := newTestingPool(t)
 
@@ -178,6 +179,7 @@ func TestCanQueryForEntitiesByComponentExistence(t *testing.T) {
 
 	t.Logf("issusing query for Include[myTestComponent]")
 	queryedFor, err := p.Query(
+		myTestComponent{},
 		entity.DebugSelector{
 			Debug:    t.Logf,
 			Selector: entity.Include[myTestComponent]{},
