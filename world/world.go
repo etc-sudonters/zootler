@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/etc-sudonters/rando/entity"
-	"github.com/etc-sudonters/rando/graph"
-	"github.com/etc-sudonters/rando/set"
+	"github.com/etc-sudonters/zootler/entity"
+	"github.com/etc-sudonters/zootler/graph"
+	"github.com/etc-sudonters/zootler/set"
 )
 
 type edge struct {

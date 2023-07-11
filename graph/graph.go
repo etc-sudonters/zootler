@@ -1,61 +1,58 @@
 package graph
 
 import (
-	"github.com/etc-sudonters/rando/set"
+	"fmt"
 )
 
 type Node int
-
-type Destination Node
 type Origination Node
+type Destination Node
 
-func WithCapacity(c int) Model {
-	return Model{
-		nodes:   make([]Neighbors, 0, c),
-		inEdges: make(map[Node]Neighbors, c),
+type NodeConstraint interface {
+	Node
+}
+
+type DirectionConstraint interface {
+	Origination | Destination
+}
+
+func (n Node) String() string {
+	return fmt.Sprintf("Node{%d}", n)
+}
+
+func (d Destination) String() string {
+	return fmt.Sprintf("Destination{%d}", d)
+}
+
+func (o Origination) String() string {
+	return fmt.Sprintf("Origination{%d}", o)
+}
+
+func WithCapacity(c int) Directed {
+	return Directed{
+		origins: make(map[Origination][]Destination, c),
+		dests:   make(map[Destination][]Origination, c),
 	}
 }
 
-type Model struct {
-	nodes   []Neighbors
-	inEdges map[Node]Neighbors
+type Directed struct {
+	origins map[Origination][]Destination
+	dests   map[Destination][]Origination
 }
 
-func (g Model) Predecessors(n Node) []Origination {
-	if !g.canNodeExist(n) {
+func (g Directed) Predecessors(n Destination) []Origination {
+	return copyEdgeList(g.dests[n])
+}
+
+func (g Directed) Successors(n Origination) []Destination {
+	return copyEdgeList(g.origins[n])
+}
+
+func copyEdgeList[T DirectionConstraint](src []T) []T {
+	if src == nil {
 		return nil
 	}
-
-	originations := make([]Origination, 0, len(g.inEdges[n]))
-
-	for origin := range g.inEdges[n] {
-		originations = append(originations, Origination(origin))
-	}
-
-	return originations
-}
-
-func (g Model) Successors(n Node) []Destination {
-	if !g.canNodeExist(n) {
-		return nil
-	}
-
-	destinations := make([]Destination, 0, len(g.nodes[n]))
-
-	for dest := range g.nodes[n] {
-		destinations = append(destinations, Destination(dest))
-	}
-
-	return destinations
-}
-
-func (g Model) canNodeExist(n Node) bool {
-	actualIdx := int(n)
-	return 0 <= actualIdx && actualIdx < len(g.nodes)
-}
-
-type Neighbors set.Hash[Node]
-
-func (n Neighbors) Add(i Node) {
-	(set.Hash[Node])(n).Add(i)
+	dst := make([]T, len(src))
+	copy(dst, src)
+	return dst
 }

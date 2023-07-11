@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/etc-sudonters/rando/set"
+	"github.com/etc-sudonters/zootler/set"
 )
 
 // used to fill in the blanks when a component is optional
@@ -33,7 +33,7 @@ func ComponentName(c Component) string {
 		return "nil"
 	}
 
-	return fmt.Sprintf("%s", reflect.TypeOf(c).Name())
+	return reflect.TypeOf(c).Name()
 }
 
 type View interface {
@@ -44,6 +44,7 @@ type View interface {
 		if err := e.Get(&s); err != {
 			fmt.Println(s.String())
 		}
+		_ALWAYS_ pass reference to what we're assiging
 	*/
 	Get(interface{}) error
 	Add(Component) error

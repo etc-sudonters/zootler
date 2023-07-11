@@ -1,9 +1,9 @@
 package world
 
 import (
-	"github.com/etc-sudonters/rando/entity"
-	"github.com/etc-sudonters/rando/graph"
-	"github.com/etc-sudonters/rando/logic"
+	"github.com/etc-sudonters/zootler/entity"
+	"github.com/etc-sudonters/zootler/graph"
+	"github.com/etc-sudonters/zootler/logic"
 )
 
 type TimeOfDay uint8

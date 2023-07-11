@@ -1,28 +1,56 @@
 package graph
 
-import "errors"
+import (
+	"errors"
+)
 
 var ErrNodeNotFound = errors.New("node not found")
+var ErrOriginNotFound = errors.New("origin not found")
+var ErrDestNotFound = errors.New("destination not found")
 
 type Builder struct {
-	G Model
+	G Directed
 }
 
-func (b *Builder) AddNode() Node {
-	newId := Node(len(b.G.nodes))
-	b.G.nodes = append(b.G.nodes, make(Neighbors))
-	b.G.inEdges[newId] = make(Neighbors)
-	return newId
+type EdgeMap map[Origination][]Destination
+
+func (b *Builder) AddNode(n Node) {
+	if _, exists := b.G.dests[Destination(n)]; !exists {
+		b.G.dests[Destination(n)] = []Origination{}
+		b.G.origins[Origination(n)] = []Destination{}
+	}
+}
+
+func (b *Builder) AddNodes(ns []Node) {
+	for _, n := range ns {
+		b.AddNode(n)
+	}
 }
 
 func (b *Builder) AddEdge(o Origination, d Destination) error {
-	origin := Node(o)
-	destination := Node(d)
-	if !b.G.canNodeExist(origin) || !b.G.canNodeExist(destination) {
-		return ErrNodeNotFound
+
+	if origins, exists := b.G.origins[o]; exists {
+		b.G.origins[o] = append(origins, d)
+	} else {
+		return ErrOriginNotFound
 	}
 
-	b.G.nodes[origin].Add(destination)
-	b.G.inEdges[destination].Add(origin)
+	if destinations, exists := b.G.dests[d]; exists {
+		b.G.dests[d] = append(destinations, o)
+	} else {
+		return ErrDestNotFound
+	}
+
+	return nil
+}
+
+func (b *Builder) AddEdges(e EdgeMap) error {
+	for o, neighbors := range e {
+		for _, d := range neighbors {
+			if err := b.AddEdge(o, d); err != nil {
+				return err
+			}
+		}
+	}
 	return nil
 }

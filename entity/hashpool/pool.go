@@ -5,21 +5,15 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/etc-sudonters/rando/entity"
-	"github.com/etc-sudonters/rando/set"
+	"github.com/etc-sudonters/zootler/entity"
+	"github.com/etc-sudonters/zootler/set"
 )
 
-var NotLoaded = errors.New("not loaded")
+var ErrNotLoaded = errors.New("not loaded")
 
 type entityBucket map[entity.Model]entity.Component
 type componentBucket map[reflect.Type]entity.Component
 type storage map[reflect.Type]entityBucket
-
-var modelType = reflect.TypeOf(entity.Model(0))
-
-func interfaceToComponentType(i interface{}) (reflect.Type, error) {
-	return nil, nil
-}
 
 type Pool struct {
 	population set.Hash[entity.Model]
@@ -75,22 +69,16 @@ func (p *Pool) Create() (entity.View, error) {
 }
 
 func (p *Pool) Query(basePopulation entity.Component, qs ...entity.Selector) ([]entity.View, error) {
-	if len(qs) == 0 {
-		p.debug("no queries")
-		return nil, nil
-	}
-
 	if len(p.population) == 0 {
 		p.debug("no population")
 		return nil, nil
 	}
 
-	basePopType := reflect.ValueOf(basePopulation).Type()
 	population := map[entity.Model]componentBucket{}
 
 	// first generation spawns, this is some subset of the total population
 	{
-		needed := basePopType
+		needed := reflect.ValueOf(basePopulation).Type()
 		members, ok := p.membership[needed]
 		if !ok {
 			return nil, fmt.Errorf("unknown component: %s", entity.NiceTypeName(needed))
@@ -196,7 +184,7 @@ func (v view) Get(target interface{}) error {
 			v.origin.debug("attempting to load %s from session", entity.NiceTypeName(t))
 			acquired, ok = v.session[t]
 			if !ok {
-				return nil, NotLoaded
+				return nil, ErrNotLoaded
 			}
 		}
 
@@ -205,7 +193,7 @@ func (v view) Get(target interface{}) error {
 
 	acquired, err := tryFind(targetType)
 	if err != nil {
-		if errors.Is(err, NotLoaded) && targetType.Kind() == reflect.Pointer {
+		if errors.Is(err, ErrNotLoaded) && targetType.Kind() == reflect.Pointer {
 			v.origin.debug("pointer to pointer? try dereferencing once")
 			acquired, err = tryFind(targetType.Elem())
 		}

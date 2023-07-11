@@ -17,16 +17,17 @@ Idea:
 
 - Tokens are accessed in ECS-esque fashion
 ```go
-tokenPool := &zooty.TokenPool{}
-// mint several tokens
+p := zootler.NewHashPool()
+for i = 0; i <= 10_000; i++ {
+    entity := p.Creat()
+    if i % 13 == 0 {
+        entity.Add(LuckyComponent{})
+    }
+}
 
-// find all available (for placement) tokens that are not labeled advancement
-// and are labeled priority. in zootr, ice arrows, stone of agony, double def
-matchingSet := tokenPool.Match(
-    zooty.NotTagged("advancement"),
-    zooty.Tagged("priority"),
-    zooty.Tagged("available"),
-)
+for _, lucky := p.Query(LuckyComponent{}) {
+    ...
+}
 ```
 
 - Could be extended to locations as well. For example, some spots are cloakable
@@ -34,17 +35,20 @@ matchingSet := tokenPool.Match(
   interesting results:
 
   ```go
-  locationPool := &zooty.Pool{}
-  // mint...
-  matchingSet := locationPool.Match(
-    zooty.Tagged("cloakable"),
-    zooty.Tagged("filled"),
-    //zooty.Tagged("shop")
-  )
-
-  _ := locationPool.Match(
-    zooty.NotTagged("filled"),
-    zooty.Tagged("song"),
-    zooty.Tagged("adult"),
-  ) // aka warp songs
+  p := zootler.NewHashPool()
+  for _, unfilledCloakableSpots := p.Query(
+    CheckComponent,
+    zootler.Include[CloakableComponent]{},
+    zootler.Exclude[FilledComponent]{},
+    zootler.Include[Reachable]{},
+    ) {
+        ...
+    }
+    
+  for _, unfilledAdultSongSpots := p.Query(
+    CheckComponent,
+    zootler.Exclude[FilledComponent]{},
+    zootler.Include[SongComponent]{},
+    zootler.Include[AdultExclusiveComponent]{},
+    ) { ... }
   ```

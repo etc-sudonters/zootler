@@ -3,8 +3,8 @@ package logic
 import (
 	"io"
 
-	"github.com/etc-sudonters/rando/entity"
-	"github.com/etc-sudonters/rando/ioutils"
+	"github.com/etc-sudonters/zootler/entity"
+	"github.com/etc-sudonters/zootler/ioutils"
 )
 
 /*

@@ -104,3 +104,17 @@ func Union[T Id](s, t Hash[T]) Hash[T] {
 
 	return d
 }
+
+func Equal[T Id](s, t Hash[T]) bool {
+	if len(s) != len(t) {
+		return false
+	}
+
+	for k := range s {
+		if _, ok := t[k]; !ok {
+			return false
+		}
+	}
+
+	return true
+}

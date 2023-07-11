@@ -1,7 +1,7 @@
 package world
 
 import (
-	"github.com/etc-sudonters/rando/entity"
+	"github.com/etc-sudonters/zootler/entity"
 )
 
 type Pool struct {

@@ -1,20 +1,18 @@
 package world
 
 import (
-	"context"
-
-	"github.com/etc-sudonters/rando/graph"
-	"github.com/etc-sudonters/rando/logic"
+	"github.com/etc-sudonters/zootler/graph"
+	"github.com/etc-sudonters/zootler/logic"
 )
 
-type RulesAwareSelector struct {
+type RulesAwareSelector[T graph.DirectionConstraint] struct {
 	World *World
-	graph.Selector
+	graph.Selector[T]
 }
 
-func (s *RulesAwareSelector) Select(ctx context.Context, g graph.Model, n graph.Node) (graph.Neighbors, error) {
-	neighbors := make(graph.Neighbors)
-	candidates, err := s.Selector.Select(ctx, g, n)
+func (s *RulesAwareSelector[T]) Select(g graph.Directed, n graph.Node) (graph.Neighbors[T], error) {
+	neighbors := make(graph.Neighbors[T])
+	candidates, err := s.Selector.Select(g, n)
 
 	if err != nil {
 		return neighbors, err
@@ -25,7 +23,7 @@ func (s *RulesAwareSelector) Select(ctx context.Context, g graph.Model, n graph.
 	}
 
 	for c := range candidates {
-		edge, _ := s.World.edgeCache[edge{graph.Origination(n), graph.Destination(c)}]
+		edge, _ := s.World.edgeCache[edge{graph.Origination(n), c}]
 		view := s.World.Entities.Get(edge)
 		component, _ := view.Get(RuleComponent)
 		rule, hasRules := component.(logic.Rule)

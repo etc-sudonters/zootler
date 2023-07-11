@@ -3,11 +3,11 @@ package main
 import (
 	"fmt"
 
-	"github.com/etc-sudonters/rando/entity"
-	"github.com/etc-sudonters/rando/entity/hashpool"
+	"github.com/etc-sudonters/zootler/entity"
+	"github.com/etc-sudonters/zootler/entity/hashpool"
 )
 
 func main() {
-	var p entity.Pool = hashpool.New()
+	_, _ = hashpool.New[entity.Model]()
 	fmt.Println("vim-go")
 }

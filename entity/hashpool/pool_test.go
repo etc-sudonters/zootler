@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/etc-sudonters/rando/entity"
-	"github.com/etc-sudonters/rando/set"
+	"github.com/etc-sudonters/zootler/entity"
+	"github.com/etc-sudonters/zootler/set"
 )
 
 func newTestingPool(t *testing.T) *Pool {
@@ -22,7 +22,7 @@ func newTestingPool(t *testing.T) *Pool {
 }
 
 func dump(t *testing.T, v interface{}) {
-	t.Log(fmt.Sprintf("%+v", v))
+	t.Logf("%+v", v)
 }
 
 func dumpView(w io.Writer, v interface{}) {
@@ -146,7 +146,7 @@ func TestCanRemoveCustomComponent(t *testing.T) {
 	ent.Remove(myTestComponent{})
 
 	var d myTestComponent
-	if err := ent.Get(&d); err != nil && !errors.Is(err, NotLoaded) {
+	if err := ent.Get(&d); err != nil && !errors.Is(err, ErrNotLoaded) {
 		didNotExpectError(t, err)
 	}
 }
