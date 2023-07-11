@@ -2,8 +2,11 @@ package testutils
 
 import (
 	"context"
+	"errors"
 	"testing"
 )
+
+var ErrTestEnded = errors.New("test ended")
 
 func CreateContextFrom(t *testing.T) (context.Context, context.CancelCauseFunc) {
 	var cancel context.CancelFunc
