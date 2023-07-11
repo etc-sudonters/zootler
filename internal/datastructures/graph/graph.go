@@ -17,7 +17,7 @@ type Destination Node
 type OriginationMap map[Origination][]Destination
 
 // describes a graph as the set of terminating edges
-type DestinationMap map[Destination][]Origination
+type destinationMap map[Destination][]Origination
 
 // allows specifying direction when interacting with a Directed
 type Direction interface {
@@ -39,7 +39,7 @@ func (o Origination) String() string {
 func WithCapacity(c int) Directed {
 	return Directed{
 		origins: make(OriginationMap, c),
-		dests:   make(DestinationMap, c),
+		dests:   make(destinationMap, c),
 	}
 }
 
