@@ -3,8 +3,7 @@ package logic
 import (
 	"io"
 
-	"github.com/etc-sudonters/zootler/entity"
-	"github.com/etc-sudonters/zootler/ioutils"
+	"github.com/etc-sudonters/zootler/pkg/entity"
 )
 
 /*
@@ -22,10 +21,8 @@ Programming -- we will consider the functionality offered by these "built ins"
 to be interfaces and the details to be implementation defined.
 */
 
-// we should be able to recover human understandable representation of this rule
 type Rule interface {
 	Fulfill(entity.Queryable) (bool, error)
-	WriteTo(io.Writer) (int64, error)
 }
 
 type constRule bool
@@ -67,31 +64,9 @@ func (r AndRule) Fulfill(q entity.Queryable) (bool, error) {
 	return r.RHS.Fulfill(q)
 }
 
-func (r AndRule) WriteTo(w io.Writer) (int64, error) {
-	e := &ioutils.ErrorCarryingWriter{W: w}
-	c := &ioutils.CountingWriter{W: e}
-	c.Write([]byte("("))
-	r.LHS.WriteTo(c)
-	c.Write([]byte(" and "))
-	r.RHS.WriteTo(c)
-	c.Write([]byte(")"))
-	return c.N, e.Err
-}
-
 type OrRule struct {
 	LHS Rule
 	RHS Rule
-}
-
-func (r OrRule) WriteTo(w io.Writer) (int64, error) {
-	e := &ioutils.ErrorCarryingWriter{W: w}
-	c := &ioutils.CountingWriter{W: e}
-	c.Write([]byte("("))
-	r.LHS.WriteTo(c)
-	c.Write([]byte(" or "))
-	r.RHS.WriteTo(c)
-	c.Write([]byte(")"))
-	return c.N, e.Err
 }
 
 func (r OrRule) Fulfill(q entity.Queryable) (bool, error) {

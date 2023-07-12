@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/etc-sudonters/zootler/internal/datastructures/queue"
+	"github.com/etc-sudonters/zootler/internal/datastructures/set"
 	"github.com/etc-sudonters/zootler/internal/datastructures/stack"
 )
 
@@ -36,6 +37,10 @@ type (
 	VisitStack struct {
 		S stack.S[Node]
 	}
+
+	VisitSet struct {
+		S set.Hash[Node]
+	}
 )
 
 func (v VisitorArray) Visit(ctx context.Context, node Node) error {
@@ -66,6 +71,14 @@ func (q *VisitQueue) Visit(_ context.Context, n Node) error {
 
 func (s *VisitStack) Visit(_ context.Context, n Node) error {
 	s.S = s.S.Push(n)
+	return nil
+}
+
+func (s *VisitSet) Visit(_ context.Context, n Node) error {
+	if s.S == nil {
+		s.S = set.New[Node]()
+	}
+	s.S.Add(n)
 	return nil
 }
 

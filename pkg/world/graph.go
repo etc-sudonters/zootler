@@ -1,48 +1,60 @@
 package world
 
 import (
-	"github.com/etc-sudonters/zootler/graph"
-	"github.com/etc-sudonters/zootler/logic"
+	"github.com/etc-sudonters/zootler/internal/datastructures/graph"
 )
 
-type RulesAwareSelector[T graph.DirectionConstraint] struct {
-	World *World
-	graph.Selector[T]
+type RulesAwareSelector[T graph.Direction] struct {
+	W *World
+	S graph.Selector[T]
 }
 
-func (s *RulesAwareSelector[T]) Select(g graph.Directed, n graph.Node) (graph.Neighbors[T], error) {
-	neighbors := make(graph.Neighbors[T])
-	candidates, err := s.Selector.Select(g, n)
+func edgeTo(n graph.Node, other interface{}) edge {
+	switch t := other.(type) {
+	case graph.Origination:
+		return edge{t, graph.Destination(n)}
+	case graph.Destination:
+		return edge{graph.Origination(n), t}
+	}
+
+	panic("unreachable")
+
+}
+
+func (s RulesAwareSelector[T]) Select(g graph.Directed, n graph.Node) ([]T, error) {
+	candidates, err := s.S.Select(g, n)
 
 	if err != nil {
-		return neighbors, err
+		return nil, err
 	}
 
 	if len(candidates) == 0 {
-		return neighbors, nil
+		return nil, nil
 	}
 
-	for c := range candidates {
-		edge, _ := s.World.edgeCache[edge{graph.Origination(n), c}]
-		view := s.World.Entities.Get(edge)
-		component, _ := view.Get(RuleComponent)
-		rule, hasRules := component.(logic.Rule)
+	accessibleNeighbors := make([]T, 0, len(candidates))
 
-		if !hasRules {
-			neighbors.Add(c)
+	var rule Rule
+
+	for _, c := range candidates {
+		edge := s.W.edgeCache[edgeTo(n, c)]
+		s.W.Entities.Get(edge, &rule)
+
+		if rule == nil {
+			accessibleNeighbors = append(accessibleNeighbors, c)
 			continue
 		}
 
-		fulfillment, err := rule.Fulfill(s.World.Entities)
+		fulfillment, err := rule.Fulfill(s.W.Entities)
 
 		if err != nil {
-			return neighbors, err
+			return nil, err
 		}
 
 		if fulfillment {
-			neighbors.Add(c)
+			accessibleNeighbors = append(accessibleNeighbors, c)
 		}
 	}
 
-	return neighbors, nil
+	return accessibleNeighbors, nil
 }

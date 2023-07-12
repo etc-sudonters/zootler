@@ -1,31 +1,29 @@
 package hashpool
 
 import (
-	"errors"
-	"fmt"
 	"reflect"
 
-	"github.com/etc-sudonters/zootler/entity"
-	"github.com/etc-sudonters/zootler/set"
+	"github.com/etc-sudonters/zootler/internal/datastructures/set"
+	"github.com/etc-sudonters/zootler/pkg/entity"
 )
 
-var ErrNotLoaded = errors.New("not loaded")
+var _ entity.Pool = (*Pool)(nil)
 
-type entityBucket map[entity.Model]entity.Component
-type componentBucket map[reflect.Type]entity.Component
-type storage map[reflect.Type]entityBucket
+type entityBuckets map[entity.Model]entity.Component
+type componentBuckets map[reflect.Type]entity.Component
+type storage map[reflect.Type]entityBuckets
 
 type Pool struct {
 	population set.Hash[entity.Model]
 	membership storage
-	nextModel  entity.Model
+	lastModel  entity.Model
 	debug      func(string, ...any)
 }
 
 func EnsureTable(p *Pool, component entity.Component) error {
 	componentType := reflect.TypeOf(component)
 	if _, ok := p.membership[componentType]; !ok {
-		p.membership[componentType] = make(entityBucket)
+		p.membership[componentType] = make(entityBuckets)
 	}
 
 	return nil
@@ -43,13 +41,9 @@ func New() (*Pool, error) {
 	return p, err
 }
 
-func (p Pool) All() set.Hash[entity.Model] {
-	return set.FromMap(p.population)
-}
-
 func (p *Pool) createEasy() view {
-	thisModel := p.nextModel
-	p.nextModel++
+	p.lastModel++
+	thisModel := p.lastModel
 
 	v := view{
 		m:       thisModel,
@@ -68,65 +62,6 @@ func (p *Pool) Create() (entity.View, error) {
 	return p.createEasy(), nil
 }
 
-func (p *Pool) Query(basePopulation entity.Component, qs ...entity.Selector) ([]entity.View, error) {
-	if len(p.population) == 0 {
-		p.debug("no population")
-		return nil, nil
-	}
-
-	population := map[entity.Model]componentBucket{}
-
-	// first generation spawns, this is some subset of the total population
-	{
-		needed := reflect.ValueOf(basePopulation).Type()
-		members, ok := p.membership[needed]
-		if !ok {
-			return nil, fmt.Errorf("unknown component: %s", entity.NiceTypeName(needed))
-		}
-
-		p.debug("parthenogenesis generation: %+v", members)
-
-		for member, component := range members {
-			population[member] = componentBucket{
-				needed: component,
-			}
-		}
-	}
-
-	for _, q := range qs {
-		needed := q.Component()
-
-		nextGenParents, ok := p.membership[needed]
-		if !ok {
-			return nil, fmt.Errorf("unknown component: %s", entity.NiceTypeName(needed))
-		}
-
-		p.debug("next generation parent population: %+v", nextGenParents)
-
-		nextGeneration := q.Select(set.FromMap(population), nextGenParents)
-		set.DiscardUsing(population, set.FromMap(nextGeneration))
-
-		if len(population) == 0 {
-			p.debug("population went extinct")
-			return nil, nil
-		}
-
-		p.addToPopulation(population, needed, nextGenParents)
-	}
-
-	viewing := make([]entity.View, 0, len(population))
-
-	for entity, table := range population {
-		viewing = append(viewing, &view{
-			m:      entity,
-			origin: p,
-			loaded: table,
-		})
-	}
-
-	return viewing, nil
-}
-
 func (p *Pool) Delete(v entity.View) error {
 	m := v.(view)
 	model := m.m
@@ -143,139 +78,6 @@ func (p *Pool) Delete(v entity.View) error {
 	return nil
 }
 
-type view struct {
-	m       entity.Model
-	origin  *Pool
-	loaded  map[reflect.Type]entity.Component
-	session map[reflect.Type]entity.Component
-}
-
-func (v view) checkDetached() {
-	if v.origin == nil {
-		panic("detatched view")
-	}
-}
-
-func (v view) Model() entity.Model {
-	v.checkDetached()
-	return v.m
-}
-
-func (v view) Get(target interface{}) error {
-	v.checkDetached()
-
-	if target == nil {
-		return errors.New("nil component reference")
-	}
-
-	value := reflect.ValueOf(target)
-	typ := value.Type()
-
-	if typ.Kind() != reflect.Pointer || value.IsNil() {
-		return errors.New("non-nil pointers only")
-	}
-
-	targetType := typ.Elem()
-
-	tryFind := func(t reflect.Type) (entity.Component, error) {
-		v.origin.debug("target load type %s", entity.NiceTypeName(t))
-		acquired, ok := v.loaded[t]
-		if !ok {
-			v.origin.debug("attempting to load %s from session", entity.NiceTypeName(t))
-			acquired, ok = v.session[t]
-			if !ok {
-				return nil, ErrNotLoaded
-			}
-		}
-
-		return acquired, nil
-	}
-
-	acquired, err := tryFind(targetType)
-	if err != nil {
-		if errors.Is(err, ErrNotLoaded) && targetType.Kind() == reflect.Pointer {
-			v.origin.debug("pointer to pointer? try dereferencing once")
-			acquired, err = tryFind(targetType.Elem())
-		}
-
-		if err != nil {
-			return err
-		}
-	}
-
-	if acquired == nil {
-		panic(fmt.Sprintf("nil component loaded for %s on model{%v}", entity.NiceTypeName(targetType), v.m))
-	}
-	v.origin.debug("acquired %+v", acquired)
-
-	acquiredValue := reflect.ValueOf(acquired)
-	v.origin.debug("acquired value's type: %s", acquiredValue.Type())
-
-	if acquiredValue.Kind() != reflect.Pointer && targetType.Kind() == reflect.Pointer {
-		intermediate := reflect.New(acquiredValue.Type())
-		intermediate.Elem().Set(acquiredValue)
-		acquiredValue = intermediate
-	}
-
-	value.Elem().Set(acquiredValue)
-	return nil
-}
-
-func (v view) Add(target entity.Component) error {
-	v.checkDetached()
-
-	typ := reflect.TypeOf(target)
-	if _, ok := v.loaded[typ]; ok {
-		v.loaded[typ] = target
-	} else {
-		if err := EnsureTable(v.origin, target); err != nil {
-			return err
-		}
-		v.session[typ] = target
-	}
-
-	v.origin.membership[typ][v.m] = target
-
-	return nil
-}
-
-func (v view) Remove(target entity.Component) error {
-	v.checkDetached()
-
-	typ := reflect.TypeOf(target)
-
-	if typ == entity.ModelComponentType {
-		return errors.New("cannot remove model component")
-	}
-
-	delete(v.loaded, typ)
-	delete(v.session, typ)
-	removeFromTable(v.m, typ, v.origin)
-	return nil
-}
-
-var _ entity.Pool = (*Pool)(nil)
-
 func removeFromTable(entity entity.Model, compType reflect.Type, origin *Pool) {
 	delete(origin.membership[compType], entity)
-}
-
-func (p *Pool) addToPopulation(
-	population map[entity.Model]componentBucket,
-	component reflect.Type,
-	nextGeneration map[entity.Model]entity.Component,
-) {
-	for member := range population {
-		if population[member] == nil {
-			population[member] = make(map[reflect.Type]entity.Component)
-		}
-	}
-
-	p.debug("population size: %d", len(population))
-	p.debug("%+v", population)
-
-	for k, v := range nextGeneration {
-		p.debug("succeeding model{%v} into next generation", k)
-		population[k][component] = v
-	}
 }

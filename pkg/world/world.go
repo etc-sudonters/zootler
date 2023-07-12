@@ -2,11 +2,11 @@ package world
 
 import (
 	"context"
-	"fmt"
+	"sync"
 
-	"github.com/etc-sudonters/zootler/entity"
-	"github.com/etc-sudonters/zootler/graph"
-	"github.com/etc-sudonters/zootler/set"
+	"github.com/etc-sudonters/zootler/internal/datastructures/graph"
+	"github.com/etc-sudonters/zootler/internal/datastructures/set"
+	"github.com/etc-sudonters/zootler/pkg/entity"
 )
 
 type edge struct {
@@ -24,61 +24,65 @@ type World struct {
 	nodeCache map[graph.Node]entity.Model
 }
 
-func (w *World) AddNode(name entity.TagName) *entity.View {
-	if w.nodeCache == nil {
-		w.nodeCache = make(map[graph.Node]entity.Model)
+func (w *World) AddNode(name Name) (entity.View, error) {
+	ent, err := w.Entities.Create(name)
+	if err != nil {
+		return nil, err
 	}
-
-	node := w.Graph.AddNode()
-	ent := w.Entities.AddNode(name, node)
-	w.nodeCache[node] = ent.Id
-	return ent
+	ent.Add(Node{})
+	w.Graph.AddNode(graph.Node(ent.Model()))
+	return ent, nil
 }
 
-func (w *World) AddEdge(name entity.TagName, o graph.Origination, d graph.Destination) (*entity.View, error) {
+func (w *World) AddEdge(name Name, o graph.Origination, d graph.Destination) (entity.View, error) {
 	if w.edgeCache == nil {
 		w.edgeCache = make(map[edge]entity.Model)
 	}
 
-	ent := w.Entities.AddEdge(name, o, d)
-	err := w.Graph.AddEdge(o, d)
+	if _, ok := w.edgeCache[edge{o, d}]; ok {
+		return nil, nil
+	}
 
-	w.edgeCache[edge{o, d}] = ent.Id
+	if err := w.Graph.AddEdge(o, d); err != nil {
+		return nil, err
+	}
+
+	ent, err := w.Entities.Create(name)
+	ent.Add(Edge{
+		Destination: entity.Model(d),
+		Origination: entity.Model(o),
+	})
+
+	w.edgeCache[edge{o, d}] = ent.Model()
 
 	return ent, err
 }
 
-func (w *World) FindReachableWorld(ctx context.Context) set.Hash[entity.Model] {
-	reachable := make(set.Hash[entity.Model])
+func (w *World) FindReachableWorld(ctx context.Context) (set.Hash[graph.Node], error) {
+	reachable := set.New[graph.Node]()
 
-	bfs := graph.BreadthFirst{
-		Selector: &RulesAwareSelector{
-			w,
-			graph.Successors,
+	bfs := graph.BreadthFirst[graph.Destination]{
+		Selector: &RulesAwareSelector[graph.Destination]{
+			w, graph.Successors,
 		},
-		Visitor: graph.VisitorFunc(func(c context.Context, n graph.Node) error {
-			entity, ok := w.nodeCache[n]
-			if !ok {
-				return fmt.Errorf("unknown node %d", n)
-			}
-
-			// tagging the node and edge components with reachable
-			// would be much more useful actually, but requires
-			// a more sophiscated storage system
-			reachable.Add(entity)
-			return nil
-		}),
+		Visitor: &graph.VisitSet{S: reachable},
 	}
 
-	spawns := w.Entities.Query(
-		entity.Tagged(SpawnComponent),
-		entity.Tagged(NodeComponent),
-	)
-
-	for _, s := range spawns {
-		spawn, _ := s.Get(NodeComponent)
-		bfs.Walk(ctx, w.Graph.G, spawn.(graph.Node))
+	spawns, err := w.Entities.Query(Spawn{})
+	if err != nil {
+		return nil, err
 	}
 
-	return reachable
+	var wg sync.WaitGroup
+	for _, e := range spawns {
+		e := e
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			bfs.Walk(ctx, w.Graph.G, graph.Node(e.Model()))
+		}()
+	}
+
+	wg.Wait()
+	return reachable, nil
 }
