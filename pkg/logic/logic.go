@@ -46,6 +46,7 @@ func (c constRule) WriteTo(w io.Writer) (n int64, err error) {
 var TrueRule Rule = constRule(true)
 var FalseRule Rule = constRule(false)
 
+// short circuiting, RHS is never called if LHS is false
 type AndRule struct {
 	LHS Rule
 	RHS Rule
@@ -64,6 +65,7 @@ func (r AndRule) Fulfill(q entity.Queryable) (bool, error) {
 	return r.RHS.Fulfill(q)
 }
 
+// short circuits, RHS is never called if LHS is true
 type OrRule struct {
 	LHS Rule
 	RHS Rule
