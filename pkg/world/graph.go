@@ -2,6 +2,7 @@ package world
 
 import (
 	"github.com/etc-sudonters/zootler/internal/datastructures/graph"
+	"github.com/etc-sudonters/zootler/pkg/logic"
 )
 
 type RulesAwareSelector[T graph.Direction] struct {
@@ -34,7 +35,7 @@ func (s RulesAwareSelector[T]) Select(g graph.Directed, n graph.Node) ([]T, erro
 
 	accessibleNeighbors := make([]T, 0, len(candidates))
 
-	var rule Rule
+	var rule logic.Rule
 
 	for _, c := range candidates {
 		edge := s.W.edgeCache[edgeTo(n, c)]

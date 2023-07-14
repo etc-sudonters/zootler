@@ -1,3 +1,5 @@
+text based adventure game?
+
 Todo List:
 
 - [ ] actually generate a seed from ootr itself

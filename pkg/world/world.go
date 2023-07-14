@@ -7,6 +7,7 @@ import (
 	"github.com/etc-sudonters/zootler/internal/datastructures/graph"
 	"github.com/etc-sudonters/zootler/internal/datastructures/set"
 	"github.com/etc-sudonters/zootler/pkg/entity"
+	"github.com/etc-sudonters/zootler/pkg/logic"
 )
 
 type edge struct {
@@ -24,17 +25,17 @@ type World struct {
 	nodeCache map[graph.Node]entity.Model
 }
 
-func (w *World) AddNode(name Name) (entity.View, error) {
+func (w *World) AddNode(name logic.Name) (entity.View, error) {
 	ent, err := w.Entities.Create(name)
 	if err != nil {
 		return nil, err
 	}
-	ent.Add(Node{})
+	ent.Add(logic.Node{})
 	w.Graph.AddNode(graph.Node(ent.Model()))
 	return ent, nil
 }
 
-func (w *World) AddEdge(name Name, o graph.Origination, d graph.Destination) (entity.View, error) {
+func (w *World) AddEdge(name logic.Name, o graph.Origination, d graph.Destination) (entity.View, error) {
 	if w.edgeCache == nil {
 		w.edgeCache = make(map[edge]entity.Model)
 	}
@@ -48,7 +49,7 @@ func (w *World) AddEdge(name Name, o graph.Origination, d graph.Destination) (en
 	}
 
 	ent, err := w.Entities.Create(name)
-	ent.Add(Edge{
+	ent.Add(logic.Edge{
 		Destination: entity.Model(d),
 		Origination: entity.Model(o),
 	})
@@ -68,7 +69,7 @@ func (w *World) FindReachableWorld(ctx context.Context) (set.Hash[graph.Node], e
 		Visitor: &graph.VisitSet{S: reachable},
 	}
 
-	spawns, err := w.Entities.Query(Spawn{})
+	spawns, err := w.Entities.Query(logic.Spawn{})
 	if err != nil {
 		return nil, err
 	}

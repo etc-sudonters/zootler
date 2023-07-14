@@ -2,6 +2,7 @@ package world
 
 import (
 	"github.com/etc-sudonters/zootler/pkg/entity"
+	"github.com/etc-sudonters/zootler/pkg/logic"
 )
 
 type Pool struct {
@@ -9,7 +10,7 @@ type Pool struct {
 	entity.Pool
 }
 
-func (p Pool) Create(name Name) (entity.View, error) {
+func (p Pool) Create(name logic.Name) (entity.View, error) {
 	view, err := p.Pool.Create()
 	if err != nil {
 		return nil, err
