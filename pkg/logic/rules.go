@@ -7,20 +7,21 @@ type hasQuantityOf struct {
 	qty     uint
 }
 
+// fulfilled if the specified trick is enabled
 type TrickEnabled struct {
 	Trick Name
 	// we only need to look up once
 	cache *bool
 }
 
+// fulfilled if we've collected at least N of the desired token
 func HasQuantityOf(desired Name, qty uint) hasQuantityOf {
 	return hasQuantityOf{desired, qty}
 }
 
 func (h hasQuantityOf) Fulfill(q entity.Queryable) (bool, error) {
 	acquiredTokens, err := q.Query(
-		Collected{},
-		entity.With[Advancement]{},
+		entity.With[Collected]{},
 		entity.With[Token]{},
 		entity.Load[Name]{},
 	)
@@ -51,8 +52,9 @@ func (t *TrickEnabled) Fulfill(q entity.Queryable) (bool, error) {
 	}
 
 	enabledTricks, err := q.Query(
-		Trick(""),
+		entity.With[Trick]{},
 		entity.With[Enabled]{},
+		entity.Load[Name]{},
 	)
 
 	if err != nil {

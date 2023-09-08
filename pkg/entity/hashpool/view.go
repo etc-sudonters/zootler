@@ -62,9 +62,7 @@ func (v view) Add(target entity.Component) error {
 	if _, ok := v.loaded[typ]; ok {
 		v.loaded[typ] = target
 	} else {
-		if err := EnsureTable(v.origin, target); err != nil {
-			return err
-		}
+		ensureTable(v.origin, target)
 		v.session[typ] = target
 	}
 

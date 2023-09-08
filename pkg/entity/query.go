@@ -1,27 +1,34 @@
 package entity
 
 import (
-	"errors"
 	"reflect"
 
 	"github.com/etc-sudonters/zootler/internal/bag"
 	"github.com/etc-sudonters/zootler/internal/datastructures/set"
 )
 
-var ErrNotLoaded = errors.New("not loaded")
-
+// the population, or a subset thereof, from a pool
 type Population set.Hash[Model]
 
+// determines component loading behavior for a selector
 type LoadBehavior int
 
 const (
+	// the associated component should be loaded
 	ComponentLoad LoadBehavior = iota
+	// the associated component should not be loaded
 	ComponentIgnore
 )
 
+// responsible for looking either individual models or creating a subset of the
+// population that matches the provided selectors
 type Queryable interface {
+	// return every model currently loaded
 	All() set.Hash[Model]
-	Query(Component, ...Selector) ([]View, error)
+	// return a subset of the population that matches the provided selectors
+	Query(Selector, ...Selector) ([]View, error)
+	// load the specified components from the specified model, if a component
+	// isn't attached to the model its pointer should be set to nil
 	Get(Model, ...interface{})
 }
 
@@ -33,16 +40,17 @@ type Selector interface {
 	Select(current, candidates Population) (Population, LoadBehavior)
 }
 
-type Includeable interface {
+type includable interface {
 	Component | *Component
 }
 
+// something funky happening?
 type DebugSelector struct {
 	F func(string, ...any)
 	S Selector
 }
 
-type componentFromGeneric[T Includeable] struct{}
+type componentFromGeneric[T includable] struct{}
 
 func (i componentFromGeneric[T]) Component() reflect.Type {
 	var t T
@@ -52,11 +60,11 @@ func (i componentFromGeneric[T]) Component() reflect.Type {
 // filters entities with an arbitrary entity set
 // when Op is called the current generation is passed as the first arg
 type Arbitrary struct {
-	Elems set.Hash[Model]
+	Elems Population
 	Op    ArbitraryOp
 }
 
-type ArbitraryOp set.Operation[Model, Population, set.Hash[Model]]
+type ArbitraryOp set.Operation[Model, Population, Population]
 
 func (a Arbitrary) Component() reflect.Type {
 	return ModelComponentType
@@ -70,17 +78,17 @@ func (a Arbitrary) Select(
 }
 
 // makes the specified component available, entities w/o this component are excluded
-type Load[T Includeable] struct {
+type Load[T includable] struct {
 	componentFromGeneric[T]
 }
 
 // entities with this component are excluded
-type Without[T Includeable] struct {
+type Without[T includable] struct {
 	componentFromGeneric[T]
 }
 
 // filter entities to ones with this component, but do not load it
-type With[T Includeable] struct {
+type With[T includable] struct {
 	componentFromGeneric[T]
 }
 

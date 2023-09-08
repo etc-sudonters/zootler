@@ -33,31 +33,23 @@ func (p *Pool) Get(e entity.Model, comps ...interface{}) {
 	}
 }
 
-func (p *Pool) Query(basePopulation entity.Component, qs ...entity.Selector) ([]entity.View, error) {
+func (p *Pool) Query(basePopulation entity.Selector, qs ...entity.Selector) ([]entity.View, error) {
 	if len(p.population) == 0 {
 		p.debug("no population")
 		return nil, nil
 	}
 
-	var population entity.Population
-	componentsToLoad := make([]reflect.Type, 0, len(qs)+1)
-
-	// first generation spawns, this is some subset of the total population
-	{
-		needed := reflect.ValueOf(basePopulation).Type()
-		members, ok := p.membership[needed]
-		if !ok {
-			return nil, fmt.Errorf("unknown component: %s", bag.NiceTypeName(needed))
-		}
-
-		p.debug("parthenogenesis generation: %+v", members)
-
-		population = entity.Population(set.FromMap(members))
-		componentsToLoad = append(componentsToLoad, needed)
+	selectors := []entity.Selector{basePopulation}
+	if len(qs) > 0 {
+		selectors = append(selectors, qs...)
 	}
 
+	// initial population is the entire loaded pool
+	var population entity.Population = entity.Population(p.All())
+	componentsToLoad := make([]reflect.Type, 0, len(qs)+1)
+
 	var behavior entity.LoadBehavior
-	for _, q := range qs {
+	for _, q := range selectors {
 		needed := q.Component()
 
 		nextGenParents, ok := p.membership[needed]

@@ -19,7 +19,7 @@ type OriginationMap map[Origination][]Destination
 // describes a graph as the set of terminating edges
 type destinationMap map[Destination][]Origination
 
-// allows specifying direction when interacting with a Directed
+// allows specifying direction when interacting with a Directed graph
 type Direction interface {
 	Origination | Destination
 }
@@ -41,6 +41,11 @@ func WithCapacity(c int) Directed {
 		origins: make(OriginationMap, c),
 		dests:   make(destinationMap, c),
 	}
+}
+
+// returns a Directed with a small predetermined capacity
+func New() Directed {
+	return WithCapacity(16)
 }
 
 func FromOriginationMap(src OriginationMap) Directed {

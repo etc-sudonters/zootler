@@ -7,7 +7,7 @@ import (
 )
 
 func TestHasQuantityOf(t *testing.T) {
-	pool, _ := hashpool.New()
+	pool := hashpool.New()
 	desired := Name("compilers")
 
 	others := []Name{"lexer", "parser", "interpreter", "linter"}
@@ -16,7 +16,6 @@ func TestHasQuantityOf(t *testing.T) {
 		ent, _ := pool.Create()
 		ent.Add(Token{})
 		ent.Add(others[i%len(others)])
-		ent.Add(Advancement{})
 		ent.Add(Collected{})
 	}
 
@@ -24,7 +23,6 @@ func TestHasQuantityOf(t *testing.T) {
 		ent, _ := pool.Create()
 		ent.Add(Token{})
 		ent.Add(desired)
-		ent.Add(Advancement{})
 		ent.Add(Collected{})
 	}
 

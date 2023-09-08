@@ -19,16 +19,19 @@ var (
 )
 
 type (
+	// visits reachable nodes via BFS traversal
 	BreadthFirst[T Direction] struct {
-		Selector[T]
 		Visitor
+		Selector[T]
 	}
 
+	// visits reachable nodes via DFS traversal
 	DepthFirst[T Direction] struct {
 		Visitor
 		Selector[T]
 	}
 
+	// Starting from the provided node, begin visiting every reachable node
 	Walker[T Direction] interface {
 		Walk(context.Context, Directed, Node) error
 	}

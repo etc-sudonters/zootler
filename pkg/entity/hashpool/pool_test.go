@@ -12,14 +12,6 @@ import (
 	"github.com/etc-sudonters/zootler/pkg/entity"
 )
 
-func newTestingPool(t *testing.T) *Pool {
-	p, err := New()
-	if err != nil {
-		t.Fatalf("could not initialize pool: %s", err)
-	}
-	return p
-}
-
 func dump(t *testing.T, v interface{}) {
 	t.Logf("%+v", v)
 }
@@ -47,8 +39,8 @@ func expectedEqualComponents[T entity.Component](w io.Writer, v view, expect T, 
 }
 
 func TestCanRetrieveComponentFromView(t *testing.T) {
-	p := newTestingPool(t)
-	ent := p.createEasy()
+	p := New()
+	ent := p.createCore()
 
 	var model entity.Model = 99999
 	err := ent.Get(&model)
@@ -71,8 +63,8 @@ func TestCanStoreAndRetrievePointerToComp(t *testing.T) {
 	initialValue := 10
 	changedValue := 9999
 
-	p := newTestingPool(t)
-	ent := p.createEasy()
+	p := New()
+	ent := p.createCore()
 	ent.Add(&myTestComponent{initialValue})
 
 	var c *myTestComponent
@@ -100,8 +92,8 @@ func TestCanStoreComponentAndRetrieveThroughPointer(t *testing.T) {
 	initialValue := 10
 	changedValue := 9999
 
-	p := newTestingPool(t)
-	ent := p.createEasy()
+	p := New()
+	ent := p.createCore()
 	// NOTE _not_ a pointer
 	ent.Add(myTestComponent{initialValue})
 
@@ -132,8 +124,8 @@ func TestCanStoreComponentAndRetrieveThroughPointer(t *testing.T) {
 }
 
 func TestCanRemoveCustomComponent(t *testing.T) {
-	p := newTestingPool(t)
-	ent := p.createEasy()
+	p := New()
+	ent := p.createCore()
 	ent.Add(myTestComponent{})
 
 	var c myTestComponent
@@ -154,13 +146,13 @@ func TestCanQueryForEntitiesByComponentExistence(t *testing.T) {
 	t.Log("sure would be nice to make this a nice big number")
 	componentsToMake := 10000
 	tagRatio := 7
-	p := newTestingPool(t)
+	p := New()
 
 	totalEnts := set.New[entity.Model]()
 	taggedEnts := set.New[entity.Model]()
 
 	for i := 0; i <= componentsToMake; i++ {
-		ent := p.createEasy()
+		ent := p.createCore()
 		totalEnts.Add(ent.Model())
 
 		if (i % tagRatio) == 0 {
@@ -177,7 +169,7 @@ func TestCanQueryForEntitiesByComponentExistence(t *testing.T) {
 	}
 
 	queryedFor, err := p.Query(
-		myTestComponent{},
+		entity.With[myTestComponent]{},
 		entity.DebugSelector{
 			F: func(s string, a ...any) {},
 			S: entity.Load[myTestComponent]{},
@@ -210,14 +202,14 @@ func TestCanUseMultipleComponents(t *testing.T) {
 	componentsToMake := 35
 	goodTagRatio := 7
 	badTagRation := 5
-	p := newTestingPool(t)
+	p := New()
 
 	totalEnts := set.New[entity.Model]()
 	goodTaggedEnts := set.New[entity.Model]()
 	badTaggedEnts := set.New[entity.Model]()
 
 	for i := 0; i <= componentsToMake; i++ {
-		ent := p.createEasy()
+		ent := p.createCore()
 		totalEnts.Add(ent.Model())
 
 		if (i % goodTagRatio) == 0 {
@@ -231,11 +223,8 @@ func TestCanUseMultipleComponents(t *testing.T) {
 		}
 	}
 
-	var baseComp entity.Model
-
 	comboTagSet := set.Intersection(goodTaggedEnts, badTaggedEnts)
 	comboQueries, err := p.Query(
-		baseComp,
 		entity.DebugSelector{
 			F: func(string, ...any) {}, //t.Logf,
 			S: entity.Load[myTestComponent]{},
@@ -266,14 +255,14 @@ func TestCanExcludeEntitiesBasedOnComponent(t *testing.T) {
 	componentsToMake := 1000
 	firstTagRatio := 7
 	secondTagRatio := 5
-	p := newTestingPool(t)
+	p := New()
 
 	totalEnts := set.New[entity.Model]()
 	firstTagEnts := set.New[entity.Model]()
 	secondTagEnt := set.New[entity.Model]()
 
 	for i := 0; i <= componentsToMake; i++ {
-		ent := p.createEasy()
+		ent := p.createCore()
 		totalEnts.Add(ent.Model())
 
 		if (i % firstTagRatio) == 0 {
@@ -287,14 +276,12 @@ func TestCanExcludeEntitiesBasedOnComponent(t *testing.T) {
 		}
 	}
 
-	var baseComp entity.Model
 	allEntitiesWithoutTags := set.Difference(
 		set.Union(firstTagEnts, secondTagEnt),
 		totalEnts,
 	)
 
 	queriedAllUntagged, err := p.Query(
-		baseComp,
 		entity.Without[myTestComponent]{},
 		entity.Without[anotherComponent]{},
 	)
@@ -324,14 +311,14 @@ func TestCanExcludeEntitiesBasedOnComponent(t *testing.T) {
 func TestCanFilterWithoutLoading(t *testing.T) {
 	componentsToMake := 10000
 	tagRatio := 7
-	p := newTestingPool(t)
+	p := New()
 
 	totalEnts := set.New[entity.Model]()
 	taggedEnts := set.New[entity.Model]()
 	taggedCount := 0
 
 	for i := 0; i <= componentsToMake; i++ {
-		ent := p.createEasy()
+		ent := p.createCore()
 		totalEnts.Add(ent.Model())
 
 		if (i % tagRatio) == 0 {
@@ -347,8 +334,7 @@ func TestCanFilterWithoutLoading(t *testing.T) {
 		t.FailNow()
 	}
 
-	var baseComp entity.Model
-	queriedEnts, err := p.Query(baseComp, entity.With[myTestComponent]{})
+	queriedEnts, err := p.Query(entity.With[myTestComponent]{})
 
 	if err != nil {
 		didNotExpectError(t, err)
@@ -377,8 +363,8 @@ func TestCanFilterWithoutLoading(t *testing.T) {
 }
 
 func TestCanRetrieveArbitraryEntityWithComps(t *testing.T) {
-	p := newTestingPool(t)
-	ent := p.createEasy()
+	p := New()
+	ent := p.createCore()
 	ent.Add(myTestComponent{99})
 
 	var c1 *myTestComponent

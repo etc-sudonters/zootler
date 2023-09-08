@@ -38,6 +38,7 @@ type (
 		S stack.S[Node]
 	}
 
+	// records visited nodes in a set.Hash[Node]
 	VisitSet struct {
 		S set.Hash[Node]
 	}

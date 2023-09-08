@@ -13,6 +13,7 @@ type entityBuckets map[entity.Model]entity.Component
 type componentBuckets map[reflect.Type]entity.Component
 type storage map[reflect.Type]entityBuckets
 
+// maintains a population via a hash set
 type Pool struct {
 	population set.Hash[entity.Model]
 	membership storage
@@ -20,28 +21,19 @@ type Pool struct {
 	debug      func(string, ...any)
 }
 
-func EnsureTable(p *Pool, component entity.Component) error {
-	componentType := reflect.TypeOf(component)
-	if _, ok := p.membership[componentType]; !ok {
-		p.membership[componentType] = make(entityBuckets)
-	}
-
-	return nil
-}
-
-func New() (*Pool, error) {
+func New() *Pool {
 	p := &Pool{
 		population: make(set.Hash[entity.Model]),
 		membership: make(storage),
 		debug:      func(s string, a ...any) {},
 	}
 
-	err := EnsureTable(p, entity.Model(0))
+	ensureTable(p, entity.Model(0))
 
-	return p, err
+	return p
 }
 
-func (p *Pool) createEasy() view {
+func (p *Pool) createCore() view {
 	p.lastModel++
 	thisModel := p.lastModel
 
@@ -59,7 +51,7 @@ func (p *Pool) createEasy() view {
 }
 
 func (p *Pool) Create() (entity.View, error) {
-	return p.createEasy(), nil
+	return p.createCore(), nil
 }
 
 func (p *Pool) Delete(v entity.View) error {
@@ -76,6 +68,13 @@ func (p *Pool) Delete(v entity.View) error {
 	m.origin = nil
 
 	return nil
+}
+
+func ensureTable(p *Pool, component entity.Component) {
+	componentType := reflect.TypeOf(component)
+	if _, ok := p.membership[componentType]; !ok {
+		p.membership[componentType] = make(entityBuckets)
+	}
 }
 
 func removeFromTable(entity entity.Model, compType reflect.Type, origin *Pool) {
