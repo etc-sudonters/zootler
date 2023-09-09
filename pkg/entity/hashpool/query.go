@@ -1,10 +1,8 @@
 package hashpool
 
 import (
-	"fmt"
 	"reflect"
 
-	"github.com/etc-sudonters/zootler/internal/bag"
 	"github.com/etc-sudonters/zootler/internal/datastructures/set"
 	"github.com/etc-sudonters/zootler/pkg/entity"
 )
@@ -54,7 +52,7 @@ func (p *Pool) Query(basePopulation entity.Selector, qs ...entity.Selector) ([]e
 
 		nextGenParents, ok := p.membership[needed]
 		if !ok {
-			return nil, fmt.Errorf("unknown component: %s", bag.NiceTypeName(needed))
+			continue
 		}
 
 		p.debug("next generation parent population: %+v", nextGenParents)
