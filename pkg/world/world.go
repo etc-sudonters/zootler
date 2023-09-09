@@ -4,8 +4,8 @@ import (
 	"context"
 	"sync"
 
-	"github.com/etc-sudonters/zootler/internal/datastructures/graph"
-	"github.com/etc-sudonters/zootler/internal/datastructures/set"
+	"github.com/etc-sudonters/zootler/internal/graph"
+	"github.com/etc-sudonters/zootler/internal/set"
 	"github.com/etc-sudonters/zootler/pkg/entity"
 	"github.com/etc-sudonters/zootler/pkg/logic"
 )

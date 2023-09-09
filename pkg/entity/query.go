@@ -4,7 +4,7 @@ import (
 	"reflect"
 
 	"github.com/etc-sudonters/zootler/internal/bag"
-	"github.com/etc-sudonters/zootler/internal/datastructures/set"
+	"github.com/etc-sudonters/zootler/internal/set"
 )
 
 // the population, or a subset thereof, from a pool

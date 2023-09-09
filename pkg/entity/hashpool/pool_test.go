@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/etc-sudonters/zootler/internal/datastructures/set"
+	"github.com/etc-sudonters/zootler/internal/set"
 	"github.com/etc-sudonters/zootler/pkg/entity"
 )
 

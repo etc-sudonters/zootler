@@ -1,7 +1,7 @@
 package world
 
 import (
-	"github.com/etc-sudonters/zootler/internal/datastructures/graph"
+	"github.com/etc-sudonters/zootler/internal/graph"
 	"github.com/etc-sudonters/zootler/pkg/logic"
 )
 

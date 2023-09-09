@@ -6,8 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/etc-sudonters/zootler/internal/datastructures/stack"
 	"github.com/etc-sudonters/zootler/internal/rules"
+	"github.com/etc-sudonters/zootler/internal/stack"
 	"github.com/etc-sudonters/zootler/pkg/entity"
 	"github.com/etc-sudonters/zootler/pkg/logic"
 	"github.com/etc-sudonters/zootler/pkg/world"

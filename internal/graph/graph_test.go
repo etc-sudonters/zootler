@@ -3,8 +3,8 @@ package graph
 import (
 	"testing"
 
-	"github.com/etc-sudonters/zootler/internal/datastructures/queue"
-	"github.com/etc-sudonters/zootler/internal/datastructures/stack"
+	"github.com/etc-sudonters/zootler/internal/queue"
+	"github.com/etc-sudonters/zootler/internal/stack"
 	"github.com/etc-sudonters/zootler/internal/testutils"
 )
 

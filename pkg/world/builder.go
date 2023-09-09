@@ -3,7 +3,7 @@ package world
 import (
 	"fmt"
 
-	"github.com/etc-sudonters/zootler/internal/datastructures/graph"
+	"github.com/etc-sudonters/zootler/internal/graph"
 	"github.com/etc-sudonters/zootler/pkg/entity"
 	"github.com/etc-sudonters/zootler/pkg/entity/hashpool"
 	"github.com/etc-sudonters/zootler/pkg/logic"

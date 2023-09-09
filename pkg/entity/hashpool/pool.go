@@ -3,7 +3,7 @@ package hashpool
 import (
 	"reflect"
 
-	"github.com/etc-sudonters/zootler/internal/datastructures/set"
+	"github.com/etc-sudonters/zootler/internal/set"
 	"github.com/etc-sudonters/zootler/pkg/entity"
 )
 

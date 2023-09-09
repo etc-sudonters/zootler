@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 
-	"github.com/etc-sudonters/zootler/internal/datastructures/queue"
-	"github.com/etc-sudonters/zootler/internal/datastructures/set"
-	"github.com/etc-sudonters/zootler/internal/datastructures/stack"
+	"github.com/etc-sudonters/zootler/internal/queue"
+	"github.com/etc-sudonters/zootler/internal/set"
+	"github.com/etc-sudonters/zootler/internal/stack"
 )
 
 type (
