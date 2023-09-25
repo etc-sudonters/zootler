@@ -70,10 +70,7 @@ func (a Arbitrary) Component() reflect.Type {
 	return ModelComponentType
 }
 
-func (a Arbitrary) Select(
-	currentGeneration Population,
-	_ Population,
-) (Population, LoadBehavior) {
+func (a Arbitrary) Select(currentGeneration Population, _ Population) (Population, LoadBehavior) {
 	return Population(a.Op(currentGeneration, a.Elems)), ComponentIgnore
 }
 
@@ -92,34 +89,16 @@ type With[T includable] struct {
 	componentFromGeneric[T]
 }
 
-func (l Load[T]) Select(
-	currentGeneration Population,
-	candidates Population,
-) (Population, LoadBehavior) {
-	return Population(
-			set.Intersection(candidates, currentGeneration),
-		),
-		ComponentLoad
+func (l Load[T]) Select(currentGeneration Population, candidates Population) (Population, LoadBehavior) {
+	return Population(set.Intersection(candidates, currentGeneration)), ComponentLoad
 }
 
-func (e Without[T]) Select(
-	currentGeneration Population,
-	candidates Population,
-) (Population, LoadBehavior) {
-	return Population(
-			set.Difference(candidates, currentGeneration),
-		),
-		ComponentIgnore
+func (e Without[T]) Select(currentGeneration Population, candidates Population) (Population, LoadBehavior) {
+	return Population(set.Difference(candidates, currentGeneration)), ComponentIgnore
 }
 
-func (w With[T]) Select(
-	currentGeneration Population,
-	candidates Population,
-) (Population, LoadBehavior) {
-	return Population(
-			set.Intersection(candidates, currentGeneration),
-		),
-		ComponentIgnore
+func (w With[T]) Select(currentGeneration Population, candidates Population) (Population, LoadBehavior) {
+	return Population(set.Intersection(candidates, currentGeneration)), ComponentIgnore
 }
 
 func (d DebugSelector) Component() reflect.Type {

@@ -1,10 +1,12 @@
 package logic
 
 import (
+	"encoding/json"
+	"fmt"
+	"io"
 	"os"
 
 	"github.com/etc-sudonters/zootler/pkg/entity"
-	"muzzammil.xyz/jsonc"
 )
 
 type (
@@ -298,16 +300,21 @@ type PlacementLocation struct {
 	Tags        []string `json:"categories"`
 }
 
-func ReadLocationFile(fp string) ([]PlacementLocation, error) {
-	contents, err := os.ReadFile(fp)
-	if err != nil {
-		return nil, err
-	}
-
+func ReadLocations(r io.Reader) ([]PlacementLocation, error) {
+	decoder := json.NewDecoder(r)
 	var locs []PlacementLocation
-	if err := jsonc.Unmarshal(contents, &locs); err != nil {
-		return nil, err
+	if err := decoder.Decode(&locs); err != nil {
+		return nil, fmt.Errorf("while loading locations %w", err)
 	}
 
 	return locs, nil
+}
+
+func ReadLocationFile(fp string) ([]PlacementLocation, error) {
+	fh, err := os.Open(fp)
+	if err != nil {
+		return nil, fmt.Errorf("when opening %s: %w", fp, err)
+	}
+
+	return ReadLocations(fh)
 }

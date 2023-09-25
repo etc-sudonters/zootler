@@ -179,7 +179,7 @@ func main() {
 			continue
 		}
 
-		N(count, func() {
+		doN(count, func() {
 			entity, _ := builder.AddEntity(logic.Name(item.Name))
 			entity.Add(logic.Token{})
 			entity.Add(item.Importance)
@@ -245,7 +245,7 @@ func main() {
 	}
 }
 
-func N(n int, do func()) {
+func doN(n int, do func()) {
 	for i := 0; i < n; i++ {
 		do()
 	}
