@@ -5,16 +5,24 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/etc-sudonters/zootler/pkg/entity"
 )
 
+//jq -Mr 'reduce .[] as $x ([]; . + $x.categories // []) | .[]' data/locations.json
 type (
+	RecoveryHeart        struct{}
+	ActorOverride        struct{}
 	Beehive              struct{}
+	Boss                 struct{}
+	BossHeart            struct{}
 	BottomOfTheWell      struct{}
 	Chest                struct{}
+	Collectable          struct{}
 	Cow                  struct{}
 	Crate                struct{}
+	Cutscene             struct{}
 	DeathMountainCrater  struct{}
 	DeathMountainTrail   struct{}
 	DekuScrub            struct{}
@@ -23,21 +31,24 @@ type (
 	DesertColossus       struct{}
 	DodongosCavern       struct{}
 	FireTemple           struct{}
-	FlyingPot            struct{}
+	Flying               struct{}
 	ForestArea           struct{}
 	ForestTemple         struct{}
 	Freestanding         struct{}
 	GanonsCastle         struct{}
 	GanonsTower          struct{}
-	GerudosFortress      struct{}
 	GerudoTrainingGround struct{}
 	GerudoValley         struct{}
+	GerudosFortress      struct{}
 	GoldSkulltula        struct{}
 	GoronCity            struct{}
 	Graveyard            struct{}
 	GreatFairie          struct{}
 	Grotto               struct{}
+	GrottoScrub          struct{}
 	HauntedWasteland     struct{}
+	Hint                 struct{}
+	HintStone            struct{}
 	HyruleCastle         struct{}
 	HyruleField          struct{}
 	IceCavern            struct{}
@@ -50,12 +61,13 @@ type (
 	Market               struct{}
 	MasterQuest          struct{}
 	Minigame             struct{}
-	NeedSpiritualStones  struct{}
 	NPC                  struct{}
+	NeedSpiritualStones  struct{}
 	OutsideGanonsCastle  struct{}
 	Pot                  struct{}
 	RupeeTower           struct{}
 	SacredForestMeadow   struct{}
+	Scrub                struct{}
 	ShadowTemple         struct{}
 	Shop                 struct{}
 	SkulltulaHouse       struct{}
@@ -70,6 +82,83 @@ type (
 	ZorasFountain        struct{}
 	ZorasRiver           struct{}
 )
+
+func ParseComponentsFromLocationType(typ string) []entity.Component {
+	var comps []entity.Component
+	switch typ {
+	case "ActorOverride":
+		comps = append(comps, ActorOverride{})
+		break
+	case "Beehive":
+		comps = append(comps, Beehive{})
+		break
+	case "Boss":
+		comps = append(comps, Boss{})
+		break
+	case "BossHeart":
+		comps = append(comps, BossHeart{})
+		break
+	case "Chest":
+		comps = append(comps, Chest{})
+		break
+	case "Collectable":
+		comps = append(comps, Collectable{})
+		break
+	case "Crate":
+		comps = append(comps, Crate{})
+		break
+	case "Cutscene":
+		comps = append(comps, Cutscene{})
+		break
+	case "Drop":
+		comps = append(comps, Drop{})
+		break
+	case "Event":
+		comps = append(comps, Event{})
+		break
+	case "FlyingPot":
+		comps = append(comps, Flying{}, Pot{})
+		break
+	case "Freestanding":
+		comps = append(comps, Freestanding{})
+		break
+	case "GrottoScrub":
+		comps = append(comps, GrottoScrub{})
+		break
+	case "GS Token":
+		comps = append(comps, GoldSkulltulaToken{})
+		break
+	case "Hint":
+		comps = append(comps, Hint{})
+		break
+	case "HintStone":
+		comps = append(comps, HintStone{}, Hint{})
+		break
+	case "NPC":
+		comps = append(comps, NPC{})
+		break
+	case "Pot":
+		comps = append(comps, Pot{})
+		break
+	case "RupeeTower":
+		comps = append(comps, RupeeTower{})
+		break
+	case "Scrub":
+		comps = append(comps, Scrub{})
+		break
+	case "Shop":
+		comps = append(comps, Shop{})
+		break
+	case "SmallCrate":
+		comps = append(comps, SmallCrate{})
+		break
+	case "Song":
+		comps = append(comps, Song{})
+		break
+	}
+
+	return comps
+}
 
 func ParseComponentsFromLocationTag(tag string) []entity.Component {
 	var comps []entity.Component
@@ -127,7 +216,7 @@ func ParseComponentsFromLocationTag(tag string) []entity.Component {
 		comps = append(comps, FireTemple{}, MasterQuest{})
 		break
 	case "Flying Pots":
-		comps = append(comps, FlyingPot{})
+		comps = append(comps, Flying{}, Pot{})
 		break
 	case "Forest Area":
 		comps = append(comps, ForestArea{})
@@ -288,6 +377,28 @@ func ParseComponentsFromLocationTag(tag string) []entity.Component {
 	case "Zora's River":
 		comps = append(comps, ZorasRiver{})
 		break
+	}
+
+	return comps
+}
+
+func GetAllLocationComponents(p PlacementLocation) []entity.Component {
+	var comps []entity.Component
+
+	comps = append(comps, ParseComponentsFromLocationType(p.Type))
+	for _, tag := range p.Tags {
+		comps = append(comps, ParseComponentsFromLocationTag(tag))
+	}
+
+	if p.Type == "Freestandings" {
+		if p.DefaultItem == "RecoveryHeart" {
+			comps = append(comps, RecoveryHeart{})
+		}
+
+		if strings.Contains(p.DefaultItem, "Small Key") {
+			comps = append(comps, SmallKey{})
+		}
+
 	}
 
 	return comps

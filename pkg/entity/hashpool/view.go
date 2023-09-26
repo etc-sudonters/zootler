@@ -63,6 +63,9 @@ func (v view) Add(target entity.Component) error {
 		v.loaded[typ] = target
 	} else {
 		ensureTable(v.origin, target)
+		if v.session == nil {
+			v.session = make(map[reflect.Type]entity.Component)
+		}
 		v.session[typ] = target
 	}
 

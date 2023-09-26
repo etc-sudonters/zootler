@@ -1,11 +1,15 @@
 package hashpool
 
 import (
+	"errors"
 	"reflect"
 
 	"github.com/etc-sudonters/zootler/internal/set"
 	"github.com/etc-sudonters/zootler/pkg/entity"
 )
+
+var ErrNoPopulation = errors.New("no population")
+var ErrExtinction = errors.New("extinction")
 
 func (p Pool) All() set.Hash[entity.Model] {
 	return set.FromMap(p.population)
@@ -34,7 +38,7 @@ func (p *Pool) Get(e entity.Model, comps ...interface{}) {
 func (p *Pool) Query(basePopulation entity.Selector, qs ...entity.Selector) ([]entity.View, error) {
 	if len(p.population) == 0 {
 		p.debug("no population")
-		return nil, nil
+		return nil, ErrNoPopulation
 	}
 
 	selectors := []entity.Selector{basePopulation}
@@ -65,7 +69,7 @@ func (p *Pool) Query(basePopulation entity.Selector, qs ...entity.Selector) ([]e
 
 		if len(population) == 0 {
 			p.debug("population went extinct")
-			return nil, nil
+			return nil, ErrExtinction
 		}
 	}
 

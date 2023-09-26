@@ -1,278 +1,124 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"math/rand"
 	"os"
-	"path/filepath"
 
-	"github.com/etc-sudonters/zootler/internal/rules"
 	"github.com/etc-sudonters/zootler/internal/stack"
 	"github.com/etc-sudonters/zootler/pkg/entity"
 	"github.com/etc-sudonters/zootler/pkg/logic"
 	"github.com/etc-sudonters/zootler/pkg/world"
 )
 
-var itempool map[string]int = map[string]int{
-	"Arrows (10)":                          8,
-	"Arrows (30)":                          6,
-	"Arrows (5)":                           3,
-	"Biggoron Sword":                       1,
-	"Bolero of Fire":                       1,
-	"Bomb Bag":                             3,
-	"Bombchus (10)":                        3,
-	"Bombchus (20)":                        1,
-	"Bombchus (5)":                         1,
-	"Bombs (10)":                           2,
-	"Bombs (20)":                           2,
-	"Bombs (5)":                            8,
-	"Boomerang":                            1,
-	"Bottle with Blue Potion":              1,
-	"Bottle with Red Potion":               2,
-	"Bow":                                  3,
-	"Claim Check":                          1,
-	"Deku Nut Capacity":                    2,
-	"Deku Nuts (10)":                       1,
-	"Deku Nuts (5)":                        4,
-	"Deku Seeds (30)":                      4,
-	"Deku Shield":                          4,
-	"Deku Stick (1)":                       3,
-	"Deku Stick Capacity":                  2,
-	"Dins Fire":                            1,
-	"Double Defense":                       1,
-	"Eponas Song":                          1,
-	"Farores Wind":                         1,
-	"Fire Arrows":                          1,
-	"Goron Tunic":                          1,
-	"Heart Container":                      8,
-	"Hover Boots":                          1,
-	"Hylian Shield":                        2,
-	"Ice Arrows":                           1,
-	"Iron Boots":                           1,
-	"Kokiri Sword":                         1,
-	"Lens of Truth":                        1,
-	"Light Arrows":                         1,
-	"Magic Meter":                          2,
-	"Megaton Hammer":                       1,
-	"Minuet of Forest":                     1,
-	"Mirror Shield":                        1,
-	"Nayrus Love":                          1,
-	"Nocturne of Shadow":                   1,
-	"Piece of Heart (Treasure Chest Game)": 1,
-	"Piece of Heart":                       35,
-	"Prelude of Light":                     1,
-	"Progressive Hookshot":                 2,
-	"Progressive Scale":                    2,
-	"Progressive Strength Upgrade":         3,
-	"Progressive Wallet":                   2,
-	"Recovery Heart":                       11,
-	"Requiem of Spirit":                    1,
-	"Rupee (1)":                            1,
-	"Rupees (20)":                          6,
-	"Rupees (200)":                         6,
-	"Rupees (5)":                           23,
-	"Rupees (50)":                          7,
-	"Rutos Letter":                         1,
-	"Sarias Song":                          1,
-	"Serenade of Water":                    1,
-	"Slingshot":                            3,
-	"Song of Storms":                       1,
-	"Song of Time":                         1,
-	"Stone of Agony":                       1,
-	"Suns Song":                            1,
-	"Zeldas Lullaby":                       1,
-	"Zora Tunic":                           1,
-}
-
 func main() {
-	args := os.Args
-
 	var logicFileDir string
+	var dataDir string
 
-	if len(args) > 1 {
-		logicFileDir = args[1]
-	} else {
-		logicFileDir = "."
+	flag.StringVar(&logicFileDir, "l", "", "Directory where logic files are located")
+	flag.StringVar(&dataDir, "d", "", "Directory where data files are stored")
+	flag.Parse()
+
+	if logicFileDir == "" || dataDir == "" {
+		fmt.Fprint(os.Stderr, "-l and -d are both required!\n")
+		os.Exit(2)
 	}
 
-	binPath, err := os.Executable()
+	builder, err := world.BuildFromDirectory(1, dataDir, logicFileDir)
 	if err != nil {
 		panic(err)
 	}
 
-	binDir := filepath.Dir(binPath)
-	dataPath := filepath.Join(binDir, "data")
-
-	builder := world.NewBuilder(1)
-	// step 1 populate the world with all locations
-	placements, err := logic.ReadLocationFile(filepath.Join(dataPath, "locations.json"))
-
-	if err != nil {
-		panic(fmt.Errorf("error while reading placements: %w", err))
-	}
-
-	if len(placements) == 0 {
-		panic("no placements loaded!")
-	}
-
-	var locationMap map[string]entity.View = make(map[string]entity.View, len(placements))
-
-	for _, placement := range placements {
-		loc, _ := builder.AddEntity(logic.Name(placement.Name))
-		locationMap[placement.Name] = loc
-		builder.AddNode(loc)
-		loc.Add(logic.Location{})
-
-		if len(placement.Tags) > 0 {
-			for _, tag := range placement.Tags {
-				for _, comp := range logic.ParseComponentsFromLocationTag(tag) {
-					loc.Add(comp)
-				}
-			}
-		}
-	}
-
-	//step 2 connect everything in the graph and record the raw rules
-	entries, err := os.ReadDir(logicFileDir)
-	if err != nil {
-		panic(err)
-	}
-
-	for _, entry := range entries {
-		if filepath.Ext(entry.Name()) != "json" {
-			continue
-		}
-
-		path := filepath.Join(logicFileDir, entry.Name())
-		logicLocations, err := rules.ReadLogicFile(path)
-		if err != nil {
-			panic(fmt.Errorf("error while reading logic rules: %w", err))
-		}
-
-		for _, logicLocation := range logicLocations {
-			region := locationMap[string(logicLocation.Region)]
-
-			for name, rule := range logicLocation.Locations {
-				loc := locationMap[string(name)]
-				connection, err := builder.AddEdge(region, loc)
-				if err != nil {
-					panic(fmt.Errorf(
-						"error while building %s -> %s: %w", logicLocation.Region, name, err))
-				}
-
-				connection.Add(logic.RawRule(rule))
-			}
-		}
-	}
-
-	// step 3 pour item pool into the mix
-	items, err := logic.ReadItemFile(filepath.Join(dataPath, "items.json"))
-	if err != nil {
-		panic(err)
-	}
-
-	placeableItems := make([]entity.View, getItemPoolSize(itempool))
-
-	for _, item := range items {
-		count, ok := itempool[item.Name]
-		if !ok {
-			continue
-		}
-
-		doN(count, func() {
-			entity, _ := builder.AddEntity(logic.Name(item.Name))
-			entity.Add(logic.Token{})
-			entity.Add(item.Importance)
-			entity.Add(item.Type)
-			placeableItems = append(placeableItems, entity)
-		})
-	}
-
-	// step 4 throw the items everywhere who fucking cares for now
-	songLocations, err := builder.Pool.Query(
+	locations, err := builder.Pool.Query(
+		entity.Load[logic.Name]{},
 		entity.With[logic.Location]{},
+		entity.Without[logic.MasterQuest]{},
 		entity.Without[logic.Inhabited]{},
-		entity.With[logic.Song]{},
-		entity.Load[logic.Name]{},
+		entity.Without[logic.Cow]{},
+		entity.Without[logic.Beehive]{},
+		entity.Without[logic.Cow]{},
+		entity.Without[logic.Shop]{},
+		entity.Without[logic.Crate]{},
+		entity.Without[logic.Pot]{},
+		entity.Without[logic.Flying]{},
+		entity.Without[logic.RupeeTower]{},
+		entity.Without[logic.GoldSkulltula]{},
+		entity.Without[logic.SmallCrate]{},
+		entity.Without[logic.Refill]{},
+		entity.Without[logic.Drop]{},
+		entity.Without[logic.RupeeTower]{},
 	)
 
 	if err != nil {
-		panic(err)
+		panic("oh no!")
 	}
 
-	songTokens, err := builder.Pool.Query(
-		entity.With[logic.Token]{},
-		entity.With[logic.Song]{},
-		entity.Without[logic.Inhabited]{},
+	tokens, err := builder.Pool.Query(
 		entity.Load[logic.Name]{},
+		entity.With[logic.Token]{},
+		entity.Without[logic.Inhabited]{},
 	)
 
 	if err != nil {
-		panic(err)
+		panic("bruno")
 	}
 
 	placeItems(
-		songLocations,
-		songTokens,
+		locations,
+		tokens,
 	)
 
-	//step 3 get some dumb locations
 	world := builder.Build()
 
-	songs, err := world.Entities.Query(entity.With[logic.Song]{}, entity.Load[logic.Inhabited]{}, entity.Load[logic.Name]{})
+	placedSongs, err := world.Entities.Query(
+		entity.With[logic.Token]{},
+		entity.Load[logic.Inhabited]{},
+		entity.Load[logic.Name]{},
+	)
+
 	if err != nil {
 		panic(err)
 	}
 
 	fmt.Printf("Songs ended up at:\n")
-	for _, check := range songs {
+	for _, placedSong := range placedSongs {
 		var name logic.Name
-		err := check.Get(&name)
+		err := placedSong.Get(&name)
 		if err != nil {
 			panic(err)
 		}
 
 		var inhabited logic.Inhabited
-		err = check.Get(&inhabited)
+		err = placedSong.Get(&inhabited)
 		if err != nil {
 			panic(err)
 		}
 
-		var songName logic.Name
-		world.Entities.Get(entity.Model(inhabited), &songName)
+		var locationName logic.Name
+		world.Entities.Get(entity.Model(inhabited), &locationName)
 
-		fmt.Printf("%s @ %s\n", name, songName)
+		fmt.Printf("%s @ %s\n", name, locationName)
 	}
-}
-
-func doN(n int, do func()) {
-	for i := 0; i < n; i++ {
-		do()
-	}
-}
-
-func getItemPoolSize(pool map[string]int) int {
-	var n int
-
-	for _, v := range pool {
-		n += v
-	}
-
-	return n
 }
 
 func placeItems(locations []entity.View, itempool []entity.View) {
 	fmt.Print("placing items")
 	var err error
-	shuffle(locations)
-	shuffle(itempool)
+
+	fmt.Printf("Placing %d items in %d locations\n", len(itempool), len(locations))
 
 	L := stack.From(locations)
 	I := stack.From(itempool)
+	shuffle(L)
+	shuffle(I)
 
 	for {
 		var loc entity.View
 		var item entity.View
+		var locName logic.Name
+		var itemName logic.Name
+
 		loc, L, err = L.Pop()
 		if err != nil {
 			fmt.Print("No more locations, exiting")
@@ -284,11 +130,16 @@ func placeItems(locations []entity.View, itempool []entity.View) {
 			break
 		}
 
+		loc.Get(&locName)
+		item.Get(&itemName)
+
+		fmt.Printf("Placing %s at '%s'\n", itemName, locName)
+
 		loc.Add(logic.Inhabited(item.Model()))
 	}
 }
 
-func shuffle[T any](elms []T) {
+func shuffle[T any, E ~[]T](elms E) {
 	rand.Shuffle(len(elms), func(i, j int) {
 		elms[i], elms[j] = elms[j], elms[i]
 	})

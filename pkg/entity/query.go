@@ -94,7 +94,7 @@ func (l Load[T]) Select(currentGeneration Population, candidates Population) (Po
 }
 
 func (e Without[T]) Select(currentGeneration Population, candidates Population) (Population, LoadBehavior) {
-	return Population(set.Difference(candidates, currentGeneration)), ComponentIgnore
+	return Population(set.Difference(currentGeneration, candidates)), ComponentIgnore
 }
 
 func (w With[T]) Select(currentGeneration Population, candidates Population) (Population, LoadBehavior) {
