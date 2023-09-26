@@ -1,0 +1,14 @@
+{
+  "configurations": {
+    "run": {
+      "adapter": "vscode-go",
+      "configuration": {
+        "request": "launch",
+        "program": "${workspaceRoot}/main.go",
+        "args": ["-d", "${workspaceRoot}/data/", "-l", "${workspaceRoot}/data/logic"],
+        "mode": "debug",
+        "dlvToolPath": "$GOPATH/bin/dlv"
+      }
+    }
+  }
+}
