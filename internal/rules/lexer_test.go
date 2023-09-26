@@ -164,3 +164,7 @@ func lexUntilEofOrErr(l *lexer, t *testing.T) []item {
 func toksAreEqual(expected, actual []item, t *testing.T) {
 	testutils.ArrEqF(expected, actual, func(e, a item) bool { return e.fungible(a) }, t)
 }
+
+func (i item) fungible(o item) bool {
+	return i.typ == o.typ && i.pos == o.pos && i.val == o.val
+}

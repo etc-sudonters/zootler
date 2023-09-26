@@ -17,10 +17,6 @@ type item struct {
 	val string
 }
 
-func (i item) fungible(o item) bool {
-	return i.typ == o.typ && i.pos == o.pos && i.val == o.val
-}
-
 const (
 	trueWord  = "True"
 	falseWord = "False"
