@@ -33,21 +33,21 @@ func main() {
 	locations, err := builder.Pool.Query(
 		entity.Load[logic.Name]{},
 		entity.With[logic.Location]{},
-		entity.Without[logic.MasterQuest]{},
-		entity.Without[logic.Inhabited]{},
-		entity.Without[logic.Cow]{},
 		entity.Without[logic.Beehive]{},
 		entity.Without[logic.Cow]{},
-		entity.Without[logic.Shop]{},
 		entity.Without[logic.Crate]{},
-		entity.Without[logic.Pot]{},
-		entity.Without[logic.Flying]{},
-		entity.Without[logic.RupeeTower]{},
-		entity.Without[logic.GoldSkulltula]{},
-		entity.Without[logic.SmallCrate]{},
-		entity.Without[logic.Refill]{},
 		entity.Without[logic.Drop]{},
+		entity.Without[logic.Flying]{},
+		entity.Without[logic.GoldSkulltula]{},
+		entity.Without[logic.Inhabited]{},
+		entity.Without[logic.MasterQuest]{},
+		entity.Without[logic.Pot]{},
+		entity.Without[logic.Refill]{},
 		entity.Without[logic.RupeeTower]{},
+		entity.Without[logic.Shop]{},
+		entity.Without[logic.SmallCrate]{},
+		entity.Without[logic.Hint]{},
+		entity.Without[logic.HintStone]{},
 	)
 
 	if err != nil {
@@ -64,17 +64,17 @@ func main() {
 		panic("bruno")
 	}
 
+	world := builder.Build()
+
 	placeItems(
 		locations,
 		tokens,
 	)
 
-	world := builder.Build()
-
 	placedSongs, err := world.Entities.Query(
 		entity.With[logic.Token]{},
-		entity.Load[logic.Inhabited]{},
 		entity.Load[logic.Name]{},
+		entity.Load[logic.Inhabits]{},
 	)
 
 	if err != nil {
@@ -89,14 +89,14 @@ func main() {
 			panic(err)
 		}
 
-		var inhabited logic.Inhabited
-		err = placedSong.Get(&inhabited)
+		var inhabits logic.Inhabits
+		err = placedSong.Get(&inhabits)
 		if err != nil {
 			panic(err)
 		}
 
 		var locationName logic.Name
-		world.Entities.Get(entity.Model(inhabited), &locationName)
+		world.Entities.Get(entity.Model(inhabits), &locationName)
 
 		fmt.Printf("%s @ %s\n", name, locationName)
 	}
@@ -115,28 +115,36 @@ func placeItems(locations []entity.View, itempool []entity.View) {
 
 	for {
 		var loc entity.View
-		var item entity.View
-		var locName logic.Name
-		var itemName logic.Name
+		var token entity.View
 
 		loc, L, err = L.Pop()
 		if err != nil {
 			fmt.Print("No more locations, exiting")
 			break
 		}
-		item, I, err = I.Pop()
+		token, I, err = I.Pop()
 		if err != nil {
 			fmt.Print("No more items, exiting")
 			break
 		}
 
-		loc.Get(&locName)
-		item.Get(&itemName)
+		placeItem(loc, token)
 
-		fmt.Printf("Placing %s at '%s'\n", itemName, locName)
-
-		loc.Add(logic.Inhabited(item.Model()))
+		var inh logic.Inhabited
+		loc.Get(&inh)
+		fmt.Printf("%+v", inh)
 	}
+}
+
+func placeItem(loc, token entity.View) {
+	var locName logic.Name
+	var itemName logic.Name
+	loc.Get(&locName)
+	token.Get(&itemName)
+
+	fmt.Printf("Placing %s at '%s'\n", itemName, locName)
+	loc.Add(logic.Inhabited(token.Model()))
+	token.Add(logic.Inhabits(loc.Model()))
 }
 
 func shuffle[T any, E ~[]T](elms E) {

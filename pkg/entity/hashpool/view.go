@@ -55,7 +55,7 @@ func (v view) Get(target interface{}) error {
 	return nil
 }
 
-func (v view) Add(target entity.Component) error {
+func (v *view) Add(target entity.Component) error {
 	v.checkDetached()
 
 	typ := reflect.TypeOf(target)

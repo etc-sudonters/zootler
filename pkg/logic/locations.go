@@ -390,17 +390,6 @@ func GetAllLocationComponents(p PlacementLocation) []entity.Component {
 		comps = append(comps, ParseComponentsFromLocationTag(tag))
 	}
 
-	if p.Type == "Freestandings" {
-		if p.DefaultItem == "RecoveryHeart" {
-			comps = append(comps, RecoveryHeart{})
-		}
-
-		if strings.Contains(p.DefaultItem, "Small Key") {
-			comps = append(comps, SmallKey{})
-		}
-
-	}
-
 	return comps
 }
 
@@ -409,6 +398,39 @@ type PlacementLocation struct {
 	Type        string   `json:"type"`
 	DefaultItem string   `json:"vanilla"`
 	Tags        []string `json:"categories"`
+}
+
+func (p *PlacementLocation) UnmarshalJSON(data []byte) error {
+	var raw map[string]interface{}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+
+	for k, v := range raw {
+		if v == nil {
+			continue
+		}
+		switch strings.ToLower(k) {
+		case "name":
+			p.Name = v.(string)
+			break
+		case "type":
+			p.Type = v.(string)
+			break
+		case "vanilla":
+			p.DefaultItem = v.(string)
+			break
+		case "categories":
+			c := v.([]interface{})
+			p.Tags = make([]string, len(c))
+			for i, s := range c {
+				p.Tags[i] = s.(string)
+			}
+			break
+		}
+	}
+
+	return nil
 }
 
 func ReadLocations(r io.Reader) ([]PlacementLocation, error) {

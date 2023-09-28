@@ -26,6 +26,8 @@ type RawLogicLocation struct {
 	Events    map[EventName]RawRule    `json:"events"`
 	Scene     *SceneName               `json:"scene"`
 	Hint      *HintGroup               `json:"hint"`
+	Dungeon   string                   `json:"dungeon"`
+	SaveWarp  string                   `json:"savewarp""`
 }
 
 func (l RawLogicLocation) String() string {

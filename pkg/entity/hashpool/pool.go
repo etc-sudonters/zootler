@@ -33,7 +33,7 @@ func New() *Pool {
 	return p
 }
 
-func (p *Pool) createCore() view {
+func (p *Pool) createCore() *view {
 	p.lastModel++
 	thisModel := p.lastModel
 
@@ -47,7 +47,7 @@ func (p *Pool) createCore() view {
 	v.Add(thisModel)
 	v.origin.population.Add(thisModel)
 
-	return v
+	return &v
 }
 
 func (p *Pool) Create() (entity.View, error) {
@@ -55,7 +55,7 @@ func (p *Pool) Create() (entity.View, error) {
 }
 
 func (p *Pool) Delete(v entity.View) error {
-	m := v.(view)
+	m := v.(*view)
 	model := m.m
 	delete(p.population, model)
 

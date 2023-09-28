@@ -18,4 +18,5 @@ type (
 	Location  struct{}
 	Token     struct{}
 	Inhabited entity.Model
+	Inhabits  entity.Model
 )
