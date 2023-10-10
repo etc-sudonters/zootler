@@ -9,20 +9,20 @@ import (
 
 func TestCanLexIdentifier(t *testing.T) {
 	rule := "Compiler"
-	expected := []item{{typ: itemIdent, val: rule}}
+	expected := []Item{{Type: ItemIdentifier, Value: rule}}
 
-	l := lex("TestCanLexIdentifier", rule)
+	l := NewLexer("TestCanLexIdentifier", rule)
 	collected := lexUntilEofOrErr(l, t)
 
 	toksAreEqual(expected, collected, t)
 }
 
 func TestErrsIfNonSepFollowsIdent(t *testing.T) {
-	expected := []item{
-		{typ: itemErr, pos: 8, val: "unexpected '\\''"},
+	expected := []Item{
+		{Type: ItemErr, Pos: 8, Value: "unexpected '\\''"},
 	}
 
-	l := lex("TestErrsIfNonSepFollowsIdent", "Compiler'")
+	l := NewLexer("TestErrsIfNonSepFollowsIdent", "Compiler'")
 	collected := lexUntilEofOrErr(l, t)
 
 	toksAreEqual(expected, collected, t)
@@ -30,11 +30,11 @@ func TestErrsIfNonSepFollowsIdent(t *testing.T) {
 
 func TestCanLexBoolOp(t *testing.T) {
 	rule := "Compiler or Interpreter"
-	l := lex("TestCanLexBoolOp", rule)
-	expected := []item{
-		{typ: itemIdent, val: "Compiler", pos: 0},
-		{typ: itemBoolOp, val: "or", pos: 9},
-		{typ: itemIdent, val: "Interpreter", pos: 12},
+	l := NewLexer("TestCanLexBoolOp", rule)
+	expected := []Item{
+		{Type: ItemIdentifier, Value: "Compiler", Pos: 0},
+		{Type: ItemAnd, Value: "or", Pos: 9},
+		{Type: ItemIdentifier, Value: "Interpreter", Pos: 12},
 	}
 
 	collected := lexUntilEofOrErr(l, t)
@@ -43,8 +43,8 @@ func TestCanLexBoolOp(t *testing.T) {
 }
 
 func TestCanLexNumber(t *testing.T) {
-	l := lex("TestCanLexNumber", "99")
-	expected := []item{{typ: itemNumber, pos: 0, val: "99"}}
+	l := NewLexer("TestCanLexNumber", "99")
+	expected := []Item{{Type: ItemNumber, Pos: 0, Value: "99"}}
 
 	collected := lexUntilEofOrErr(l, t)
 
@@ -52,11 +52,11 @@ func TestCanLexNumber(t *testing.T) {
 }
 
 func TestErrsIfNonSepFollowsNumber(t *testing.T) {
-	expected := []item{
-		{typ: itemErr, pos: 2, val: "unexpected '\\''"},
+	expected := []Item{
+		{Type: ItemErr, Pos: 2, Value: "unexpected '\\''"},
 	}
 
-	l := lex("TestErrsIfNonSepFollowsNumber", "99'")
+	l := NewLexer("TestErrsIfNonSepFollowsNumber", "99'")
 
 	collected := lexUntilEofOrErr(l, t)
 
@@ -65,15 +65,15 @@ func TestErrsIfNonSepFollowsNumber(t *testing.T) {
 
 func TestCanLexParens(t *testing.T) {
 	rule := "(Compiler or Interpreter)"
-	expected := []item{
-		{typ: itemOpenParen, pos: 0, val: "("},
-		{typ: itemIdent, pos: 1, val: "Compiler"},
-		{typ: itemBoolOp, pos: 10, val: "or"},
-		{typ: itemIdent, pos: 13, val: "Interpreter"},
-		{typ: itemCloseParen, pos: 24, val: ")"},
+	expected := []Item{
+		{Type: ItemOpenParen, Pos: 0, Value: "("},
+		{Type: ItemIdentifier, Pos: 1, Value: "Compiler"},
+		{Type: ItemAnd, Pos: 10, Value: "or"},
+		{Type: ItemIdentifier, Pos: 13, Value: "Interpreter"},
+		{Type: ItemCloseParen, Pos: 24, Value: ")"},
 	}
 
-	l := lex("TestCanLexParens", rule)
+	l := NewLexer("TestCanLexParens", rule)
 	collected := lexUntilEofOrErr(l, t)
 
 	toksAreEqual(expected, collected, t)
@@ -81,26 +81,25 @@ func TestCanLexParens(t *testing.T) {
 
 func TestErrsOnUnclosedParen(t *testing.T) {
 	rule := "(Compiler"
-	expected := []item{
-		{typ: itemOpenParen, pos: 0, val: "("},
-		{typ: itemIdent, pos: 1, val: "Compiler"},
-		{typ: itemErr, pos: 9, val: "unclosed '('"},
+	expected := []Item{
+		{Type: ItemOpenParen, Pos: 0, Value: "("},
+		{Type: ItemIdentifier, Pos: 1, Value: "Compiler"},
+		{Type: ItemErr, Pos: 9, Value: "unclosed '(' or '['"},
 	}
 
-	l := lex("TestErrsOnUnclosedParen", rule)
-	l.debug = t.Logf
+	l := NewLexer("TestErrsOnUnclosedParen", rule)
 	collected := lexUntilEofOrErr(l, t)
 
 	toksAreEqual(expected, collected, t)
 }
 
 func TestErrsOnUnexpectedClosedParent(t *testing.T) {
-	expected := []item{
-		{typ: itemIdent, pos: 0, val: "Compiler"},
-		{typ: itemErr, pos: 9, val: "unexpected ')'"},
+	expected := []Item{
+		{Type: ItemIdentifier, Pos: 0, Value: "Compiler"},
+		{Type: ItemErr, Pos: 9, Value: "unexpected ')'"},
 	}
 
-	l := lex("TestErrsOnUnexpectedClosedParent", "Compiler)")
+	l := NewLexer("TestErrsOnUnexpectedClosedParent", "Compiler)")
 	collected := lexUntilEofOrErr(l, t)
 
 	toksAreEqual(expected, collected, t)
@@ -115,10 +114,10 @@ func TestCanLexActualRules(t *testing.T) {
 	}
 
 	for _, rule := range rules {
-		l := lex("TestLexActualRule", rule)
+		l := NewLexer("TestLexActualRule", rule)
 		collected := lexUntilEofOrErr(l, t)
 
-		if collected[len(collected)-1].typ == itemErr {
+		if collected[len(collected)-1].Type == ItemErr {
 			t.Logf("Failed lexing rule %.80q...", rule)
 			t.Log("Failure", collected[len(collected)-1])
 			t.Log("Collected tokens", collected)
@@ -129,11 +128,11 @@ func TestCanLexActualRules(t *testing.T) {
 
 }
 
-func lexUntilEofOrErr(l *lexer, t *testing.T) []item {
+func lexUntilEofOrErr(l *lexer, t *testing.T) []Item {
 	// protection against lexer getting stuck
 	runeCount := utf8.RuneCountInString(l.input)
 	i := 0
-	collected := []item{}
+	collected := []Item{}
 
 	for {
 		if i > runeCount {
@@ -144,14 +143,14 @@ func lexUntilEofOrErr(l *lexer, t *testing.T) []item {
 		}
 
 		item := l.nextItem()
-		if item.typ == itemEof {
+		if item.Type == ItemEof {
 			break
 		}
 
 		collected = append(collected, item)
 
 		// collect err but not eof
-		if item.typ == itemErr {
+		if item.Type == ItemErr {
 			break
 		}
 
@@ -161,10 +160,10 @@ func lexUntilEofOrErr(l *lexer, t *testing.T) []item {
 	return collected
 }
 
-func toksAreEqual(expected, actual []item, t *testing.T) {
-	testutils.ArrEqF(expected, actual, func(e, a item) bool { return e.fungible(a) }, t)
+func toksAreEqual(expected, actual []Item, t *testing.T) {
+	testutils.ArrEqF(expected, actual, func(e, a Item) bool { return e.fungible(a) }, t)
 }
 
-func (i item) fungible(o item) bool {
-	return i.typ == o.typ && i.pos == o.pos && i.val == o.val
+func (i Item) fungible(o Item) bool {
+	return i.Type == o.Type && i.Pos == o.Pos && i.Value == o.Value
 }

@@ -9,70 +9,69 @@ import (
 
 type stateFn func(*lexer) stateFn
 
-type itemType int
-type pos int
-type item struct {
-	typ itemType
-	pos pos
-	val string
+type ItemType int
+type Pos int
+type Item struct {
+	Type  ItemType
+	Pos   Pos
+	Value string
 }
 
 const (
 	trueWord  = "True"
 	falseWord = "False"
-	noneWord  = "None"
 	andWord   = "and"
 	orWord    = "or"
 )
 
 const (
-	itemEof itemType = iota
-	itemErr
-	itemDot
-	itemQuote
-	itemOpenParen
-	itemCloseParen
-	itemOpenBrack
-	itemCloseBrack
-	itemIdent
-	itemStr
-	itemNumber
-	itemBoolOp
-	itemBool
-	itemNone
-	itemComma
-	itemCmp
+	ItemEof ItemType = iota
+	ItemErr
+	ItemDot
+	ItemQuote
+	ItemOpenParen
+	ItemCloseParen
+	ItemOpenBracket
+	ItemCloseBracket
+	ItemIdentifier
+	ItemString
+	ItemNumber
+	ItemAnd
+	ItemOr
+	ItemBool
+	ItemComma
+	ItemCompare
 )
 
-func (i itemType) String() string {
+func (i ItemType) String() string {
 	switch i {
-	case itemEof:
+	case ItemEof:
 		return "<EOF>"
-	case itemErr:
+	case ItemErr:
 		return "<ERR>"
-	case itemDot:
+	case ItemDot:
 		return "<DOT>"
-	case itemQuote:
+	case ItemQuote:
 		return "<SINGLEQUOTE>"
-	case itemOpenParen:
+	case ItemOpenParen:
 		return "<OPENPAREN>"
-	case itemCloseParen:
+	case ItemCloseParen:
 		return "<CLOSEPAREN>"
-	case itemIdent:
+	case ItemIdentifier:
 		return "<IDENT>"
-	case itemStr:
+	case ItemString:
 		return "<STR>"
-	case itemNumber:
+	case ItemNumber:
 		return "<NUMBER>"
-	case itemBoolOp:
-		return "<BOOLOP>"
-	case itemBool:
+	case ItemAnd:
+		return "<ANDOP>"
+	case ItemOr:
+		return "<OROP>"
+	case ItemBool:
 		return "<BOOL>"
-	case itemNone:
-		return "<NONE>"
-	case itemComma:
+	case ItemComma:
 		return "<COMMA>"
-	case itemCmp:
+	case ItemCompare:
 		return "<CMP>"
 	default:
 		return "<UNKNOWN>"
@@ -84,22 +83,26 @@ const (
 	spaceChars = " \t\n\r"
 )
 
-func (i item) String() string {
+func (i Item) String() string {
 	repr := &strings.Builder{}
 	repr.WriteString("{typ: ")
-	repr.WriteString(i.typ.String())
-	repr.WriteString(fmt.Sprintf(", pos: %d, val:", i.pos))
+	repr.WriteString(i.Type.String())
+	repr.WriteString(fmt.Sprintf(", pos: %d, val:", i.Pos))
 
-	if len(i.val) > 10 && i.typ != itemErr {
-		fmt.Fprintf(repr, "%.10q...}", i.val)
+	if len(i.Value) > 10 && i.Type != ItemErr {
+		fmt.Fprintf(repr, "%.10q...}", i.Value)
 		return repr.String()
 	}
 
-	fmt.Fprintf(repr, "%q}", i.val)
+	fmt.Fprintf(repr, "%q}", i.Value)
 	return repr.String()
 }
 
-func lex(name, rule string) *lexer {
+func (i Item) Is(t ItemType) bool {
+	return i.Type == t
+}
+
+func NewLexer(name, rule string) *lexer {
 	return &lexer{
 		name:  name,
 		input: rule,
@@ -109,12 +112,23 @@ func lex(name, rule string) *lexer {
 type lexer struct {
 	name       string
 	input      string
-	pos        pos
-	start      pos
+	pos        Pos
+	start      Pos
 	atEOF      bool
-	item       item
+	item       Item
 	parenDepth int
 	brackDepth int
+}
+
+func (l *lexer) nextItem() Item {
+	l.item = Item{Type: ItemEof, Pos: l.pos}
+	state := lexRule
+	for {
+		state = state(l)
+		if state == nil {
+			return l.item
+		}
+	}
 }
 
 func (l *lexer) peek() rune {
@@ -130,28 +144,28 @@ func (l *lexer) next() rune {
 	}
 
 	r, width := utf8.DecodeRuneInString(l.input[l.pos:])
-	l.pos += pos(width)
+	l.pos += Pos(width)
 	return r
 }
 
 func (l *lexer) backup() {
 	if !l.atEOF && l.pos > 0 {
 		_, width := utf8.DecodeLastRuneInString(l.input[:l.pos])
-		l.pos -= pos(width)
+		l.pos -= Pos(width)
 	}
 }
 
-func (l *lexer) thisItem(typ itemType) item {
-	i := item{
-		typ: typ,
-		pos: l.start,
-		val: l.input[l.start:l.pos],
+func (l *lexer) thisItem(typ ItemType) Item {
+	i := Item{
+		Type:  typ,
+		Pos:   l.start,
+		Value: l.input[l.start:l.pos],
 	}
 	l.start = l.pos
 	return i
 }
 
-func (l *lexer) emit(typ itemType) stateFn {
+func (l *lexer) emit(typ ItemType) stateFn {
 	l.item = l.thisItem(typ)
 	return nil
 }
@@ -188,23 +202,12 @@ func (l *lexer) acceptFn(accept func(rune) bool) {
 }
 
 func (l *lexer) errorf(format string, args ...any) stateFn {
-	l.item = item{
-		typ: itemErr,
-		pos: l.pos,
-		val: fmt.Sprintf(format, args...),
+	l.item = Item{
+		Type:  ItemErr,
+		Pos:   l.pos,
+		Value: fmt.Sprintf(format, args...),
 	}
 	return nil
-}
-
-func (l *lexer) nextItem() item {
-	l.item = item{typ: itemEof, pos: l.pos}
-	state := lexRule
-	for {
-		state = state(l)
-		if state == nil {
-			return l.item
-		}
-	}
 }
 
 func lexRule(l *lexer) stateFn {
@@ -231,7 +234,7 @@ func lexRule(l *lexer) stateFn {
 	case r == ']':
 		return lexCloseBrack
 	case r == ',':
-		return l.emit(itemComma)
+		return l.emit(ItemComma)
 	case r == '=':
 		l.backup()
 		return lexEq
@@ -252,15 +255,19 @@ func lexRule(l *lexer) stateFn {
 func lexIdent(l *lexer) stateFn {
 	l.acceptFn(isIdentRune)
 	switch word := l.input[l.start:l.pos]; {
-	case word == andWord || word == orWord:
-		return l.emit(itemBoolOp)
+	case word == andWord:
+		return l.emit(ItemAnd)
+	case word == orWord:
+		return l.emit(ItemOr)
+	case word == trueWord || word == falseWord:
+		return l.emit(ItemBool)
 	}
 
 	if !atSeparator(l) {
 		return unexpected(l.peek(), l)
 	}
 
-	return l.emit(itemIdent)
+	return l.emit(ItemIdentifier)
 }
 
 func lexWhitespace(l *lexer) stateFn {
@@ -274,13 +281,13 @@ func lexNumber(l *lexer) stateFn {
 	if !atSeparator(l) {
 		return unexpected(l.peek(), l)
 	}
-	return l.emit(itemNumber)
+	return l.emit(ItemNumber)
 }
 
 // the '(' is already scanned
 func lexOpenParen(l *lexer) stateFn {
 	l.parenDepth++
-	return l.emit(itemOpenParen)
+	return l.emit(ItemOpenParen)
 }
 
 // the ')' is already scanned
@@ -289,27 +296,27 @@ func lexCloseParen(l *lexer) stateFn {
 	if l.parenDepth < 0 {
 		return unexpected(')', l)
 	}
-	return l.emit(itemCloseParen)
+	return l.emit(ItemCloseParen)
 }
 
 // the '[' is already scanned
 func lexOpenBrack(l *lexer) stateFn {
 	l.brackDepth++
-	return l.emit(itemOpenBrack)
+	return l.emit(ItemOpenBracket)
 }
 
 // the ']' is already scanned
 func lexCloseBrack(l *lexer) stateFn {
 	l.brackDepth--
 	if l.brackDepth < 0 {
-		return unexpected(')', l)
+		return unexpected(']', l)
 	}
-	return l.emit(itemCloseBrack)
+	return l.emit(ItemCloseBracket)
 }
 
 func lexEq(l *lexer) stateFn {
 	if l.acceptOne("=") && l.acceptOne("=") {
-		return l.emit(itemCmp)
+		return l.emit(ItemCompare)
 	}
 
 	return unexpected(l.peek(), l)
@@ -317,7 +324,7 @@ func lexEq(l *lexer) stateFn {
 
 func lexNotEq(l *lexer) stateFn {
 	if l.acceptOne("!") && l.acceptOne("=") {
-		return l.emit(itemCmp)
+		return l.emit(ItemCompare)
 	}
 	return unexpected(l.peek(), l)
 }
@@ -325,14 +332,14 @@ func lexNotEq(l *lexer) stateFn {
 func lexInEq(l *lexer) stateFn {
 	l.acceptOne("<>") // know its one of these
 	l.acceptOne("=")  // might be hanging out too
-	return l.emit(itemCmp)
+	return l.emit(ItemCompare)
 }
 
 // opening ' is already scanned
 func lexStr(l *lexer) stateFn {
 	l.acceptFn(func(r rune) bool { return r != '\'' })
 	l.next()
-	return l.emit(itemStr)
+	return l.emit(ItemString)
 }
 
 func isDigit(r rune) bool {

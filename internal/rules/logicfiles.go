@@ -27,7 +27,7 @@ type RawLogicLocation struct {
 	Scene     *SceneName               `json:"scene"`
 	Hint      *HintGroup               `json:"hint"`
 	Dungeon   string                   `json:"dungeon"`
-	SaveWarp  string                   `json:"savewarp""`
+	SaveWarp  string                   `json:"savewarp"`
 }
 
 func (l RawLogicLocation) String() string {
@@ -87,10 +87,10 @@ func LexAllLocationRules(loc RawLogicLocation) error {
 
 func lexEntire(name string, rawRule RawRule) error {
 	var rule string = string(rawRule)
-	l := lex(name, rule)
+	l := NewLexer(name, rule)
 	runeCount := utf8.RuneCountInString(rule)
 	i := 0
-	collected := []item{}
+	collected := []Item{}
 
 	for {
 		if i > runeCount {
@@ -102,14 +102,14 @@ func lexEntire(name string, rawRule RawRule) error {
 		}
 
 		item := l.nextItem()
-		if item.typ == itemEof {
+		if item.Type == ItemEof {
 			break
 		}
 
 		collected = append(collected, item)
 
 		// collect err but not eof
-		if item.typ == itemErr {
+		if item.Type == ItemErr {
 			break
 		}
 
@@ -117,7 +117,7 @@ func lexEntire(name string, rawRule RawRule) error {
 	}
 
 	lastTok := collected[len(collected)-1]
-	if lastTok.typ == itemErr {
+	if lastTok.Type == ItemErr {
 		repr := &strings.Builder{}
 		fmt.Fprintf(repr, "failed to parse %s\n", name)
 		fmt.Fprintf(repr, "err: %s", lastTok)

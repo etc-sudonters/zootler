@@ -9,6 +9,16 @@
         "mode": "debug",
         "dlvToolPath": "$GOPATH/bin/dlv"
       }
+    },
+    "test": {
+      "adapter": "vscode-go",
+      "configuration": {
+        "request": "launch",
+        "program": "${fileDirname}",
+        "args": [],
+        "mode": "test",
+        "dlvToolPath": "$GOPATH/bin/dlv"
+      }
     }
   }
 }
