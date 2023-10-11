@@ -2,6 +2,23 @@ package rules
 
 import "testing"
 
+func TestParseRealRule(t *testing.T) {
+	r := "can_play(Song_of_Time) or (logic_shadow_mq_invisible_blades and damage_multiplier != 'ohko')"
+	l := NewLexer("Parse Real Rule *guitar riff*", r)
+	p := NewParser(l)
+
+	rule, err := p.ParseTotalRule()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if rule == nil {
+		t.FailNow()
+	}
+
+	t.Fatalf("%s", rule.Repr())
+}
+
 func TestParseConstRule(t *testing.T) {
 	inputs := []struct {
 		raw      string

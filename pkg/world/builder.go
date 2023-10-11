@@ -25,7 +25,7 @@ func NewBuilder(id Id) *Builder {
 	return &Builder{
 		id,
 		Pool{id, hashpool.New()},
-		graph.Builder{graph.New()},
+		graph.Builder{G: graph.New()},
 		make(map[edge]entity.View),
 		make(map[graph.Node]entity.View),
 	}

@@ -4,8 +4,13 @@
       "adapter": "vscode-go",
       "configuration": {
         "request": "launch",
-        "program": "${workspaceRoot}/main.go",
-        "args": ["-d", "${workspaceRoot}/data/", "-l", "${workspaceRoot}/data/logic"],
+        "program": "${workspaceRoot}/cmd/zootlr/main.go",
+        "args": [
+          "-d",
+          "${workspaceRoot}/data/",
+          "-l",
+          "${workspaceRoot}/data/logic"
+        ],
         "mode": "debug",
         "dlvToolPath": "$GOPATH/bin/dlv"
       }
@@ -17,6 +22,19 @@
         "program": "${fileDirname}",
         "args": [],
         "mode": "test",
+        "dlvToolPath": "$GOPATH/bin/dlv"
+      }
+    },
+    "parser": {
+      "adapter": "vscode-go",
+      "configuration": {
+        "request": "launch",
+        "program": "${workspaceRoot}/cmd/parser/main.go",
+        "args": [
+          "-l",
+          "${workspaceRoot}/data/logic"
+        ],
+        "mode": "debug",
         "dlvToolPath": "$GOPATH/bin/dlv"
       }
     }

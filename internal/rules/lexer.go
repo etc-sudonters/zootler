@@ -28,7 +28,6 @@ const (
 	ItemEof ItemType = iota
 	ItemErr
 	ItemDot
-	ItemQuote
 	ItemOpenParen
 	ItemCloseParen
 	ItemOpenBracket
@@ -51,12 +50,14 @@ func (i ItemType) String() string {
 		return "<ERR>"
 	case ItemDot:
 		return "<DOT>"
-	case ItemQuote:
-		return "<SINGLEQUOTE>"
 	case ItemOpenParen:
 		return "<OPENPAREN>"
 	case ItemCloseParen:
 		return "<CLOSEPAREN>"
+	case ItemOpenBracket:
+		return "<OPENBRACKET>"
+	case ItemCloseBracket:
+		return "<CLOSEBRACKET>"
 	case ItemIdentifier:
 		return "<IDENT>"
 	case ItemString:

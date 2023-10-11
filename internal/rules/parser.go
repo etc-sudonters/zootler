@@ -1,6 +1,9 @@
 package rules
 
-import "fmt"
+import (
+	"fmt"
+	"strconv"
+)
 
 type unexpectedToken struct {
 	have Item
@@ -54,13 +57,15 @@ func NewParser(l *lexer) *parser {
 
 	addPrefixParselet(ItemOpenParen, 0, p.parseParenExpr)
 	addPrefixParselet(ItemIdentifier, 0, p.parseIdentifierExpr)
+	addPrefixParselet(ItemNumber, 0, p.parseNumber)
+	addPrefixParselet(ItemString, 0, p.parseString)
+
 	addInfixParselet(ItemAnd, 1, p.parseBoolOpExpr)
 	addInfixParselet(ItemOr, 2, p.parseBoolOpExpr)
 	addInfixParselet(ItemDot, 3, p.parseAttrAccess)
 	addInfixParselet(ItemOpenBracket, 4, p.parseSubscript)
 	addInfixParselet(ItemCompare, 5, p.parseBinOp)
 	addInfixParselet(ItemOpenParen, 8, p.parseCall)
-	addInfixParselet(ItemString, 9, p.parseString)
 
 	// rotate first token into current
 	p.consume()
@@ -124,28 +129,29 @@ func (p *parser) expect(next ItemType) bool {
 }
 
 func (p *parser) parseParenExpr(precedence) (Expression, error) {
+	p.consume()
 	e, err := p.parseRule(0)
 	if err != nil {
 		return nil, err
 	}
 
 	if p.expect(ItemComma) {
-		next, err := p.parseRule(0)
+		elem, err := p.parseRule(0)
 		if err != nil {
 			return nil, err
 		}
-		args := []Expression{e, next}
+		elems := []Expression{e, elem}
 
 		for p.expect(ItemComma) {
-			arg, err := p.parseRule(0)
+			elem, err = p.parseRule(0)
 			if err != nil {
 				return nil, err
 			}
 
-			args = append(args, arg)
+			elems = append(elems, elem)
 		}
 
-		e = &Tuple{args}
+		e = &Tuple{elems}
 	}
 
 	if err := p.expectOrErr(ItemCloseParen); err != nil {
@@ -161,6 +167,7 @@ func (p *parser) parseIdentifierExpr(precedence) (Expression, error) {
 
 func (p *parser) parseBoolOpExpr(left Expression, pr precedence) (Expression, error) {
 	thisTok := p.curTok
+	p.consume()
 	right, err := p.parseRule(pr)
 	if err != nil {
 		return nil, err
@@ -176,6 +183,7 @@ func (p *parser) parseBoolOpExpr(left Expression, pr precedence) (Expression, er
 
 func (p *parser) parseBinOp(left Expression, pr precedence) (Expression, error) {
 	thisTok := p.curTok
+	p.consume()
 	right, err := p.parseRule(pr)
 	if err != nil {
 		return nil, err
@@ -191,31 +199,29 @@ func (p *parser) parseBinOp(left Expression, pr precedence) (Expression, error) 
 }
 
 func (p *parser) parseCall(left Expression, pr precedence) (Expression, error) {
-	if p.expect(ItemCloseParen) {
+	if p.expect(ItemCloseParen) { // fn()
 		return &Call{Name: left}, nil
 	}
+	p.consume()
 
 	var args []Expression
 	for {
-		arg, err := p.parseRule(0)
+		arg, err := p.parseRule(precedence(0))
 		if err != nil {
 			return nil, err
 		}
 		args = append(args, arg)
-		if !p.nextTok.Is(ItemCloseParen) {
+		if !p.expect(ItemComma) {
 			break
 		}
-		p.consume()
 	}
 
 	if err := p.expectOrErr(ItemCloseParen); err != nil {
 		return nil, err
 	}
 
-	return &Call{
-		Name: left,
-		Args: args,
-	}, nil
+	c := Call{Name: left, Args: args}
+	return &c, nil
 }
 
 func (p *parser) parseSubscript(left Expression, pr precedence) (Expression, error) {
@@ -236,6 +242,23 @@ func (p *parser) parseString(precedence) (Expression, error) {
 	return &String{Value: p.curTok.Value}, nil
 }
 
-func (p *parser) parseAttrAccess(Expression, precedence) (Expression, error) {
-	panic("not impled")
+func (p *parser) parseAttrAccess(target Expression, _ precedence) (Expression, error) {
+	attr, err := p.parseRule(0)
+	if err != nil {
+		return nil, err
+	}
+
+	return &AttrAccess{
+		Target: target,
+		Attr:   attr,
+	}, nil
+}
+
+func (p *parser) parseNumber(_ precedence) (Expression, error) {
+	n, err := strconv.ParseFloat(p.curTok.Value, 64)
+	if err != nil {
+		return nil, fmt.Errorf("cannot parse %q as number", p.curTok)
+	}
+
+	return &Number{n}, nil
 }

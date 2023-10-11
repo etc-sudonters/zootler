@@ -33,7 +33,7 @@ func TestCanLexBoolOp(t *testing.T) {
 	l := NewLexer("TestCanLexBoolOp", rule)
 	expected := []Item{
 		{Type: ItemIdentifier, Value: "Compiler", Pos: 0},
-		{Type: ItemAnd, Value: "or", Pos: 9},
+		{Type: ItemOr, Value: "or", Pos: 9},
 		{Type: ItemIdentifier, Value: "Interpreter", Pos: 12},
 	}
 
@@ -68,7 +68,7 @@ func TestCanLexParens(t *testing.T) {
 	expected := []Item{
 		{Type: ItemOpenParen, Pos: 0, Value: "("},
 		{Type: ItemIdentifier, Pos: 1, Value: "Compiler"},
-		{Type: ItemAnd, Pos: 10, Value: "or"},
+		{Type: ItemOr, Pos: 10, Value: "or"},
 		{Type: ItemIdentifier, Pos: 13, Value: "Interpreter"},
 		{Type: ItemCloseParen, Pos: 24, Value: ")"},
 	}
