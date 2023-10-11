@@ -29,10 +29,12 @@
       "adapter": "vscode-go",
       "configuration": {
         "request": "launch",
-        "program": "${workspaceRoot}/cmd/parser/main.go",
+        "program": "${workspaceRoot}/cmd/parser/",
         "args": [
           "-l",
-          "${workspaceRoot}/data/logic"
+          "${workspaceRoot}/data/logic",
+          "-f",
+          "kind=Exit;name=Ganons Castle Tower;region=Ganons Castle Lobby"
         ],
         "mode": "debug",
         "dlvToolPath": "$GOPATH/bin/dlv"

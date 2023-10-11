@@ -16,6 +16,7 @@ type AstVisitor interface {
 	VisitString(*String)
 	VisitSubscript(*Subscript)
 	VisitTuple(*Tuple)
+	VisitUnary(*UnaryOp)
 }
 
 type TotalRule struct {
@@ -80,18 +81,34 @@ type (
 	String struct {
 		Value string
 	}
+
+	UnaryOp struct {
+		Op     UnaryOpKind
+		Target Expression
+	}
 )
 
 type BinOpKind string
 type BoolOpKind string
+type UnaryOpKind string
 
 var (
-	BinOpEq    BinOpKind  = "=="
-	BinOpNotEq BinOpKind  = "!="
-	BinOpLt    BinOpKind  = "<"
-	BoolOpAnd  BoolOpKind = "and"
-	BoolOpOr   BoolOpKind = "or"
+	BinOpEq    BinOpKind   = "=="
+	BinOpNotEq BinOpKind   = "!="
+	BinOpLt    BinOpKind   = "<"
+	BoolOpAnd  BoolOpKind  = "and"
+	BoolOpOr   BoolOpKind  = "or"
+	UnaryNot   UnaryOpKind = "not"
 )
+
+func UnaryOpFromTok(t Item) UnaryOpKind {
+	switch t.Value {
+	case string(UnaryNot):
+		return UnaryNot
+	default:
+		panic(fmt.Errorf("invalid unaryop %q", t))
+	}
+}
 
 func BoolOpFromTok(t Item) BoolOpKind {
 	switch s := strings.ToLower(t.Value); s {
@@ -127,6 +144,7 @@ func (n *Number) exprNode()     {}
 func (s *String) exprNode()     {}
 func (s *Subscript) exprNode()  {}
 func (t *Tuple) exprNode()      {}
+func (u *UnaryOp) exprNode()    {}
 
 func (expr *AttrAccess) Visit(v AstVisitor) { v.VisitAttrAccess(expr) }
 func (expr *BinOp) Visit(v AstVisitor)      { v.VisitBinOp(expr) }
@@ -138,3 +156,4 @@ func (expr *Number) Visit(v AstVisitor)     { v.VisitNumber(expr) }
 func (expr *String) Visit(v AstVisitor)     { v.VisitString(expr) }
 func (expr *Subscript) Visit(v AstVisitor)  { v.VisitSubscript(expr) }
 func (expr *Tuple) Visit(v AstVisitor)      { v.VisitTuple(expr) }
+func (expr *UnaryOp) Visit(v AstVisitor)    { v.VisitUnary(expr) }

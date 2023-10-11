@@ -22,6 +22,7 @@ const (
 	falseWord = "False"
 	andWord   = "and"
 	orWord    = "or"
+	notWord   = "not"
 )
 
 const (
@@ -35,11 +36,11 @@ const (
 	ItemIdentifier
 	ItemString
 	ItemNumber
-	ItemAnd
-	ItemOr
+	ItemBoolOp
 	ItemBool
 	ItemComma
 	ItemCompare
+	ItemUnary
 )
 
 func (i ItemType) String() string {
@@ -64,16 +65,16 @@ func (i ItemType) String() string {
 		return "<STR>"
 	case ItemNumber:
 		return "<NUMBER>"
-	case ItemAnd:
+	case ItemBoolOp:
 		return "<ANDOP>"
-	case ItemOr:
-		return "<OROP>"
 	case ItemBool:
-		return "<BOOL>"
+		return "<TRUE>"
 	case ItemComma:
 		return "<COMMA>"
 	case ItemCompare:
 		return "<CMP>"
+	case ItemUnary:
+		return "<UNARY>"
 	default:
 		return "<UNKNOWN>"
 	}
@@ -256,12 +257,12 @@ func lexRule(l *lexer) stateFn {
 func lexIdent(l *lexer) stateFn {
 	l.acceptFn(isIdentRune)
 	switch word := l.input[l.start:l.pos]; {
-	case word == andWord:
-		return l.emit(ItemAnd)
-	case word == orWord:
-		return l.emit(ItemOr)
-	case word == trueWord || word == falseWord:
+	case word == andWord, word == orWord:
+		return l.emit(ItemBoolOp)
+	case word == trueWord, word == falseWord:
 		return l.emit(ItemBool)
+	case word == notWord:
+		return l.emit(ItemUnary)
 	}
 
 	if !atSeparator(l) {

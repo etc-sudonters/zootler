@@ -23,6 +23,7 @@ var (
 	boolColor  console.ForegroundColor = 208
 	identColor console.ForegroundColor = 212
 	fnColor    console.ForegroundColor = 160
+	unaryColor console.ForegroundColor = 25
 )
 
 var bracketColors []console.ForegroundColor = []console.ForegroundColor{
@@ -63,7 +64,7 @@ func (w *FancyAstWriter) VisitBoolOp(b *rules.BoolOp) {
 
 func (w *FancyAstWriter) VisitBoolean(b *rules.Boolean) {
 	w.writeObject(b)
-	w.writeBool(b.Value)
+	w.writeBoolProperty("Value", b.Value)
 	w.writeObjectEnd()
 }
 func (w *FancyAstWriter) VisitCall(c *rules.Call) {
@@ -107,6 +108,13 @@ func (w *FancyAstWriter) VisitTuple(t *rules.Tuple) {
 		w.writeArrElem(e)
 	}
 	w.writeArrEnd()
+	w.writeObjectEnd()
+}
+
+func (w *FancyAstWriter) VisitUnary(u *rules.UnaryOp) {
+	w.writeObject(u)
+	w.writeStrProperty("Op", string(u.Op))
+	w.writeProperty("Target", u.Target)
 	w.writeObjectEnd()
 }
 
