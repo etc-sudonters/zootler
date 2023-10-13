@@ -34,7 +34,7 @@
           "-l",
           "${workspaceRoot}/data/logic",
           "-f",
-          "kind=Exit;name=Ganons Castle Tower;region=Ganons Castle Lobby"
+          "kind=Check;region=LLR.*;name=.*Chickens"
         ],
         "mode": "debug",
         "dlvToolPath": "$GOPATH/bin/dlv"

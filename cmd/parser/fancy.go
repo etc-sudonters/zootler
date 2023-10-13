@@ -16,23 +16,18 @@ func newFancy() *FancyAstWriter {
 }
 
 var (
-	nodeColor  console.ForegroundColor = 57
-	propColor  console.ForegroundColor = 69
-	strColor   console.ForegroundColor = 106
-	numColor   console.ForegroundColor = 159
-	boolColor  console.ForegroundColor = 208
-	identColor console.ForegroundColor = 212
-	fnColor    console.ForegroundColor = 160
-	unaryColor console.ForegroundColor = 25
+	nodeColor    console.ForegroundColor = 244
+	propColor    console.ForegroundColor = 252
+	strColor     console.ForegroundColor = 112
+	numColor     console.ForegroundColor = 33
+	boolColor    console.ForegroundColor = 160
+	identColor   console.ForegroundColor = 99
+	keywordColor console.ForegroundColor = 208
+	fnColor      console.ForegroundColor = 228
 )
 
 var bracketColors []console.ForegroundColor = []console.ForegroundColor{
-	196,
-	201,
-	100,
-	92,
-	123,
-	220,
+	1, 2, 3, 4, 5, 6, 7,
 }
 
 type FancyAstWriter struct {
@@ -48,16 +43,16 @@ func (w *FancyAstWriter) VisitAttrAccess(a *rules.AttrAccess) {
 }
 func (w *FancyAstWriter) VisitBinOp(b *rules.BinOp) {
 	w.writeObject(b)
+	w.writeKeywordProperty("Op", string(b.Op))
 	w.writeProperty("Left", b.Left)
-	w.writeStrProperty("Op", string(b.Op))
 	w.writeProperty("Right", b.Right)
 	w.writeObjectEnd()
 }
 
 func (w *FancyAstWriter) VisitBoolOp(b *rules.BoolOp) {
 	w.writeObject(b)
+	w.writeKeywordProperty("Op", string(b.Op))
 	w.writeProperty("Left", b.Left)
-	w.writeStrProperty("Op", string(b.Op))
 	w.writeProperty("Right", b.Right)
 	w.writeObjectEnd()
 }
@@ -80,7 +75,7 @@ func (w *FancyAstWriter) VisitCall(c *rules.Call) {
 }
 func (w *FancyAstWriter) VisitIdentifier(i *rules.Identifier) {
 	w.writeObject(i)
-	w.writeStrProperty("Value", i.Value)
+	w.writeIdentifierProperty("Value", i.Value)
 	w.writeObjectEnd()
 }
 
@@ -113,7 +108,7 @@ func (w *FancyAstWriter) VisitTuple(t *rules.Tuple) {
 
 func (w *FancyAstWriter) VisitUnary(u *rules.UnaryOp) {
 	w.writeObject(u)
-	w.writeStrProperty("Op", string(u.Op))
+	w.writeKeywordProperty("Op", string(u.Op))
 	w.writeProperty("Target", u.Target)
 	w.writeObjectEnd()
 }
@@ -160,7 +155,7 @@ func (a *FancyAstWriter) writePropertyEnd() {
 }
 
 func (a *FancyAstWriter) writeStr(s string) {
-	fmt.Fprintf(a.b, strColor.Paint("%q"), s)
+	fmt.Fprintf(a.b, strColor.Paint("%s"), s)
 }
 
 func (a *FancyAstWriter) writeStrProperty(name, value string) {
@@ -170,7 +165,7 @@ func (a *FancyAstWriter) writeStrProperty(name, value string) {
 }
 
 func (a *FancyAstWriter) writeNumber(f float64) {
-	fmt.Fprintf(a.b, numColor.Paint("%f"), f)
+	fmt.Fprintf(a.b, numColor.Paint("%.0f"), f)
 }
 
 func (a *FancyAstWriter) writeNumProperty(name string, value float64) {
@@ -186,6 +181,26 @@ func (a *FancyAstWriter) writeBool(b bool) {
 func (a *FancyAstWriter) writeBoolProperty(name string, value bool) {
 	a.writePropertyName(name)
 	a.writeBool(value)
+	a.writePropertyEnd()
+}
+
+func (a *FancyAstWriter) writeIdentifier(i string) {
+	fmt.Fprint(a.b, identColor.Paint(i))
+}
+
+func (a *FancyAstWriter) writeIdentifierProperty(name, i string) {
+	a.writePropertyName(name)
+	a.writeIdentifier(i)
+	a.writePropertyEnd()
+}
+
+func (a *FancyAstWriter) writeKeyword(kw string) {
+	fmt.Fprint(a.b, keywordColor.Paint(kw))
+}
+
+func (a *FancyAstWriter) writeKeywordProperty(name, kw string) {
+	a.writePropertyName(name)
+	a.writeKeyword(kw)
 	a.writePropertyEnd()
 }
 

@@ -36,10 +36,14 @@ const (
 	ItemIdentifier
 	ItemString
 	ItemNumber
-	ItemBoolOp
-	ItemBool
+	ItemAnd
+	ItemOr
+	ItemTrue
+	ItemFalse
 	ItemComma
-	ItemCompare
+	ItemEq
+	ItemNotEq
+	ItemLt
 	ItemUnary
 )
 
@@ -65,14 +69,22 @@ func (i ItemType) String() string {
 		return "<STR>"
 	case ItemNumber:
 		return "<NUMBER>"
-	case ItemBoolOp:
-		return "<ANDOP>"
-	case ItemBool:
+	case ItemAnd:
+		return "<AND>"
+	case ItemOr:
+		return "<OR>"
+	case ItemTrue:
 		return "<TRUE>"
+	case ItemFalse:
+		return "<FALSE>"
 	case ItemComma:
 		return "<COMMA>"
-	case ItemCompare:
-		return "<CMP>"
+	case ItemEq:
+		return "<EQ>"
+	case ItemNotEq:
+		return "<NEQ>"
+	case ItemLt:
+		return "<LT>"
 	case ItemUnary:
 		return "<UNARY>"
 	default:
@@ -257,10 +269,14 @@ func lexRule(l *lexer) stateFn {
 func lexIdent(l *lexer) stateFn {
 	l.acceptFn(isIdentRune)
 	switch word := l.input[l.start:l.pos]; {
-	case word == andWord, word == orWord:
-		return l.emit(ItemBoolOp)
-	case word == trueWord, word == falseWord:
-		return l.emit(ItemBool)
+	case word == andWord:
+		return l.emit(ItemAnd)
+	case word == orWord:
+		return l.emit(ItemOr)
+	case word == trueWord:
+		return l.emit(ItemTrue)
+	case word == falseWord:
+		return l.emit(ItemFalse)
 	case word == notWord:
 		return l.emit(ItemUnary)
 	}
@@ -318,7 +334,7 @@ func lexCloseBrack(l *lexer) stateFn {
 
 func lexEq(l *lexer) stateFn {
 	if l.acceptOne("=") && l.acceptOne("=") {
-		return l.emit(ItemCompare)
+		return l.emit(ItemEq)
 	}
 
 	return unexpected(l.peek(), l)
@@ -326,15 +342,14 @@ func lexEq(l *lexer) stateFn {
 
 func lexNotEq(l *lexer) stateFn {
 	if l.acceptOne("!") && l.acceptOne("=") {
-		return l.emit(ItemCompare)
+		return l.emit(ItemNotEq)
 	}
 	return unexpected(l.peek(), l)
 }
 
 func lexInEq(l *lexer) stateFn {
-	l.acceptOne("<>") // know its one of these
-	l.acceptOne("=")  // might be hanging out too
-	return l.emit(ItemCompare)
+	l.acceptOne("<") // know its one of these
+	return l.emit(ItemLt)
 }
 
 // opening ' is already scanned
