@@ -5,7 +5,9 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"runtime/debug"
 
+	"github.com/etc-sudonters/zootler/internal/errs"
 	"github.com/etc-sudonters/zootler/internal/ioutil"
 	"github.com/etc-sudonters/zootler/pkg/world"
 )
@@ -29,17 +31,25 @@ func (c cliOptions) validate() error {
 
 func main() {
 	var opts cliOptions
-	var exit *ioutil.ExitCode = &ioutil.ExitSuccess
-	defer func() { os.Exit(int(*exit)) }()
+	var exit ioutil.ExitCode = ioutil.ExitSuccess
 	stdio := ioutil.Std{
 		In:  os.Stdin,
 		Out: os.Stdout,
 		Err: os.Stdout,
 	}
+	defer func() {
+		os.Exit(int(exit))
+	}()
+	defer func() {
+		if r := recover(); r != nil {
+			stdio.Err.Write(debug.Stack())
+			exit = ioutil.AsExitCode(r, ioutil.ExitPanic)
+		}
+	}()
 
 	ctx := context.Background()
 	ctx = ioutil.AddStdToContext(ctx, &stdio)
-	ctx = ioutil.AddExitCodeToContext(ctx, exit)
+	ctx = ioutil.AddExitCodeToContext(ctx, &exit)
 
 	flag.StringVar(&opts.logicDir, "l", "", "Directory where logic files are located")
 	flag.StringVar(&opts.dataDir, "d", "", "Directory where data files are stored")
@@ -47,14 +57,21 @@ func main() {
 
 	if cliErr := opts.validate(); cliErr != nil {
 		fmt.Fprintf(stdio.Err, "%s\n", cliErr.Error())
-		flag.PrintDefaults()
-		*exit = ioutil.ExitBadFlag
+		exit = ioutil.ExitBadFlag
 		return
 	}
 
 	builder := world.NewBuilder(1)
-	buildFromDataDir(ctx, builder, opts.dataDir)
-	buildFromLogicDir(ctx, builder, opts.logicDir)
+	if err := buildFromDataDir(ctx, builder, opts.dataDir); err != nil {
+		exit = ioutil.GetExitCodeOr(err, ioutil.ExitCode(2))
+		fmt.Fprintf(stdio.Err, "Error while parsing files: %s\n", err.Error())
+		return
+	}
+	if err := buildFromLogicDir(ctx, builder, opts.logicDir); err != nil {
+		exit = ioutil.GetExitCodeOr(err, ioutil.ExitCode(2))
+		fmt.Fprintf(stdio.Err, "Error while parsing files: %s\n", err.Error())
+		return
+	}
 }
 
 type missingRequired string // option name
@@ -64,9 +81,9 @@ func (arg missingRequired) Error() string {
 }
 
 func buildFromLogicDir(ctx context.Context, b *world.Builder, path string) error {
-	panic("not impled!")
+	return errs.NotImplErr
 }
 
 func buildFromDataDir(ctx context.Context, b *world.Builder, path string) error {
-	panic("not impled")
+	return errs.NotImplErr
 }

@@ -68,8 +68,6 @@ func (b *bitpool) Query(q entity.Selector, qs ...entity.Selector) ([]entity.View
 	return entities, nil
 }
 
-// load the specified components from the specified model, if a component
-// isn't attached to the model its pointer should be set to nil
 func (b *bitpool) Get(m entity.Model, cs ...interface{}) {
 	for i := range cs {
 		entity.AssignComponentTo(cs[i], tryFindCompFor(b, m))
