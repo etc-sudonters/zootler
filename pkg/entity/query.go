@@ -4,21 +4,28 @@ import (
 	"reflect"
 
 	"github.com/etc-sudonters/zootler/internal/bag"
-	"github.com/etc-sudonters/zootler/internal/set"
 )
 
-// the population, or a subset thereof, from a pool
-type Population set.Hash[Model]
+var _ Selector = With[interface{}]{}
+var _ Selector = Without[interface{}]{}
+var _ Selector = Optional[interface{}]{}
+var _ Selector = DebugSelector{}
 
-// determines component loading behavior for a selector
-type LoadBehavior int
+func UnknownComponent(t reflect.Type) unknownComponent {
+	return unknownComponent(bag.NiceTypeName(t))
+}
 
-const (
-	// the associated component should be loaded
-	ComponentLoad LoadBehavior = iota
-	// the associated component should not be loaded
-	ComponentIgnore
-)
+type unknownComponent string
+
+func (u unknownComponent) Error() string {
+	return "unknown component " + string(u)
+}
+
+type Population interface {
+	Difference(Population) Population
+	Intersect(Population) Population
+	Union(Population) Population
+}
 
 // responsible for looking either individual models or creating a subset of the
 // population that matches the provided selectors
@@ -31,11 +38,8 @@ type Queryable interface {
 }
 
 type Selector interface {
-	// which component pool to select against
 	Component() reflect.Type
-	// creates a new population based on the current population
-	// the secondary return value controls how/if a component is attached
-	Select(current, candidates Population) (Population, LoadBehavior)
+	Select(current, candidates Population) Population
 }
 
 type includable interface {
@@ -55,31 +59,13 @@ func (i componentFromGeneric[T]) Component() reflect.Type {
 	return reflect.TypeOf(t)
 }
 
-// filters entities with an arbitrary entity set
-// when Op is called the current generation is passed as the first arg
-type Arbitrary struct {
-	Elems Population
-	Op    ArbitraryOp
-}
-
-type ArbitraryOp set.Operation[Model, Population, Population]
-
-func (a Arbitrary) Component() reflect.Type {
-	return ModelComponentType
-}
-
-func (a Arbitrary) Select(currentGeneration Population, _ Population) (Population, LoadBehavior) {
-	return Population(a.Op(currentGeneration, a.Elems)), ComponentIgnore
-}
-
-// makes the specified component available, entities w/o this component are excluded
-type Load[T includable] struct {
-	componentFromGeneric[T]
-}
-
 // entities with this component are excluded
 type Without[T includable] struct {
 	componentFromGeneric[T]
+}
+
+func (e Without[T]) Select(current, next Population) Population {
+	return current.Difference(next)
 }
 
 // filter entities to ones with this component, but do not load it
@@ -87,16 +73,16 @@ type With[T includable] struct {
 	componentFromGeneric[T]
 }
 
-func (l Load[T]) Select(currentGeneration Population, candidates Population) (Population, LoadBehavior) {
-	return Population(set.Intersection(candidates, currentGeneration)), ComponentLoad
+func (w With[T]) Select(current, next Population) Population {
+	return current.Intersect(next)
 }
 
-func (e Without[T]) Select(currentGeneration Population, candidates Population) (Population, LoadBehavior) {
-	return Population(set.Difference(currentGeneration, candidates)), ComponentIgnore
+type Optional[T includable] struct {
+	componentFromGeneric[T]
 }
 
-func (w With[T]) Select(currentGeneration Population, candidates Population) (Population, LoadBehavior) {
-	return Population(set.Intersection(candidates, currentGeneration)), ComponentIgnore
+func (o Optional[T]) Select(current, next Population) Population {
+	return current.Union(next)
 }
 
 func (d DebugSelector) Component() reflect.Type {
@@ -105,14 +91,10 @@ func (d DebugSelector) Component() reflect.Type {
 	return target
 }
 
-func (d DebugSelector) Select(
-	currentGeneration Population,
-	candidates Population,
-) (Population, LoadBehavior) {
+func (d DebugSelector) Select(currentGeneration Population, candidates Population) Population {
 	d.F("current generation %+v\n", currentGeneration)
 	d.F("candidates %+v\n", candidates)
-	population, behavior := d.S.Select(currentGeneration, candidates)
+	population := d.S.Select(currentGeneration, candidates)
 	d.F("next generation %+v", population)
-	d.F("behavior %d", behavior)
-	return population, behavior
+	return population
 }

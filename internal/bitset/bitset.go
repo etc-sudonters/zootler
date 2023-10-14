@@ -17,10 +17,6 @@ func Buckets(max int64) int64 {
 	return max/bs64Size + 1
 }
 
-func MaxForBuckets(buckets int64) int64 {
-	return buckets * bs64Size
-}
-
 func New(k int64) Bitset64 {
 	bs := make([]int64, k, k)
 	return Bitset64{k, bs}

@@ -8,7 +8,7 @@ import (
 	"github.com/etc-sudonters/zootler/internal/graph"
 	"github.com/etc-sudonters/zootler/internal/rules"
 	"github.com/etc-sudonters/zootler/pkg/entity"
-	"github.com/etc-sudonters/zootler/pkg/entity/hashpool"
+	"github.com/etc-sudonters/zootler/pkg/entity/bitpool"
 	"github.com/etc-sudonters/zootler/pkg/logic"
 )
 
@@ -24,7 +24,7 @@ type Builder struct {
 func NewBuilder(id Id) *Builder {
 	return &Builder{
 		id,
-		Pool{id, hashpool.New()},
+		Pool{id, bitpool.New(10000)},
 		graph.Builder{G: graph.New()},
 		make(map[edge]entity.View),
 		make(map[graph.Node]entity.View),
@@ -198,7 +198,10 @@ func loadItems(b *Builder, dataDir string) error {
 		}
 
 		for i := 0; i < count; i++ {
-			entity, _ := b.AddEntity(logic.Name(item.Name))
+			entity, err := b.AddEntity(logic.Name(item.Name))
+			if err != nil {
+				return err
+			}
 			entity.Add(logic.Token{})
 			entity.Add(item.Importance)
 			entity.Add(item.Type)

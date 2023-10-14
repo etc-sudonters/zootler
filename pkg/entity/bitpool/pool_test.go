@@ -141,7 +141,7 @@ func TestCanRemoveCustomComponent(t *testing.T) {
 	ent.Remove(myTestComponent{})
 
 	var d myTestComponent
-	if err := ent.Get(&d); err != nil && !errors.Is(err, entity.ErrNotLoaded) {
+	if err := ent.Get(&d); err != nil && !errors.Is(err, entity.ErrNotAssigned) {
 		didNotExpectError(t, err)
 	}
 }
@@ -150,12 +150,12 @@ func TestCanQueryForEntitiesByComponentExistence(t *testing.T) {
 	t.Log("sure would be nice to make this a nice big number")
 	componentsToMake := 10000
 	tagRatio := 7
-	p := New(1000)
+	p := New(10000)
 
 	totalEnts := set.New[entity.Model]()
 	taggedEnts := set.New[entity.Model]()
 
-	for i := 0; i <= componentsToMake; i++ {
+	for i := 0; i < componentsToMake; i++ {
 		v, _ := p.Create()
 		ent := v.(*bitview)
 		totalEnts.Add(ent.Model())
@@ -177,7 +177,7 @@ func TestCanQueryForEntitiesByComponentExistence(t *testing.T) {
 		entity.With[myTestComponent]{},
 		entity.DebugSelector{
 			F: func(s string, a ...any) {},
-			S: entity.Load[myTestComponent]{},
+			S: entity.With[myTestComponent]{},
 		},
 	)
 	if err != nil {
@@ -233,11 +233,11 @@ func TestCanUseMultipleComponents(t *testing.T) {
 	comboQueries, err := p.Query(
 		entity.DebugSelector{
 			F: func(string, ...any) {}, //t.Logf,
-			S: entity.Load[myTestComponent]{},
+			S: entity.With[myTestComponent]{},
 		},
 		entity.DebugSelector{
 			F: t.Logf,
-			S: entity.Load[anotherComponent]{},
+			S: entity.With[anotherComponent]{},
 		},
 	)
 
@@ -261,15 +261,15 @@ func TestCanExcludeEntitiesBasedOnComponent(t *testing.T) {
 	componentsToMake := 1000
 	firstTagRatio := 7
 	secondTagRatio := 5
-	p := New(1000)
+	p := New(int64(componentsToMake))
 
 	totalEnts := set.New[entity.Model]()
 	firstTagEnts := set.New[entity.Model]()
 	secondTagEnt := set.New[entity.Model]()
 
 	for i := 0; i <= componentsToMake; i++ {
-		v, _ := p.Create()
-		ent := v.(*bitview)
+		ent, _ := p.Create()
+
 		totalEnts.Add(ent.Model())
 
 		if (i % firstTagRatio) == 0 {
@@ -284,13 +284,20 @@ func TestCanExcludeEntitiesBasedOnComponent(t *testing.T) {
 	}
 
 	allEntitiesWithoutTags := set.Difference(
-		set.Union(firstTagEnts, secondTagEnt),
 		totalEnts,
+		set.Union(firstTagEnts, secondTagEnt),
 	)
 
+	debuggify := func(q entity.Selector) entity.DebugSelector {
+		return entity.DebugSelector{
+			S: q,
+			F: t.Logf,
+		}
+	}
+
 	queriedAllUntagged, err := p.Query(
-		entity.Without[myTestComponent]{},
-		entity.Without[anotherComponent]{},
+		debuggify(entity.Without[myTestComponent]{}),
+		debuggify(entity.Without[anotherComponent]{}),
 	)
 
 	if err != nil {
@@ -318,13 +325,13 @@ func TestCanExcludeEntitiesBasedOnComponent(t *testing.T) {
 func TestCanFilterWithoutLoading(t *testing.T) {
 	componentsToMake := 10000
 	tagRatio := 7
-	p := New(1000)
+	p := New(int64(componentsToMake * 2))
 
 	totalEnts := set.New[entity.Model]()
 	taggedEnts := set.New[entity.Model]()
 	taggedCount := 0
 
-	for i := 0; i <= componentsToMake; i++ {
+	for i := 0; i < componentsToMake; i++ {
 		v, _ := p.Create()
 		ent := v.(*bitview)
 		totalEnts.Add(ent.Model())
@@ -342,7 +349,7 @@ func TestCanFilterWithoutLoading(t *testing.T) {
 		t.FailNow()
 	}
 
-	queriedEnts, err := p.Query(entity.With[myTestComponent]{})
+	queriedEnts, err := p.Query(entity.Without[myTestComponent]{})
 
 	if err != nil {
 		didNotExpectError(t, err)
@@ -351,7 +358,7 @@ func TestCanFilterWithoutLoading(t *testing.T) {
 	var comp myTestComponent
 	for _, ent := range queriedEnts {
 		err := ent.Get(&comp)
-		if errors.Is(err, entity.ErrNotLoaded) {
+		if errors.Is(err, entity.ErrNotAssigned) {
 			continue
 		}
 
@@ -363,8 +370,8 @@ func TestCanFilterWithoutLoading(t *testing.T) {
 		t.Fail()
 	}
 
-	if len(queriedEnts) != taggedCount {
-		t.Logf("expected %d elements", componentsToMake/tagRatio)
+	if len(queriedEnts) != (componentsToMake - taggedCount) {
+		t.Logf("expected %d elements", componentsToMake-taggedCount)
 		t.Logf("got %d elements", len(queriedEnts))
 		t.Fail()
 	}

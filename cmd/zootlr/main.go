@@ -31,7 +31,7 @@ func main() {
 	}
 
 	locations, err := builder.Pool.Query(
-		entity.Load[logic.Name]{},
+		entity.With[logic.Name]{},
 		entity.With[logic.Location]{},
 		entity.Without[logic.Beehive]{},
 		entity.Without[logic.Cow]{},
@@ -39,10 +39,7 @@ func main() {
 		entity.Without[logic.Drop]{},
 		entity.Without[logic.Flying]{},
 		entity.Without[logic.GoldSkulltula]{},
-		entity.Without[logic.Inhabited]{},
-		entity.Without[logic.MasterQuest]{},
 		entity.Without[logic.Pot]{},
-		entity.Without[logic.Refill]{},
 		entity.Without[logic.RupeeTower]{},
 		entity.Without[logic.Shop]{},
 		entity.Without[logic.SmallCrate]{},
@@ -51,13 +48,12 @@ func main() {
 	)
 
 	if err != nil {
-		panic("oh no!")
+		panic(err)
 	}
 
 	tokens, err := builder.Pool.Query(
-		entity.Load[logic.Name]{},
+		entity.With[logic.Name]{},
 		entity.With[logic.Token]{},
-		entity.Without[logic.Inhabited]{},
 	)
 
 	if err != nil {
@@ -73,8 +69,8 @@ func main() {
 
 	placedSongs, err := world.Entities.Query(
 		entity.With[logic.Token]{},
-		entity.Load[logic.Name]{},
-		entity.Load[logic.Inhabits]{},
+		entity.With[logic.Name]{},
+		entity.With[logic.Inhabits]{},
 	)
 
 	if err != nil {

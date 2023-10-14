@@ -81,7 +81,7 @@ func Intersection[E Id, S Constraint[E], T Constraint[E]](s S, t T) Hash[E] {
 
 	for k := range s {
 		if _, ok := t[k]; ok {
-			u[k] = struct{}{}
+			u.Add(k)
 		}
 	}
 

@@ -4,25 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+
+	"github.com/etc-sudonters/zootler/internal/bag"
 )
 
-// used to fill in the blanks when a component is optional
-var ComponentType reflect.Type
-var OptionalComponent Component
-var OptionalComponentType reflect.Type
-var ModelComponentType reflect.Type
 var ErrNotLoaded = errors.New("not loaded")
 var ErrNotAssigned = errors.New("not assigned")
-
-func init() {
-	optional := optionalComponent{}
-	OptionalComponent = Component(optional)
-	OptionalComponentType = reflect.TypeOf(optional)
-	ComponentType = reflect.TypeOf([]Component{}).Elem()
-	ModelComponentType = reflect.TypeOf(Model(0))
-}
-
-type optionalComponent struct{}
 
 // a member of a pool's population
 type Model uint
@@ -39,7 +26,7 @@ func ComponentName(c Component) string {
 		return "nil"
 	}
 
-	return reflect.TypeOf(c).Name()
+	return bag.NiceTypeName(reflect.TypeOf(c))
 }
 
 // a mutable reference to a pool population member

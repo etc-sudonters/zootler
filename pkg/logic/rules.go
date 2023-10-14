@@ -23,7 +23,7 @@ func (h hasQuantityOf) Fulfill(q entity.Queryable) (bool, error) {
 	acquiredTokens, err := q.Query(
 		entity.With[Collected]{},
 		entity.With[Token]{},
-		entity.Load[Name]{},
+		entity.With[Name]{},
 	)
 	if err != nil {
 		return false, err
@@ -54,7 +54,7 @@ func (t *TrickEnabled) Fulfill(q entity.Queryable) (bool, error) {
 	enabledTricks, err := q.Query(
 		entity.With[Trick]{},
 		entity.With[Enabled]{},
-		entity.Load[Name]{},
+		entity.With[Name]{},
 	)
 
 	if err != nil {

@@ -5,26 +5,22 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/etc-sudonters/zootler/internal/bag"
 	"github.com/etc-sudonters/zootler/internal/bitset"
 	"github.com/etc-sudonters/zootler/pkg/entity"
 )
-
-func notImpled() error {
-	panic("not impl")
-}
 
 var ErrNoMoreIds = errors.New("no more ids available")
 var ErrNoEntities = errors.New("no entities")
 var _ entity.Pool = (*bitpool)(nil)
 var _ entity.View = (*bitview)(nil)
+var _ entity.Population = bitpop{}
 
 func New(maxId int64) *bitpool {
 	buckets := bitset.Buckets(maxId)
 	b := bitset.New(buckets)
 	return &bitpool{
 		k:      buckets,
-		maxId:  entity.Model(bitset.MaxForBuckets(buckets)),
+		maxId:  entity.Model(maxId),
 		nextId: 0,
 		all:    &b,
 		tests:  make(map[reflect.Type]*bitset.Bitset64),
@@ -38,31 +34,32 @@ func (b *bitpool) Query(q entity.Selector, qs ...entity.Selector) ([]entity.View
 		return nil, ErrNoEntities
 	}
 
-	population := bitset.NewFrom(*b.all)
 	test := q.Component()
 	members, ok := b.tests[test]
 	if !ok {
-		panic(fmt.Errorf("unknown component %s", bag.NiceTypeName(test)))
+		return nil, entity.UnknownComponent(test)
 	}
-	population = q.Select(population, members)
+
+	population := q.Select(bitpop{*b.all}, bitpop{*members})
 
 	for _, q = range qs {
 		test = q.Component()
 		members, ok = b.tests[test]
 		if !ok {
-			panic(fmt.Errorf("unknown component %s", bag.NiceTypeName(test)))
+			return nil, entity.UnknownComponent(test)
 		}
-		population = q.Select(population, members)
-	}
+		population = q.Select(population, bitpop{*members})
 
-	if bitset.Empty(population) {
-		return nil, ErrNoEntities
+		if bitset.Empty((population.(bitpop)).b) {
+			return nil, ErrNoEntities
+		}
 	}
 
 	var entities []entity.View
+	p := (population.(bitpop)).b
 
 	for i := int64(0); i < int64(b.nextId); i++ {
-		if population.Test(i) {
+		if p.Test(i) {
 			e := bitview{entity.Model(i), b}
 			entities = append(entities, &e)
 		}
@@ -159,4 +156,20 @@ func tryFindCompFor(p *bitpool, m entity.Model) func(reflect.Type) (entity.Compo
 		}
 		return p.table[t][m], nil
 	}
+}
+
+type bitpop struct {
+	b bitset.Bitset64
+}
+
+func (b bitpop) Difference(o entity.Population) entity.Population {
+	return bitpop{b.b.Difference((o.(bitpop).b))}
+}
+
+func (b bitpop) Intersect(e entity.Population) entity.Population {
+	return bitpop{b.b.Intersect((e.(bitpop).b))}
+}
+
+func (b bitpop) Union(e entity.Population) entity.Population {
+	return bitpop{b.b.Union((e.(bitpop)).b)}
 }
