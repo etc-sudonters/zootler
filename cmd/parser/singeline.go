@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/etc-sudonters/zootler/internal/console"
+	"github.com/etc-sudonters/zootler/internal/ioutil"
 	"github.com/etc-sudonters/zootler/internal/rules"
 )
 
@@ -96,6 +96,6 @@ func (s *singleLine) writeCloseParen() {
 	s.b.WriteString(s.bracketColor().Paint(")"))
 }
 
-func (s singleLine) bracketColor() console.ForegroundColor {
+func (s singleLine) bracketColor() ioutil.ForegroundColor {
 	return bracketColors[s.depth%len(bracketColors)]
 }

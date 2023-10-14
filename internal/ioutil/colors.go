@@ -1,6 +1,10 @@
-package console
+package ioutil
 
 import "fmt"
+
+type ConsolePainter interface {
+	Paint(string) string
+}
 
 type BackgroundColor color
 type ForegroundColor color
@@ -18,6 +22,10 @@ func (r Reset) String() string {
 
 func (f ForegroundColor) Paint(s string) string {
 	return fmt.Sprintf("%s%s%s", paint(color(f), canvasFore), s, Reset{})
+}
+
+func (b BackgroundColor) Paint(s string) string {
+	return fmt.Sprintf("%s%s%s", paint(color(b), canvasBack), s, Reset{})
 }
 
 func paint(clr color, cnv canvas) string {

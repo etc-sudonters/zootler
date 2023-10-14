@@ -31,20 +31,8 @@ func main() {
 	}
 
 	locations, err := builder.Pool.Query(
-		entity.With[logic.Name]{},
 		entity.With[logic.Location]{},
-		entity.Without[logic.Beehive]{},
-		entity.Without[logic.Cow]{},
-		entity.Without[logic.Crate]{},
-		entity.Without[logic.Drop]{},
-		entity.Without[logic.Flying]{},
-		entity.Without[logic.GoldSkulltula]{},
-		entity.Without[logic.Pot]{},
-		entity.Without[logic.RupeeTower]{},
-		entity.Without[logic.Shop]{},
-		entity.Without[logic.SmallCrate]{},
-		entity.Without[logic.Hint]{},
-		entity.Without[logic.HintStone]{},
+		entity.With[logic.Song]{},
 	)
 
 	if err != nil {
@@ -52,12 +40,12 @@ func main() {
 	}
 
 	tokens, err := builder.Pool.Query(
-		entity.With[logic.Name]{},
+		entity.With[logic.Song]{},
 		entity.With[logic.Token]{},
 	)
 
 	if err != nil {
-		panic("bruno")
+		panic(err)
 	}
 
 	world := builder.Build()
@@ -69,8 +57,8 @@ func main() {
 
 	placedSongs, err := world.Entities.Query(
 		entity.With[logic.Token]{},
-		entity.With[logic.Name]{},
 		entity.With[logic.Inhabits]{},
+		entity.With[logic.Song]{},
 	)
 
 	if err != nil {
@@ -99,10 +87,7 @@ func main() {
 }
 
 func placeItems(locations []entity.View, itempool []entity.View) {
-	fmt.Print("placing items")
 	var err error
-
-	fmt.Printf("Placing %d items in %d locations\n", len(itempool), len(locations))
 
 	L := stack.From(locations)
 	I := stack.From(itempool)
@@ -115,12 +100,10 @@ func placeItems(locations []entity.View, itempool []entity.View) {
 
 		loc, L, err = L.Pop()
 		if err != nil {
-			fmt.Print("No more locations, exiting")
 			break
 		}
 		token, I, err = I.Pop()
 		if err != nil {
-			fmt.Print("No more items, exiting")
 			break
 		}
 
@@ -128,7 +111,6 @@ func placeItems(locations []entity.View, itempool []entity.View) {
 
 		var inh logic.Inhabited
 		loc.Get(&inh)
-		fmt.Printf("%+v", inh)
 	}
 }
 
@@ -138,7 +120,6 @@ func placeItem(loc, token entity.View) {
 	loc.Get(&locName)
 	token.Get(&itemName)
 
-	fmt.Printf("Placing %s at '%s'\n", itemName, locName)
 	loc.Add(logic.Inhabited(token.Model()))
 	token.Add(logic.Inhabits(loc.Model()))
 }

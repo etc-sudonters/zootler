@@ -8,12 +8,12 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/etc-sudonters/zootler/internal/console"
+	"github.com/etc-sudonters/zootler/internal/ioutil"
 	"github.com/etc-sudonters/zootler/internal/rules"
 	"muzzammil.xyz/jsonc"
 )
 
-var parseErrorColor console.ForegroundColor = 141
+var parseErrorColor ioutil.ForegroundColor = 141
 var compressWhiteSpaceRe *regexp.Regexp = regexp.MustCompile(`\s+`)
 var leadWhiteSpace *regexp.Regexp = regexp.MustCompile(`^\s+`)
 var trailWhiteSpace *regexp.Regexp = regexp.MustCompile(`\s+$`)
@@ -154,7 +154,7 @@ func parseAll[E ~string, R ~string, M map[E]R, N ~string](ctx string, m M, regio
 	}
 }
 
-const errColor console.BackgroundColor = 210
+const errColor ioutil.BackgroundColor = 210
 
 func manyVisitors(v ...rules.AstVisitor) rules.AstVisitor {
 	return manyVisit{v}
