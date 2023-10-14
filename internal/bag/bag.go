@@ -10,6 +10,13 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
+func Max[A constraints.Ordered](a, b A) A {
+	if a > b {
+		return a
+	}
+	return b
+}
+
 // returns a if a < b otherwise b
 func Min[A constraints.Ordered](a, b A) A {
 	if a < b {

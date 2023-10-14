@@ -46,11 +46,11 @@ func main() {
 	loadLogic(logicFileDir, filt, pretty)
 
 	if showHelpers {
-		loadHelpers(logicFileDir, filt, newDual, showHelpers, pretty)
+		loadHelpers(logicFileDir, filt, showHelpers, pretty)
 	}
 }
 
-func loadHelpers(logicDir string, filt filter, f func() *dualVisit, display bool, pretty bool) {
+func loadHelpers(logicDir string, filt filter, display bool, pretty bool) {
 	contents, err := os.ReadFile(filepath.Join(logicDir, "LogicHelpers.json"))
 	if err != nil {
 		panic(err)
@@ -75,12 +75,11 @@ func loadHelpers(logicDir string, filt filter, f func() *dualVisit, display bool
 		}
 
 		if display && !filt.errsOnly {
-			v := f()
-			totalRule.Rule.Visit(v)
-			pretty := v.pretty.b.String()
-			single := v.single.b.String()
+			fancy := newFancy()
+			single := newSingleLine()
+			totalRule.Rule.Visit(manyVisitors(fancy, single))
 			fmt.Fprintf(os.Stdout, "Name:\t%s\n", name)
-			fmt.Fprintf(os.Stdout, "Helper:\t%s\n%s\n", single, pretty)
+			fmt.Fprintf(os.Stdout, "Helper:\t%s\n%s\n", single.b.String(), fancy.b.String())
 		}
 
 	}
@@ -107,24 +106,18 @@ func loadLogic(logicDir string, filt filter, pretty bool) {
 			if !filt.MatchRegion(logicLocation.Region) {
 				continue
 			}
-			ParseAllChecks(logicLocation, newDual, filt, pretty)
+			ParseAllChecks(logicLocation, filt, pretty)
 		}
 	}
 }
-func newDual() *dualVisit {
-	return &dualVisit{
-		pretty: newFancy(),
-		single: newSingleLine(),
-	}
+
+func ParseAllChecks(loc rules.RawLogicLocation, filt filter, pretty bool) {
+	parseAll("Event", loc.Events, loc.Region, filt, pretty)
+	parseAll("Check", loc.Locations, loc.Region, filt, pretty)
+	parseAll("Exit", loc.Exits, loc.Region, filt, pretty)
 }
 
-func ParseAllChecks(loc rules.RawLogicLocation, f func() *dualVisit, filt filter, pretty bool) {
-	parseAll("Event", loc.Events, loc.Region, f, filt, pretty)
-	parseAll("Check", loc.Locations, loc.Region, f, filt, pretty)
-	parseAll("Exit", loc.Exits, loc.Region, f, filt, pretty)
-}
-
-func parseAll[E ~string, R ~string, M map[E]R, N ~string, F func() *dualVisit](ctx string, m M, region N, f F, filt filter, prettiness bool) {
+func parseAll[E ~string, R ~string, M map[E]R, N ~string](ctx string, m M, region N, filt filter, prettiness bool) {
 	if !filt.MatchKind(ctx) {
 		return
 	}
@@ -147,15 +140,14 @@ func parseAll[E ~string, R ~string, M map[E]R, N ~string, F func() *dualVisit](c
 		}
 
 		if !filt.errsOnly {
-			v := f()
-			totalRule.Rule.Visit(v)
-			single := v.single.b.String()
+			fancy := newFancy()
+			single := newSingleLine()
+			totalRule.Rule.Visit(manyVisitors(fancy, single))
 			fmt.Fprintf(os.Stdout, "Region:\t%s\nName:\t%s\nKind:\t%s\n", region, check, ctx)
 			fmt.Fprintf(os.Stdout, "Raw:\t%s\n", rule)
-			fmt.Fprintf(os.Stdout, "Rule:\t%s\n", single)
+			fmt.Fprintf(os.Stdout, "Rule:\t%s\n", single.b.String())
 			if prettiness {
-				pretty := v.pretty.b.String()
-				fmt.Fprintf(os.Stdout, "%s\n", pretty)
+				fmt.Fprintf(os.Stdout, "%s\n", fancy.b.String())
 			}
 			fmt.Fprint(os.Stdout, "\n")
 		}
@@ -164,54 +156,55 @@ func parseAll[E ~string, R ~string, M map[E]R, N ~string, F func() *dualVisit](c
 
 const errColor console.BackgroundColor = 210
 
-type dualVisit struct {
-	pretty *FancyAstWriter
-	single *singleLine
+func manyVisitors(v ...rules.AstVisitor) rules.AstVisitor {
+	return manyVisit{v}
 }
 
-func (d dualVisit) VisitAttrAccess(n *rules.AttrAccess) {
-	d.pretty.VisitAttrAccess(n)
-	d.single.VisitAttrAccess(n)
+type manyVisit struct {
+	visitors []rules.AstVisitor
 }
-func (d dualVisit) VisitBinOp(n *rules.BinOp) {
-	d.pretty.VisitBinOp(n)
-	d.single.VisitBinOp(n)
+
+func (m manyVisit) visit(n rules.Expression) {
+	for _, v := range m.visitors {
+		if v == nil {
+			continue
+		}
+		n.Visit(v)
+	}
 }
-func (d dualVisit) VisitBoolOp(n *rules.BoolOp) {
-	d.pretty.VisitBoolOp(n)
-	d.single.VisitBoolOp(n)
+
+func (m manyVisit) VisitAttrAccess(n *rules.AttrAccess) {
+	m.visit(n)
 }
-func (d dualVisit) VisitBoolean(n *rules.Boolean) {
-	d.pretty.VisitBoolean(n)
-	d.single.VisitBoolean(n)
+func (m manyVisit) VisitBinOp(n *rules.BinOp) {
+	m.visit(n)
 }
-func (d dualVisit) VisitCall(n *rules.Call) {
-	d.pretty.VisitCall(n)
-	d.single.VisitCall(n)
+func (m manyVisit) VisitBoolOp(n *rules.BoolOp) {
+	m.visit(n)
 }
-func (d dualVisit) VisitIdentifier(n *rules.Identifier) {
-	d.pretty.VisitIdentifier(n)
-	d.single.VisitIdentifier(n)
+func (m manyVisit) VisitBoolean(n *rules.Boolean) {
+	m.visit(n)
 }
-func (d dualVisit) VisitNumber(n *rules.Number) {
-	d.pretty.VisitNumber(n)
-	d.single.VisitNumber(n)
+func (m manyVisit) VisitCall(n *rules.Call) {
+	m.visit(n)
 }
-func (d dualVisit) VisitString(n *rules.String) {
-	d.pretty.VisitString(n)
-	d.single.VisitString(n)
+func (m manyVisit) VisitIdentifier(n *rules.Identifier) {
+	m.visit(n)
 }
-func (d dualVisit) VisitSubscript(n *rules.Subscript) {
-	d.pretty.VisitSubscript(n)
-	d.single.VisitSubscript(n)
+func (m manyVisit) VisitNumber(n *rules.Number) {
+	m.visit(n)
 }
-func (d dualVisit) VisitTuple(n *rules.Tuple) {
-	d.pretty.VisitTuple(n)
-	d.single.VisitTuple(n)
+func (m manyVisit) VisitString(n *rules.String) {
+	m.visit(n)
 }
-func (d dualVisit) VisitUnary(n *rules.UnaryOp) {
-	d.pretty.VisitUnary(n)
-	d.single.VisitUnary(n)
+func (m manyVisit) VisitSubscript(n *rules.Subscript) {
+	m.visit(n)
+}
+func (m manyVisit) VisitTuple(n *rules.Tuple) {
+	m.visit(n)
+}
+func (m manyVisit) VisitUnary(n *rules.UnaryOp) {
+	m.visit(n)
 }
 
 func compressWhiteSpace(r string) string {

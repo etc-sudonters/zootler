@@ -12,6 +12,7 @@ var OptionalComponent Component
 var OptionalComponentType reflect.Type
 var ModelComponentType reflect.Type
 var ErrNotLoaded = errors.New("not loaded")
+var ErrNotAssigned = errors.New("not assigned")
 
 func init() {
 	optional := optionalComponent{}
@@ -88,5 +89,4 @@ type Pool interface {
 // responsible for creation and destruction of models
 type Manager interface {
 	Create() (View, error)
-	Delete(View) error
 }

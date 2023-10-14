@@ -1,11 +1,9 @@
 package rules
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"strings"
-	"unicode/utf8"
 
 	"muzzammil.xyz/jsonc"
 )
@@ -53,77 +51,4 @@ func ReadLogicFile(fp string) ([]RawLogicLocation, error) {
 	}
 
 	return locs, nil
-}
-
-func LexAllLocationRules(loc RawLogicLocation) error {
-	var allErrs []error
-
-	for check, rule := range loc.Locations {
-		name := fmt.Sprintf("%s: %s", loc.Region, check)
-		if err := lexEntire(name, rule); err != nil {
-			allErrs = append(allErrs, err)
-		}
-	}
-
-	for exit, rule := range loc.Exits {
-		if err := lexEntire(string(exit), rule); err != nil {
-			allErrs = append(allErrs, err)
-		}
-	}
-
-	for event, rule := range loc.Events {
-		name := fmt.Sprintf("%s %s", loc.Region, event)
-		if err := lexEntire(name, rule); err != nil {
-			allErrs = append(allErrs, err)
-		}
-	}
-
-	if allErrs != nil {
-		return errors.Join(allErrs...)
-	}
-
-	return nil
-}
-
-func lexEntire(name string, rawRule RawRule) error {
-	var rule string = string(rawRule)
-	l := NewLexer(name, rule)
-	runeCount := utf8.RuneCountInString(rule)
-	i := 0
-	collected := []Item{}
-
-	for {
-		if i > runeCount {
-			repr := &strings.Builder{}
-			fmt.Fprintf(repr, "lexer %s spinning, killing test", l.name)
-			fmt.Fprintf(repr, "collected tokens %+v", collected)
-			fmt.Fprintf(repr, "lexer state %+v", l)
-			return errors.New(repr.String())
-		}
-
-		item := l.nextItem()
-		if item.Type == ItemEof {
-			break
-		}
-
-		collected = append(collected, item)
-
-		// collect err but not eof
-		if item.Type == ItemErr {
-			break
-		}
-
-		i++
-	}
-
-	lastTok := collected[len(collected)-1]
-	if lastTok.Type == ItemErr {
-		repr := &strings.Builder{}
-		fmt.Fprintf(repr, "failed to parse %s\n", name)
-		fmt.Fprintf(repr, "err: %s", lastTok)
-		fmt.Fprintf(repr, "rule snippet: %.50q", rule)
-		return errors.New(repr.String())
-	}
-
-	return nil
 }

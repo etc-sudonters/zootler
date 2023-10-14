@@ -8,6 +8,7 @@ import (
 )
 
 var _ entity.Pool = (*Pool)(nil)
+var _ entity.View = (*view)(nil)
 
 type entityBuckets map[entity.Model]entity.Component
 type componentBuckets map[reflect.Type]entity.Component
@@ -52,22 +53,6 @@ func (p *Pool) createCore() *view {
 
 func (p *Pool) Create() (entity.View, error) {
 	return p.createCore(), nil
-}
-
-func (p *Pool) Delete(v entity.View) error {
-	m := v.(*view)
-	model := m.m
-	delete(p.population, model)
-
-	for _, members := range p.membership {
-		delete(members, model)
-	}
-
-	m.loaded = nil
-	m.session = nil
-	m.origin = nil
-
-	return nil
 }
 
 func ensureTable(p *Pool, component entity.Component) {

@@ -23,8 +23,6 @@ const (
 // responsible for looking either individual models or creating a subset of the
 // population that matches the provided selectors
 type Queryable interface {
-	// return every model currently loaded
-	All() set.Hash[Model]
 	// return a subset of the population that matches the provided selectors
 	Query(Selector, ...Selector) ([]View, error)
 	// load the specified components from the specified model, if a component
