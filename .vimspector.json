@@ -1,10 +1,10 @@
 {
   "configurations": {
-    "run": {
+    "zootler": {
       "adapter": "vscode-go",
       "configuration": {
         "request": "launch",
-        "program": "${workspaceRoot}/cmd/zootler/...",
+        "program": "${workspaceRoot}/cmd/zootler/",
         "args": [
           "-d",
           "${workspaceRoot}/inputs/data/",
