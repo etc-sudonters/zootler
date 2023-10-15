@@ -1,6 +1,8 @@
 package bitset
 
 import (
+	"fmt"
+
 	"github.com/etc-sudonters/zootler/internal/bag"
 )
 
@@ -126,6 +128,10 @@ func (b Bitset64) Eq(n Bitset64) bool {
 type Bitset64 struct {
 	k  int64
 	bs []int64
+}
+
+func (b Bitset64) String() string {
+	return fmt.Sprintf("Bitset64 { k: %d }", b.k)
 }
 
 const bs64Size = 64

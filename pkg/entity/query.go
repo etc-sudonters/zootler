@@ -11,16 +11,6 @@ var _ Selector = Without[interface{}]{}
 var _ Selector = Optional[interface{}]{}
 var _ Selector = DebugSelector{}
 
-func UnknownComponent(t reflect.Type) unknownComponent {
-	return unknownComponent(bag.NiceTypeName(t))
-}
-
-type unknownComponent string
-
-func (u unknownComponent) Error() string {
-	return "unknown component " + string(u)
-}
-
 type Population interface {
 	Difference(Population) Population
 	Intersect(Population) Population

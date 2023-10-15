@@ -386,10 +386,10 @@ func ParseComponentsFromLocationTag(tag string) []entity.Component {
 func GetAllLocationComponents(p PlacementLocation) []entity.Component {
 	var comps []entity.Component
 
-	comps = append(comps, ParseComponentsFromLocationType(p.Type))
+	comps = append(comps, ParseComponentsFromLocationType(p.Type)...)
 	comps = append(comps, DefaultItem(p.DefaultItem))
 	for _, tag := range p.Tags {
-		comps = append(comps, ParseComponentsFromLocationTag(tag))
+		comps = append(comps, ParseComponentsFromLocationTag(tag)...)
 	}
 
 	return comps

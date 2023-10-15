@@ -79,8 +79,10 @@ func GetExitCode(err error) ExitCode {
 type ExitCode uint8
 
 var (
-	ExitSuccess ExitCode = 0
-	ExitBadFlag ExitCode = 1
-	ExitUnknown ExitCode = 99
-	ExitPanic   ExitCode = 69
+	ExitSuccess      ExitCode = 0
+	ExitBadFlag      ExitCode = 1
+	ExitUnknown      ExitCode = 99
+	ExitPanic        ExitCode = 69
+	ExitParseFailure ExitCode = 100
+	ExitQueryFail    ExitCode = 15
 )

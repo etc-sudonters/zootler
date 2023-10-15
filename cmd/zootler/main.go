@@ -10,7 +10,6 @@ import (
 	"regexp"
 	"runtime/debug"
 
-	"github.com/etc-sudonters/zootler/internal/errs"
 	"github.com/etc-sudonters/zootler/internal/ioutil"
 	"github.com/etc-sudonters/zootler/internal/rules"
 	"github.com/etc-sudonters/zootler/pkg/entity"
@@ -48,6 +47,9 @@ func main() {
 	}()
 	defer func() {
 		if r := recover(); r != nil {
+			if err, ok := r.(error); ok {
+				fmt.Fprintf(stdio.Err, "%s\n", err)
+			}
 			_, _ = stdio.Err.Write(debug.Stack())
 			if exit != ioutil.ExitSuccess {
 				exit = ioutil.AsExitCode(r, ioutil.ExitPanic)
@@ -73,6 +75,24 @@ func main() {
 	if err != nil {
 		exit = ioutil.GetExitCodeOr(err, ioutil.ExitCode(2))
 		fmt.Fprintf(stdio.Err, "Error while parsing files: %s\n", err.Error())
+		return
+	}
+
+	w := b.Build()
+
+	assumed := &world.AssumedFill{
+		Locations: []entity.Selector{entity.With[logic.Song]{}},
+		Items:     []entity.Selector{entity.With[logic.Song]{}},
+	}
+	if err := assumed.Fill(ctx, w, world.ConstGoal(true)); err != nil {
+		exit = ioutil.GetExitCodeOr(err, ioutil.ExitCode(2))
+		fmt.Fprintf(stdio.Err, "Error during placement: %s\n", err.Error())
+		return
+	}
+
+	if err := showTokenPlacements(ctx, w, entity.With[logic.Song]{}); err != nil {
+		exit = ioutil.GetExitCodeOr(err, ioutil.ExitCode(2))
+		fmt.Fprintf(stdio.Err, "Error during placement review: %s\n", err.Error())
 		return
 	}
 }
@@ -135,6 +155,7 @@ func loadItemFile(ctx context.Context, b *world.Builder, path string) error {
 			panic(ioutil.AttachExitCode(err, ioutil.ExitCode(100)))
 		}
 
+		ent.Add(logic.Token{})
 		ent.Add(item.Importance)
 		for _, comp := range item.Components {
 			ent.Add(comp)
@@ -179,7 +200,7 @@ func loadLogicFiles(ctx context.Context, b *world.Builder, locCache map[string]e
 			for check, rule := range loc.Locations {
 				ent, err := b.Pool.Create(logic.Name(check))
 				if err != nil {
-					panic(ioutil.AttachExitCode(err, ioutil.ExitCode(100)))
+					panic(ioutil.AttachExitCode(err, ioutil.ExitParseFailure))
 				}
 				ent.Add(logic.RawRule(rule))
 			}
@@ -190,18 +211,22 @@ func loadLogicFiles(ctx context.Context, b *world.Builder, locCache map[string]e
 				exit := locCache[string(exit)]
 				edge, err := b.AddEdge(region, exit)
 				if err != nil {
-					panic(ioutil.AttachExitCode(err, ioutil.ExitCode(100)))
+					panic(ioutil.AttachExitCode(err, ioutil.ExitParseFailure))
 				}
 				edge.Add(logic.RawRule(raw))
 
 				lex := rules.NewLexer(name, raw)
 				parser := rules.NewParser(lex)
 				rule, err := parser.ParseTotalRule()
+				if err != nil {
+					panic(ioutil.AttachExitCode(err, ioutil.ExitParseFailure))
+				}
+				edge.Add(logic.ParsedRule{E: rule.Rule})
 			}
 		}
 	}
 
-	return errs.NotImplErr
+	return nil
 }
 
 func compressWhiteSpace(r string) string {
@@ -213,3 +238,34 @@ func compressWhiteSpace(r string) string {
 var compressWhiteSpaceRe *regexp.Regexp = regexp.MustCompile(`\s+`)
 var leadWhiteSpace *regexp.Regexp = regexp.MustCompile(`^\s+`)
 var trailWhiteSpace *regexp.Regexp = regexp.MustCompile(`\s+$`)
+
+func showTokenPlacements(ctx context.Context, w world.World, qs ...entity.Selector) error {
+	placed, err := w.Entities.Query(entity.With[logic.Inhabits]{}, qs...)
+	if err != nil {
+		return fmt.Errorf("while querying placements: %w", err)
+	}
+	stdio, _ := ioutil.StdFromContext(ctx)
+
+	for _, tok := range placed {
+		var itemName logic.Name
+		var placementName logic.Name
+		var placement logic.Inhabits
+
+		err = tok.Get(&itemName)
+		if err != nil {
+			return err
+		}
+		err = tok.Get(&placement)
+		if err != nil {
+			return err
+		}
+		w.Entities.Get(entity.Model(placement), &placementName)
+		if placementName == "" {
+			return fmt.Errorf("%v did not have an attached name", placement)
+		}
+
+		fmt.Fprintf(stdio.Out, "%s placed at %s", itemName, placementName)
+	}
+
+	return nil
+}

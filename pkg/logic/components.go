@@ -20,5 +20,7 @@ type (
 	Token      struct{}
 	Inhabited  entity.Model
 	Inhabits   entity.Model
-	ParsedRule rules.Expression
+	ParsedRule struct {
+		E rules.Expression
+	}
 )

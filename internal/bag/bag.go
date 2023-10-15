@@ -36,8 +36,22 @@ func Contains[E comparable, T ~[]E](needle E, haystack T) bool {
 	return false
 }
 
+func Map[A any, AT ~[]A, B any](as AT, f func(A) B) []B {
+	bs := make([]B, len(as))
+
+	for i, a := range as {
+		bs[i] = f(a)
+	}
+
+	return bs
+}
+
 // returns the name of the type represented, if it is a pointer & is prefixed
 func NiceTypeName(t reflect.Type) string {
+	if t == nil {
+		return "nil"
+	}
+
 	if t.Kind() != reflect.Pointer {
 		return t.Name()
 	}

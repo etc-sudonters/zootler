@@ -4,7 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 
+	"github.com/etc-sudonters/zootler/internal/bag"
 	"github.com/etc-sudonters/zootler/internal/bitset"
 	"github.com/etc-sudonters/zootler/pkg/entity"
 )
@@ -28,6 +30,10 @@ func New(maxId int64) *bitpool {
 	}
 }
 
+func unknown(t reflect.Type, b *bitpool) error {
+	return fmt.Errorf("unknown component: %q\navailable:\n%s", bag.NiceTypeName(t), bpSummary{*b})
+}
+
 // return a subset of the population that matches the provided selectors
 func (b *bitpool) Query(q entity.Selector, qs ...entity.Selector) ([]entity.View, error) {
 	if b.nextId == 0 {
@@ -37,7 +43,7 @@ func (b *bitpool) Query(q entity.Selector, qs ...entity.Selector) ([]entity.View
 	test := q.Component()
 	members, ok := b.tests[test]
 	if !ok {
-		return nil, entity.UnknownComponent(test)
+		return nil, unknown(test, b)
 	}
 
 	population := q.Select(bitpop{*b.all}, bitpop{*members})
@@ -46,7 +52,7 @@ func (b *bitpool) Query(q entity.Selector, qs ...entity.Selector) ([]entity.View
 		test = q.Component()
 		members, ok = b.tests[test]
 		if !ok {
-			return nil, entity.UnknownComponent(test)
+			return nil, unknown(test, b)
 		}
 		population = q.Select(population, bitpop{*members})
 
@@ -70,7 +76,7 @@ func (b *bitpool) Query(q entity.Selector, qs ...entity.Selector) ([]entity.View
 
 func (b *bitpool) Get(m entity.Model, cs ...interface{}) {
 	for i := range cs {
-		entity.AssignComponentTo(cs[i], tryFindCompFor(b, m))
+		_ = entity.AssignComponentTo(cs[i], tryFindCompFor(b, m))
 	}
 }
 
@@ -81,7 +87,7 @@ func (b *bitpool) Create() (entity.View, error) {
 	v := bitview{id: b.nextId, p: b}
 	b.nextId++
 	b.all.Set(int64(v.id))
-	v.Add(v.id)
+	_ = v.Add(v.id)
 	return &v, nil
 }
 
@@ -92,6 +98,26 @@ type bitpool struct {
 	all    *bitset.Bitset64
 	tests  map[reflect.Type]*bitset.Bitset64
 	table  map[reflect.Type]map[entity.Model]entity.Component
+}
+
+type bpSummary struct {
+	bitpool
+}
+
+func (b bpSummary) String() string {
+	return fmt.Sprintf("bitpool{ k: %d, maxId: %d, nextId: %d, all: %s, tests: %s }", b.k, b.maxId, b.nextId, b.all, b.summarizeTable())
+}
+
+func (b bpSummary) summarizeTable() string {
+	repr := &strings.Builder{}
+	repr.WriteRune('{')
+	repr.WriteRune(' ')
+	for typ, _ := range b.tests {
+		fmt.Fprintf(repr, "%q", typ)
+		repr.WriteRune(' ')
+	}
+	repr.WriteRune('}')
+	return repr.String()
 }
 
 type bitview struct {
@@ -111,7 +137,20 @@ func (b *bitview) Get(w interface{}) error {
 	return entity.AssignComponentTo(w, tryFindCompFor(b.p, b.id))
 }
 
+func (b *bitview) AddMany(cs ...entity.Component) error {
+	for _, c := range cs {
+		if err := b.Add(c); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (b *bitview) Add(c entity.Component) error {
+	if many, ok := c.([]entity.Component); ok {
+		return b.AddMany(many...)
+	}
+
 	typ := reflect.TypeOf(c)
 	ensureTables(b.p, typ)
 	b.p.tests[typ].Set(int64(b.id))
@@ -132,6 +171,10 @@ func (b *bitview) Remove(c entity.Component) error {
 }
 
 func ensureTables(b *bitpool, t reflect.Type) {
+	if t == nil {
+		panic(errors.New("nil component type"))
+	}
+
 	if _, ok := b.tests[t]; !ok {
 		set := bitset.New(b.k)
 		b.tests[t] = &set
