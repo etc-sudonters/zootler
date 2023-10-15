@@ -1,8 +1,8 @@
 package world
 
 import (
-	"github.com/etc-sudonters/zootler/internal/graph"
-	"github.com/etc-sudonters/zootler/pkg/logic"
+	"sudonters/zootler/internal/graph"
+	"sudonters/zootler/pkg/logic"
 )
 
 type RulesAwareSelector[T graph.Direction] struct {

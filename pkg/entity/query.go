@@ -1,9 +1,8 @@
 package entity
 
 import (
+	"fmt"
 	"reflect"
-
-	"github.com/etc-sudonters/zootler/internal/bag"
 )
 
 var _ Selector = With[interface{}]{}
@@ -11,10 +10,26 @@ var _ Selector = Without[interface{}]{}
 var _ Selector = Optional[interface{}]{}
 var _ Selector = DebugSelector{}
 
-type Population interface {
-	Difference(Population) Population
-	Intersect(Population) Population
-	Union(Population) Population
+type LoadBehavior uint
+
+const (
+	_ LoadBehavior = iota
+	ComponentInclude
+	ComponentExclude
+	ComponentOptional
+)
+
+func (l LoadBehavior) String() string {
+	switch uint(l) {
+	case 1:
+		return "Include"
+	case 2:
+		return "Exclude"
+	case 3:
+		return "Optional"
+	default:
+		panic(fmt.Errorf("unknown load behavior %d", l))
+	}
 }
 
 // responsible for looking either individual models or creating a subset of the
@@ -29,7 +44,7 @@ type Queryable interface {
 
 type Selector interface {
 	Component() reflect.Type
-	Select(current, candidates Population) Population
+	Behavior() LoadBehavior
 }
 
 type includable interface {
@@ -39,7 +54,7 @@ type includable interface {
 // something funky happening?
 type DebugSelector struct {
 	F func(string, ...any)
-	S Selector
+	Selector
 }
 
 type componentFromGeneric[T includable] struct{}
@@ -54,8 +69,8 @@ type Without[T includable] struct {
 	componentFromGeneric[T]
 }
 
-func (e Without[T]) Select(current, next Population) Population {
-	return current.Difference(next)
+func (w Without[T]) Behavior() LoadBehavior {
+	return ComponentExclude
 }
 
 // filter entities to ones with this component, but do not load it
@@ -63,28 +78,21 @@ type With[T includable] struct {
 	componentFromGeneric[T]
 }
 
-func (w With[T]) Select(current, next Population) Population {
-	return current.Intersect(next)
+func (w With[T]) Behavior() LoadBehavior {
+	return ComponentInclude
 }
 
 type Optional[T includable] struct {
 	componentFromGeneric[T]
 }
 
-func (o Optional[T]) Select(current, next Population) Population {
-	return current.Union(next)
+func (o Optional[T]) Behavior() LoadBehavior {
+	return ComponentOptional
 }
 
 func (d DebugSelector) Component() reflect.Type {
-	target := d.S.Component()
-	d.F("selecting against %s\n", bag.NiceTypeName(target))
+	target := d.Selector.Component()
+	behavior := d.Selector.Behavior()
+	d.F("%s %s", target, behavior)
 	return target
-}
-
-func (d DebugSelector) Select(currentGeneration Population, candidates Population) Population {
-	d.F("current generation %+v\n", currentGeneration)
-	d.F("candidates %+v\n", candidates)
-	population := d.S.Select(currentGeneration, candidates)
-	d.F("next generation %+v", population)
-	return population
 }

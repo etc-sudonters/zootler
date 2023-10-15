@@ -10,11 +10,11 @@ import (
 	"regexp"
 	"runtime/debug"
 
-	"github.com/etc-sudonters/zootler/internal/ioutil"
-	"github.com/etc-sudonters/zootler/internal/rules"
-	"github.com/etc-sudonters/zootler/pkg/entity"
-	"github.com/etc-sudonters/zootler/pkg/logic"
-	"github.com/etc-sudonters/zootler/pkg/world"
+	"sudonters/zootler/internal/ioutil"
+	"sudonters/zootler/internal/rules"
+	"sudonters/zootler/pkg/entity"
+	"sudonters/zootler/pkg/logic"
+	"sudonters/zootler/pkg/world"
 )
 
 type cliOptions struct {

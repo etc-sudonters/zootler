@@ -3,7 +3,7 @@ package testutils
 import (
 	"testing"
 
-	"github.com/etc-sudonters/zootler/internal/bag"
+	"sudonters/zootler/internal/bag"
 )
 
 func ArrEq[U comparable, S ~[]U, T ~[]U](expected S, actual T, t *testing.T) {

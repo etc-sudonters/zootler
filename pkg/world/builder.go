@@ -3,10 +3,10 @@ package world
 import (
 	"fmt"
 
-	"github.com/etc-sudonters/zootler/internal/graph"
-	"github.com/etc-sudonters/zootler/pkg/entity"
-	"github.com/etc-sudonters/zootler/pkg/entity/bitpool"
-	"github.com/etc-sudonters/zootler/pkg/logic"
+	"sudonters/zootler/internal/graph"
+	"sudonters/zootler/pkg/entity"
+	"sudonters/zootler/pkg/entity/bitpool"
+	"sudonters/zootler/pkg/logic"
 )
 
 type Builder struct {

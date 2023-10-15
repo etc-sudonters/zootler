@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/etc-sudonters/zootler/internal/rules"
+	"sudonters/zootler/internal/rules"
 )
 
 type filter struct {

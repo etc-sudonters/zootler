@@ -1,8 +1,8 @@
 package world
 
 import (
-	"github.com/etc-sudonters/zootler/internal/rules"
-	"github.com/etc-sudonters/zootler/pkg/entity"
+	"sudonters/zootler/internal/rules"
+	"sudonters/zootler/pkg/entity"
 )
 
 type Collection struct {

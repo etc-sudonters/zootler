@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/etc-sudonters/zootler/internal/set"
-	"github.com/etc-sudonters/zootler/pkg/entity"
+	"sudonters/zootler/internal/set"
+	"sudonters/zootler/pkg/entity"
 )
 
 func dump(t *testing.T, v interface{}) {

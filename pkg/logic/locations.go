@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/etc-sudonters/zootler/pkg/entity"
+	"sudonters/zootler/pkg/entity"
 )
 
 // jq -Mr 'reduce .[] as $x ([]; . + $x.categories // []) | .[]' data/locations.json

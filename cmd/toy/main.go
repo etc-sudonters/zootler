@@ -6,10 +6,10 @@ import (
 	"math/rand"
 	"os"
 
-	"github.com/etc-sudonters/zootler/internal/stack"
-	"github.com/etc-sudonters/zootler/pkg/entity"
-	"github.com/etc-sudonters/zootler/pkg/logic"
-	"github.com/etc-sudonters/zootler/pkg/world"
+	"sudonters/zootler/internal/stack"
+	"sudonters/zootler/pkg/entity"
+	"sudonters/zootler/pkg/logic"
+	"sudonters/zootler/pkg/world"
 )
 
 func main() {

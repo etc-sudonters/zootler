@@ -4,7 +4,7 @@ import (
 	"testing"
 	"unicode/utf8"
 
-	"github.com/etc-sudonters/zootler/internal/testutils"
+	"sudonters/zootler/internal/testutils"
 )
 
 func TestCanLexIdentifier(t *testing.T) {

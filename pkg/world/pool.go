@@ -3,8 +3,8 @@ package world
 import (
 	"fmt"
 
-	"github.com/etc-sudonters/zootler/pkg/entity"
-	"github.com/etc-sudonters/zootler/pkg/logic"
+	"sudonters/zootler/pkg/entity"
+	"sudonters/zootler/pkg/logic"
 )
 
 type Pool struct {

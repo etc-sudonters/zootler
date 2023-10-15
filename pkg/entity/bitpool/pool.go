@@ -6,16 +6,16 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/etc-sudonters/zootler/internal/bag"
-	"github.com/etc-sudonters/zootler/internal/bitset"
-	"github.com/etc-sudonters/zootler/pkg/entity"
+	"sudonters/zootler/internal/bag"
+	"sudonters/zootler/internal/bitset"
+	"sudonters/zootler/pkg/entity"
 )
 
 var ErrNoMoreIds = errors.New("no more ids available")
 var ErrNoEntities = errors.New("no entities")
 var _ entity.Pool = (*bitpool)(nil)
 var _ entity.View = (*bitview)(nil)
-var _ entity.Population = bitpop{}
+var _ entity.Subsetter = bitpop{}
 
 func New(maxId int64) *bitpool {
 	buckets := bitset.Buckets(maxId)
@@ -203,14 +203,14 @@ type bitpop struct {
 	b bitset.Bitset64
 }
 
-func (b bitpop) Difference(o entity.Population) entity.Population {
+func (b bitpop) Difference(o entity.Subsetter) entity.Subsetter {
 	return bitpop{b.b.Difference((o.(bitpop).b))}
 }
 
-func (b bitpop) Intersect(e entity.Population) entity.Population {
+func (b bitpop) Intersect(e entity.Subsetter) entity.Subsetter {
 	return bitpop{b.b.Intersect((e.(bitpop).b))}
 }
 
-func (b bitpop) Union(e entity.Population) entity.Population {
+func (b bitpop) Union(e entity.Subsetter) entity.Subsetter {
 	return bitpop{b.b.Union((e.(bitpop)).b)}
 }

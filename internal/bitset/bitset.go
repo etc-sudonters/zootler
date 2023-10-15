@@ -3,7 +3,7 @@ package bitset
 import (
 	"fmt"
 
-	"github.com/etc-sudonters/zootler/internal/bag"
+	"sudonters/zootler/internal/bag"
 )
 
 func Empty(b Bitset64) bool {

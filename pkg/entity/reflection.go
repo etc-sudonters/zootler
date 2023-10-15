@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/etc-sudonters/zootler/internal/bag"
+	"sudonters/zootler/internal/bag"
 )
 
 func isTryDerefErr(e error) bool {

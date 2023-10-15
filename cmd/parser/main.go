@@ -7,8 +7,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/etc-sudonters/zootler/internal/ioutil"
-	"github.com/etc-sudonters/zootler/internal/rules"
+	"sudonters/zootler/internal/ioutil"
+	"sudonters/zootler/internal/rules"
+
 	"muzzammil.xyz/jsonc"
 )
 

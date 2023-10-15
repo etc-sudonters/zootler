@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 
-	"github.com/etc-sudonters/zootler/internal/queue"
-	"github.com/etc-sudonters/zootler/internal/set"
-	"github.com/etc-sudonters/zootler/internal/stack"
+	"sudonters/zootler/internal/queue"
+	"sudonters/zootler/internal/set"
+	"sudonters/zootler/internal/stack"
 )
 
 var (

@@ -5,7 +5,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/etc-sudonters/zootler/pkg/entity"
+	"sudonters/zootler/pkg/entity"
+
 	"muzzammil.xyz/jsonc"
 )
 

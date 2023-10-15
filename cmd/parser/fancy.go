@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/etc-sudonters/zootler/internal/ioutil"
-	"github.com/etc-sudonters/zootler/internal/rules"
+	"sudonters/zootler/internal/ioutil"
+	"sudonters/zootler/internal/rules"
 )
 
 func newFancy() *FancyAstWriter {

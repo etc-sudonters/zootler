@@ -4,10 +4,10 @@ import (
 	"context"
 	"sync"
 
-	"github.com/etc-sudonters/zootler/internal/graph"
-	"github.com/etc-sudonters/zootler/internal/set"
-	"github.com/etc-sudonters/zootler/pkg/entity"
-	"github.com/etc-sudonters/zootler/pkg/logic"
+	"sudonters/zootler/internal/graph"
+	"sudonters/zootler/internal/set"
+	"sudonters/zootler/pkg/entity"
+	"sudonters/zootler/pkg/logic"
 )
 
 type edge struct {

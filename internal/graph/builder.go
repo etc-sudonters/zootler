@@ -3,7 +3,7 @@ package graph
 import (
 	"errors"
 
-	"github.com/etc-sudonters/zootler/internal/bag"
+	"sudonters/zootler/internal/bag"
 )
 
 var ErrNodeNotFound = errors.New("node not found")

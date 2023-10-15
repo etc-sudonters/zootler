@@ -3,9 +3,9 @@ package graph
 import (
 	"testing"
 
-	"github.com/etc-sudonters/zootler/internal/queue"
-	"github.com/etc-sudonters/zootler/internal/stack"
-	"github.com/etc-sudonters/zootler/internal/testutils"
+	"sudonters/zootler/internal/queue"
+	"sudonters/zootler/internal/stack"
+	"sudonters/zootler/internal/testutils"
 )
 
 const (

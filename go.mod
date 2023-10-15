@@ -1,4 +1,4 @@
-module github.com/etc-sudonters/zootler
+module sudonters/zootler
 
 go 1.20
 

@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 
-	"github.com/etc-sudonters/zootler/internal/bag"
-	"github.com/etc-sudonters/zootler/internal/ioutil"
-	"github.com/etc-sudonters/zootler/internal/queue"
-	"github.com/etc-sudonters/zootler/pkg/entity"
-	"github.com/etc-sudonters/zootler/pkg/logic"
+	"sudonters/zootler/internal/bag"
+	"sudonters/zootler/internal/ioutil"
+	"sudonters/zootler/internal/queue"
+	"sudonters/zootler/pkg/entity"
+	"sudonters/zootler/pkg/logic"
 )
 
 type ConstGoal bool
