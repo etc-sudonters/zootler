@@ -1,6 +1,8 @@
 package world
 
 import (
+	"fmt"
+
 	"github.com/etc-sudonters/zootler/pkg/entity"
 	"github.com/etc-sudonters/zootler/pkg/logic"
 )
@@ -13,7 +15,7 @@ type Pool struct {
 func (p Pool) Create(name logic.Name) (entity.View, error) {
 	view, err := p.Pool.Create()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create entity %q: %w", name, err)
 	}
 
 	view.Add(OriginWorld(p.W))

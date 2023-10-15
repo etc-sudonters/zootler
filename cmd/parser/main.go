@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/etc-sudonters/zootler/internal/ioutil"
@@ -14,9 +13,6 @@ import (
 )
 
 var parseErrorColor ioutil.ForegroundColor = 141
-var compressWhiteSpaceRe *regexp.Regexp = regexp.MustCompile(`\s+`)
-var leadWhiteSpace *regexp.Regexp = regexp.MustCompile(`^\s+`)
-var trailWhiteSpace *regexp.Regexp = regexp.MustCompile(`\s+$`)
 
 func main() {
 	var logicFileDir string
@@ -205,10 +201,4 @@ func (m manyVisit) VisitTuple(n *rules.Tuple) {
 }
 func (m manyVisit) VisitUnary(n *rules.UnaryOp) {
 	m.visit(n)
-}
-
-func compressWhiteSpace(r string) string {
-	r = trailWhiteSpace.ReplaceAllLiteralString(r, "")
-	r = leadWhiteSpace.ReplaceAllLiteralString(r, "")
-	return compressWhiteSpaceRe.ReplaceAllLiteralString(r, " ")
 }

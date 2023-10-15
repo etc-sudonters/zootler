@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/etc-sudonters/zootler/pkg/entity"
 	"muzzammil.xyz/jsonc"
 )
 
@@ -15,6 +16,8 @@ type (
 	SceneName    string
 	HintGroup    string
 	RawRule      string
+	SaveWarp     string
+	Dungeon      string
 )
 
 type RawLogicLocation struct {
@@ -37,6 +40,28 @@ func (l RawLogicLocation) String() string {
 		l.Region, len(l.Locations), len(l.Exits))
 
 	return repr.String()
+}
+
+func (l RawLogicLocation) Components() []entity.Component {
+	var comps []entity.Component
+
+	if l.Scene != nil {
+		comps = append(comps, *l.Scene)
+	}
+
+	if l.Hint != nil {
+		comps = append(comps, *l.Hint)
+	}
+
+	if l.Dungeon != "" {
+		comps = append(comps, Dungeon(l.Dungeon))
+	}
+
+	if l.SaveWarp != "" {
+		comps = append(comps, SaveWarp(l.SaveWarp))
+	}
+
+	return comps
 }
 
 func ReadLogicFile(fp string) ([]RawLogicLocation, error) {

@@ -10,8 +10,9 @@ import (
 	"github.com/etc-sudonters/zootler/pkg/entity"
 )
 
-//jq -Mr 'reduce .[] as $x ([]; . + $x.categories // []) | .[]' data/locations.json
+// jq -Mr 'reduce .[] as $x ([]; . + $x.categories // []) | .[]' data/locations.json
 type (
+	DefaultItem          string
 	RecoveryHeart        struct{}
 	ActorOverride        struct{}
 	Beehive              struct{}
@@ -386,6 +387,7 @@ func GetAllLocationComponents(p PlacementLocation) []entity.Component {
 	var comps []entity.Component
 
 	comps = append(comps, ParseComponentsFromLocationType(p.Type))
+	comps = append(comps, DefaultItem(p.DefaultItem))
 	for _, tag := range p.Tags {
 		comps = append(comps, ParseComponentsFromLocationTag(tag))
 	}
