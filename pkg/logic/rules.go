@@ -20,11 +20,11 @@ func HasQuantityOf(desired Name, qty uint) hasQuantityOf {
 }
 
 func (h hasQuantityOf) Fulfill(q entity.Queryable) (bool, error) {
-	acquiredTokens, err := q.Query(
+	acquiredTokens, err := q.Query([]entity.Selector{
 		entity.With[Collected]{},
 		entity.With[Token]{},
 		entity.With[Name]{},
-	)
+	})
 	if err != nil {
 		return false, err
 	}
@@ -51,11 +51,11 @@ func (t *TrickEnabled) Fulfill(q entity.Queryable) (bool, error) {
 		return *t.cache, nil
 	}
 
-	enabledTricks, err := q.Query(
+	enabledTricks, err := q.Query([]entity.Selector{
 		entity.With[Trick]{},
 		entity.With[Enabled]{},
 		entity.With[Name]{},
-	)
+	})
 
 	if err != nil {
 		return false, err

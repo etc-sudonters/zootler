@@ -6,7 +6,12 @@ import (
 	"sudonters/zootler/internal/bag"
 )
 
-func Empty(b Bitset64) bool {
+func Saturated(k int64) Bitset64 {
+	b := New(k)
+	return b.Complement()
+}
+
+func IsEmpty(b Bitset64) bool {
 	for i := range b.bs {
 		if b.bs[i] != 0 {
 			return false
@@ -20,7 +25,7 @@ func Buckets(max int64) int64 {
 }
 
 func New(k int64) Bitset64 {
-	bs := make([]int64, k, k)
+	bs := make([]int64, k)
 	return Bitset64{k, bs}
 }
 
@@ -43,7 +48,7 @@ func ClearMany(b *Bitset64, toClear ...int64) {
 }
 
 func TestMany(b Bitset64, toTest ...int64) []bool {
-	res := make([]bool, len(toTest), len(toTest))
+	res := make([]bool, len(toTest))
 
 	for i := range toTest {
 		res[i] = b.Test(toTest[i])

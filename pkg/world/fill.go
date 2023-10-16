@@ -35,11 +35,21 @@ func (a *AssumedFill) Fill(ctx context.Context, w World, g Goal) error {
 	var locs []entity.View
 	var items []entity.View
 
-	locs, err = w.Entities.Pool.Query(entity.With[logic.Location]{}, a.Locations...)
+	var filt []entity.Selector
+
+	filt = make([]entity.Selector, len(a.Locations))
+	filt[0] = entity.With[logic.Location]{}
+	copy(filt[1:], a.Locations)
+
+	locs, err = w.Entities.Pool.Query(filt)
 	if err != nil {
 		return ioutil.AttachExitCode(err, ioutil.ExitQueryFail)
 	}
-	items, err = w.Entities.Pool.Query(entity.With[logic.Token]{}, a.Items...)
+
+	filt = make([]entity.Selector, len(a.Items))
+	filt[0] = entity.With[logic.Item]{}
+	copy(filt[1:], a.Items)
+	items, err = w.Entities.Pool.Query(filt)
 	if err != nil {
 		return ioutil.AttachExitCode(err, ioutil.ExitQueryFail)
 	}

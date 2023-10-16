@@ -15,7 +15,6 @@ var ErrNoMoreIds = errors.New("no more ids available")
 var ErrNoEntities = errors.New("no entities")
 var _ entity.Pool = (*bitpool)(nil)
 var _ entity.View = (*bitview)(nil)
-var _ entity.Subsetter = bitpop{}
 
 func New(maxId int64) *bitpool {
 	buckets := bitset.Buckets(maxId)
@@ -35,37 +34,39 @@ func unknown(t reflect.Type, b *bitpool) error {
 }
 
 // return a subset of the population that matches the provided selectors
-func (b *bitpool) Query(q entity.Selector, qs ...entity.Selector) ([]entity.View, error) {
+func (b *bitpool) Query(qs []entity.Selector) ([]entity.View, error) {
 	if b.nextId == 0 {
 		return nil, ErrNoEntities
 	}
 
-	test := q.Component()
-	members, ok := b.tests[test]
-	if !ok {
-		return nil, unknown(test, b)
-	}
+	subset := bitset.NewFrom(*b.all)
 
-	population := q.Select(bitpop{*b.all}, bitpop{*members})
-
-	for _, q = range qs {
-		test = q.Component()
-		members, ok = b.tests[test]
+	for _, q := range qs {
+		test := q.Component()
+		behavior := q.Behavior()
+		members, ok := b.tests[test]
 		if !ok {
 			return nil, unknown(test, b)
 		}
-		population = q.Select(population, bitpop{*members})
 
-		if bitset.Empty((population.(bitpop)).b) {
+		switch behavior {
+		case entity.ComponentInclude:
+			subset = subset.Intersect(*members)
+		case entity.ComponentExclude:
+			subset = subset.Difference(*members)
+		default:
+			panic(fmt.Errorf("unknown behavior %q", &behavior))
+		}
+
+		if bitset.IsEmpty(subset) {
 			return nil, ErrNoEntities
 		}
 	}
 
 	var entities []entity.View
-	p := (population.(bitpop)).b
 
 	for i := int64(0); i < int64(b.nextId); i++ {
-		if p.Test(i) {
+		if subset.Test(i) {
 			e := bitview{entity.Model(i), b}
 			entities = append(entities, &e)
 		}
@@ -197,20 +198,4 @@ func tryFindCompFor(p *bitpool, m entity.Model) func(reflect.Type) (entity.Compo
 		}
 		return p.table[t][m], nil
 	}
-}
-
-type bitpop struct {
-	b bitset.Bitset64
-}
-
-func (b bitpop) Difference(o entity.Subsetter) entity.Subsetter {
-	return bitpop{b.b.Difference((o.(bitpop).b))}
-}
-
-func (b bitpop) Intersect(e entity.Subsetter) entity.Subsetter {
-	return bitpop{b.b.Intersect((e.(bitpop).b))}
-}
-
-func (b bitpop) Union(e entity.Subsetter) entity.Subsetter {
-	return bitpop{b.b.Union((e.(bitpop)).b)}
 }

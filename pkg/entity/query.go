@@ -7,7 +7,6 @@ import (
 
 var _ Selector = With[interface{}]{}
 var _ Selector = Without[interface{}]{}
-var _ Selector = Optional[interface{}]{}
 var _ Selector = DebugSelector{}
 
 type LoadBehavior uint
@@ -16,7 +15,6 @@ const (
 	_ LoadBehavior = iota
 	ComponentInclude
 	ComponentExclude
-	ComponentOptional
 )
 
 func (l LoadBehavior) String() string {
@@ -36,7 +34,7 @@ func (l LoadBehavior) String() string {
 // population that matches the provided selectors
 type Queryable interface {
 	// return a subset of the population that matches the provided selectors
-	Query(Selector, ...Selector) ([]View, error)
+	Query([]Selector) ([]View, error)
 	// load the specified components from the specified model, if a component
 	// isn't attached to the model its pointer should be set to nil
 	Get(Model, ...interface{})
@@ -80,14 +78,6 @@ type With[T includable] struct {
 
 func (w With[T]) Behavior() LoadBehavior {
 	return ComponentInclude
-}
-
-type Optional[T includable] struct {
-	componentFromGeneric[T]
-}
-
-func (o Optional[T]) Behavior() LoadBehavior {
-	return ComponentOptional
 }
 
 func (d DebugSelector) Component() reflect.Type {

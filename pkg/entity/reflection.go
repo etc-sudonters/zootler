@@ -14,14 +14,14 @@ func isTryDerefErr(e error) bool {
 
 func AssignComponentTo(target interface{}, retrieve func(reflect.Type) (Component, error)) error {
 	if target == nil {
-		return errors.New("nil component reference")
+		return ErrNilComponentPtr
 	}
 
 	value := reflect.ValueOf(target)
 	typ := value.Type()
 
 	if typ.Kind() != reflect.Pointer || value.IsNil() {
-		return errors.New("non-nil pointers only")
+		return ErrNonNilPtrOnly
 	}
 
 	targetType := typ.Elem()

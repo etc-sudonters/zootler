@@ -5,7 +5,7 @@ import (
 
 	"sudonters/zootler/internal/graph"
 	"sudonters/zootler/pkg/entity"
-	"sudonters/zootler/pkg/entity/bitpool"
+	"sudonters/zootler/pkg/entity/bitarrpool"
 	"sudonters/zootler/pkg/logic"
 )
 
@@ -22,7 +22,7 @@ type Builder struct {
 func NewBuilder(id Id) *Builder {
 	return &Builder{
 		id,
-		Pool{id, bitpool.New(10000)},
+		Pool{id, bitarrpool.New(300)},
 		graph.Builder{G: graph.New()},
 		make(map[edge]entity.View),
 		make(map[graph.Node]entity.View),

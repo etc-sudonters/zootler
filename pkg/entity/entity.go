@@ -1,15 +1,11 @@
 package entity
 
 import (
-	"errors"
 	"fmt"
 	"reflect"
 
 	"sudonters/zootler/internal/bag"
 )
-
-var ErrNotLoaded = errors.New("not loaded")
-var ErrNotAssigned = errors.New("not assigned")
 
 // a member of a pool's population
 type Model uint

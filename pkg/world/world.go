@@ -35,7 +35,7 @@ func (w *World) FindReachableWorld(ctx context.Context) (set.Hash[graph.Node], e
 		Visitor: &graph.VisitSet{S: reachable},
 	}
 
-	spawns, err := w.Entities.Query(entity.With[logic.Spawn]{})
+	spawns, err := w.Entities.Query([]entity.Selector{entity.With[logic.Spawn]{}})
 	if err != nil {
 		return nil, err
 	}
