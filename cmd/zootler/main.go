@@ -240,7 +240,11 @@ var leadWhiteSpace *regexp.Regexp = regexp.MustCompile(`^\s+`)
 var trailWhiteSpace *regexp.Regexp = regexp.MustCompile(`\s+$`)
 
 func showTokenPlacements(ctx context.Context, w world.World, qs ...entity.Selector) error {
-	placed, err := w.Entities.Query(entity.With[logic.Inhabits]{}, qs...)
+	filt := make([]entity.Selector, len(qs)+1)
+	filt[0] = entity.With[logic.Inhabits]{}
+	copy(filt[1:], qs)
+
+	placed, err := w.Entities.Query(filt)
 	if err != nil {
 		return fmt.Errorf("while querying placements: %w", err)
 	}

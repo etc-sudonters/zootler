@@ -37,7 +37,7 @@ func (a *AssumedFill) Fill(ctx context.Context, w World, g Goal) error {
 
 	var filt []entity.Selector
 
-	filt = make([]entity.Selector, len(a.Locations))
+	filt = make([]entity.Selector, len(a.Locations)+1)
 	filt[0] = entity.With[logic.Location]{}
 	copy(filt[1:], a.Locations)
 
@@ -46,7 +46,7 @@ func (a *AssumedFill) Fill(ctx context.Context, w World, g Goal) error {
 		return ioutil.AttachExitCode(err, ioutil.ExitQueryFail)
 	}
 
-	filt = make([]entity.Selector, len(a.Items))
+	filt = make([]entity.Selector, len(a.Items)+1)
 	filt[0] = entity.With[logic.Item]{}
 	copy(filt[1:], a.Items)
 	items, err = w.Entities.Pool.Query(filt)

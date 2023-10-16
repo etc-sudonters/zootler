@@ -1,6 +1,7 @@
 package bitarrpool
 
 import (
+	"fmt"
 	"reflect"
 	"sudonters/zootler/pkg/entity"
 )
@@ -27,4 +28,25 @@ func getComponenter(b bitarrview) func(reflect.Type) (entity.Component, error) {
 
 		return comp, nil
 	}
+}
+
+type CompressedRepr struct {
+	bitarrpool
+}
+
+type compressedTableRepr struct {
+	componentTable
+}
+
+func (c compressedTableRepr) String() string {
+	return fmt.Sprintf("componentTable{ rows: %d }", len(c.rows))
+}
+
+func (c CompressedRepr) String() string {
+	return fmt.Sprintf(
+		"bitarrpool{ k: %d, entities: %d, table: %s }",
+		c.componentBucketCount,
+		len(c.entities),
+		compressedTableRepr{c.table},
+	)
 }

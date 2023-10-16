@@ -349,7 +349,7 @@ func TestCanFilterWithoutLoading(t *testing.T) {
 		t.FailNow()
 	}
 
-	queriedEnts, err := p.Query(entity.Without[myTestComponent]{})
+	queriedEnts, err := p.Query([]entity.Selector{entity.Without[myTestComponent]{}})
 
 	if err != nil {
 		didNotExpectError(t, err)

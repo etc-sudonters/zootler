@@ -9,11 +9,8 @@ import (
 
 type bitarrpool struct {
 	componentBucketCount int64
-
-	entities  []bitarrview
-	maxCompId componentId
-	compIds   map[reflect.Type]componentId
-	table     componentTable
+	entities             []bitarrview
+	table                componentTable
 }
 
 var _ entity.Pool = (*bitarrpool)(nil)
@@ -27,42 +24,48 @@ func New(maxComponentId int64) *bitarrpool {
 	return &b
 }
 
+func (p bitarrpool) String() string {
+	return CompressedRepr{p}.String()
+}
+
 func (p *bitarrpool) Create() (entity.View, error) {
 	var view bitarrview
 	view.id = entity.Model(len(p.entities))
 	view.comps = bitset.New(p.componentBucketCount)
 	view.p = p
 	p.entities = append(p.entities, view)
-	return &view, nil
+	return view, nil
 }
 
 // return a subset of the population that matches the provided selectors
 func (p *bitarrpool) Query(qs []entity.Selector) ([]entity.View, error) {
-	mask := bitset.New(p.componentBucketCount)
+	includeMask := bitset.New(p.componentBucketCount)
+	excludeMask := bitset.New(p.componentBucketCount)
 	for _, q := range qs {
 		component := q.Component()
-		id, ok := p.table.id(component)
+		id, ok := p.table.idType(component)
 		if !ok {
 			return nil, entity.ErrUnknownComponent{Type: component}
 		}
 		switch q.Behavior() {
 		case entity.ComponentInclude:
-			mask.Set(int64(id))
+			includeMask.Set(int64(id))
 			break
 		case entity.ComponentExclude:
-			mask.Clear(int64(id))
+			excludeMask.Set(int64(id))
 			break
 		}
 	}
 
-	if bitset.IsEmpty(mask) {
+	if bitset.IsEmpty(includeMask) && bitset.IsEmpty(excludeMask) {
 		// empty bitmask will never select anything
 		return nil, entity.ErrNoEntities
 	}
 
 	var entities []entity.View
-	for _, v := range p.entities {
-		if v.mask(mask).Eq(mask) {
+	for _, v := range p.entities[1:] {
+		if includeMask.Intersect(v.comps).Eq(includeMask) &&
+			v.comps.Difference(excludeMask).Eq(v.comps) {
 			entities = append(entities, v)
 		}
 	}
@@ -83,15 +86,18 @@ func (p *bitarrpool) Get(m entity.Model, cs ...interface{}) {
 func (p *bitarrpool) addCompToEnt(b bitarrview, c entity.Component) error {
 	row := p.table.rowFor(c)
 	row.set(b.Model(), c)
+	id, _ := p.table.idValue(c)
+	b.comps.Set(int64(id))
 	return nil
 }
 
 func (p *bitarrpool) removeCompFromEnt(b bitarrview, c entity.Component) error {
-	id, ok := p.table.id(c)
+	id, ok := p.table.idValue(c)
 	if !ok {
 		return entity.ErrUnknownComponent{Type: reflect.TypeOf(c)}
 	}
 	row := p.table.row(id)
 	row.unset(b.Model())
+	b.comps.Clear(int64(id))
 	return nil
 }

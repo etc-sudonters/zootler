@@ -16,6 +16,10 @@ func (v bitarrview) mask(m bitset.Bitset64) bitset.Bitset64 {
 	return m.Intersect(v.comps)
 }
 
+func (v bitarrview) isFullyMasked(mask bitset.Bitset64) bool {
+	return v.mask(mask).Eq(mask)
+}
+
 func (b bitarrview) String() string {
 	return fmt.Sprintf("bitview{ %d: %s }", b.id, b.comps)
 }

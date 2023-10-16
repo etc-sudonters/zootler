@@ -17,69 +17,74 @@ type componentTable struct {
 	lookup map[reflect.Type]componentId
 }
 
-func (t *componentTable) rowFor(c entity.Component) *componentRow {
-	id, ok := t.id(c)
+func (tbl *componentTable) rowFor(c entity.Component) *componentRow {
+	id, ok := tbl.idValue(c)
 	if !ok {
-		return t.addrow(reflect.TypeOf(c))
+		return tbl.addrow(reflect.TypeOf(c))
 	}
 
-	return t.rows[id]
+	return tbl.rows[id]
 }
 
-func (t componentTable) id(c entity.Component) (componentId, bool) {
-	id, ok := t.lookup[reflect.TypeOf(c)]
+func (tbl componentTable) idType(typ reflect.Type) (componentId, bool) {
+	id, ok := tbl.lookup[typ]
 	if !ok {
 		return INVALID_COMPONENT, false
 	}
 	return id, true
 }
 
-func (c componentTable) row(r componentId) *componentRow {
-	return c.rows[r]
+func (tbl componentTable) idValue(c entity.Component) (componentId, bool) {
+	val := reflect.Indirect(reflect.ValueOf(c))
+	return tbl.idType(val.Type())
 }
 
-func (c *componentTable) addrow(t reflect.Type) *componentRow {
+func (tbl componentTable) row(r componentId) *componentRow {
+	return tbl.rows[r]
+}
+
+func (tbl *componentTable) addrow(t reflect.Type) *componentRow {
 	row := make(componentRow, 1, 128)
-	c.lookup[t] = componentId(len(c.rows))
-	c.rows = append(c.rows, &row)
+	tbl.lookup[t] = componentId(len(tbl.rows))
+	tbl.rows = append(tbl.rows, &row)
 	return &row
 }
 
-func (c *componentTable) init() {
-	c.rows = make([]*componentRow, 1, 128)
-	c.lookup = make(map[reflect.Type]componentId, 128)
-	c.lookup[nil] = 0
+func (tbl *componentTable) init() {
+	tbl.rows = make([]*componentRow, 1, 128)
+	tbl.lookup = make(map[reflect.Type]componentId, 128)
+	tbl.lookup[nil] = 0
 }
 
 type componentRow []entity.Component // idx'd by entId
 
-func (r *componentRow) set(e entity.Model, c entity.Component) {
-	r.ensureSize(int(e))
-	(*r)[e] = c
+func (row *componentRow) set(e entity.Model, c entity.Component) {
+	row.ensureSize(int(e))
+	(*row)[e] = c
 }
 
-func (r *componentRow) unset(e entity.Model) {
-	if len(*r) < int(e) {
+func (row *componentRow) unset(e entity.Model) {
+	if len(*row) < int(e) {
 		return
 	}
 
-	(*r)[e] = nil
+	(*row)[e] = nil
 }
 
-func (r componentRow) get(e entity.Model) entity.Component {
-	if len(r) < int(e) {
+func (row componentRow) get(e entity.Model) entity.Component {
+	if len(row) < int(e) {
 		return nil
 	}
 
-	return r[e]
+	return row[e]
 }
 
-func (r *componentRow) ensureSize(n int) {
-	if len(*r) > n {
+func (row *componentRow) ensureSize(n int) {
+	if len(*row) > n {
 		return
 	}
 
-	row := make(componentRow, n, n*2)
-	copy(row, *r)
-	*r = row
+	expaded := make(componentRow, n+1, n*2)
+	copy(expaded, *row)
+	*row = expaded
 }

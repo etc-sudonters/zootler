@@ -9,7 +9,16 @@ import (
 )
 
 func isTryDerefErr(e error) bool {
-	return errors.Is(e, ErrNotAssigned) || errors.Is(e, ErrNotLoaded)
+	var is = errors.Is(e, ErrNotAssigned) || errors.Is(e, ErrNotLoaded)
+	if is {
+		return true
+	}
+	var unknown ErrUnknownComponent
+	if errors.As(e, &unknown) {
+		return true
+	}
+
+	return false
 }
 
 func AssignComponentTo(target interface{}, retrieve func(reflect.Type) (Component, error)) error {
