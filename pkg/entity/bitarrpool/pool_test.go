@@ -219,7 +219,7 @@ func TestCanExcludeEntitiesBasedOnComponent(t *testing.T) {
 	componentsToMake := 1001
 	firstTagRatio := 7
 	secondTagRatio := 5
-	p := New(int64(componentsToMake))
+	p := New(int(componentsToMake))
 
 	totalEnts := set.New[entity.Model]()
 	firstTagEnts := set.New[entity.Model]()
@@ -281,9 +281,10 @@ func TestCanExcludeEntitiesBasedOnComponent(t *testing.T) {
 }
 
 func TestCanFilterWithoutLoading(t *testing.T) {
+	var lastI = 0
 	defer func() {
 		if p := recover(); p != nil {
-			t.Fatal(p)
+			t.Fatal(p, errs.ShowPanicTrace(), lastI)
 		}
 	}()
 	entitiesToMake := 10000
@@ -295,6 +296,7 @@ func TestCanFilterWithoutLoading(t *testing.T) {
 	taggedCount := 0
 
 	for i := 1; i <= entitiesToMake; i++ {
+		lastI = i
 		v, _ := p.Create()
 		ent := v.(bitarrview)
 		totalEnts.Add(ent.Model())
