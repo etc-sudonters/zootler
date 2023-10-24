@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"sudonters/zootler/internal/ioutil"
 	"sudonters/zootler/internal/rules"
+
+	"github.com/etc-sudonters/substrate/dontio"
 )
 
 func newFancy() *FancyAstWriter {
@@ -16,17 +17,17 @@ func newFancy() *FancyAstWriter {
 }
 
 var (
-	nodeColor    ioutil.ForegroundColor = 244
-	propColor    ioutil.ForegroundColor = 252
-	strColor     ioutil.ForegroundColor = 112
-	numColor     ioutil.ForegroundColor = 33
-	boolColor    ioutil.ForegroundColor = 160
-	identColor   ioutil.ForegroundColor = 99
-	keywordColor ioutil.ForegroundColor = 208
-	fnColor      ioutil.ForegroundColor = 228
+	nodeColor    dontio.ForegroundColor = 244
+	propColor    dontio.ForegroundColor = 252
+	strColor     dontio.ForegroundColor = 112
+	numColor     dontio.ForegroundColor = 33
+	boolColor    dontio.ForegroundColor = 160
+	identColor   dontio.ForegroundColor = 99
+	keywordColor dontio.ForegroundColor = 208
+	fnColor      dontio.ForegroundColor = 228
 )
 
-var bracketColors []ioutil.ForegroundColor = []ioutil.ForegroundColor{
+var bracketColors []dontio.ForegroundColor = []dontio.ForegroundColor{
 	1, 2, 3, 4, 5, 6, 7,
 }
 
@@ -123,7 +124,7 @@ func (a *FancyAstWriter) writeObjectType(o interface{}) {
 	fmt.Fprintf(a.b, nodeColor.Paint("%T"), o)
 }
 
-func (a FancyAstWriter) bracketColor() ioutil.ForegroundColor {
+func (a FancyAstWriter) bracketColor() dontio.ForegroundColor {
 	return bracketColors[a.indent%len(bracketColors)]
 }
 

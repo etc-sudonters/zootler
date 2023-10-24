@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"sudonters/zootler/internal/ioutil"
 	"sudonters/zootler/internal/rules"
+
+	"github.com/etc-sudonters/substrate/dontio"
 )
 
 func newSingleLine() *singleLine {
@@ -96,6 +97,6 @@ func (s *singleLine) writeCloseParen() {
 	s.b.WriteString(s.bracketColor().Paint(")"))
 }
 
-func (s singleLine) bracketColor() ioutil.ForegroundColor {
+func (s singleLine) bracketColor() dontio.ForegroundColor {
 	return bracketColors[s.depth%len(bracketColors)]
 }

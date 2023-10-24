@@ -1,8 +1,9 @@
 package world
 
 import (
-	"sudonters/zootler/internal/graph"
 	"sudonters/zootler/pkg/logic"
+
+	"github.com/etc-sudonters/substrate/skelly/graph"
 )
 
 type RulesAwareSelector[T graph.Direction] struct {

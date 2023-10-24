@@ -3,8 +3,6 @@ package entity
 import (
 	"fmt"
 	"reflect"
-
-	"sudonters/zootler/internal/bag"
 )
 
 // a member of a pool's population
@@ -22,7 +20,7 @@ func ComponentName(c Component) string {
 		return "nil"
 	}
 
-	return bag.NiceTypeName(reflect.TypeOf(c))
+	return reflect.TypeOf(c).Name()
 }
 
 // a mutable reference to a pool population member

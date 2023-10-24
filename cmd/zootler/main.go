@@ -10,11 +10,13 @@ import (
 	"regexp"
 	"runtime/debug"
 
-	"sudonters/zootler/internal/ioutil"
 	"sudonters/zootler/internal/rules"
 	"sudonters/zootler/pkg/entity"
 	"sudonters/zootler/pkg/logic"
 	"sudonters/zootler/pkg/world"
+
+	"github.com/etc-sudonters/substrate/dontio"
+	"github.com/etc-sudonters/substrate/stageleft"
 )
 
 type cliOptions struct {
@@ -36,8 +38,8 @@ func (c cliOptions) validate() error {
 
 func main() {
 	var opts cliOptions
-	var exit ioutil.ExitCode = ioutil.ExitSuccess
-	stdio := ioutil.Std{
+	var exit stageleft.ExitCode = stageleft.ExitSuccess
+	stdio := dontio.Std{
 		In:  os.Stdin,
 		Out: os.Stdout,
 		Err: os.Stdout,
@@ -51,15 +53,14 @@ func main() {
 				fmt.Fprintf(stdio.Err, "%s\n", err)
 			}
 			_, _ = stdio.Err.Write(debug.Stack())
-			if exit != ioutil.ExitSuccess {
-				exit = ioutil.AsExitCode(r, ioutil.ExitPanic)
+			if exit != stageleft.ExitSuccess {
+				exit = stageleft.AsExitCode(r, stageleft.ExitCode(126))
 			}
 		}
 	}()
 
 	ctx := context.Background()
-	ctx = ioutil.AddStdToContext(ctx, &stdio)
-	ctx = ioutil.AddExitCodeToContext(ctx, &exit)
+	ctx = dontio.AddStdToContext(ctx, &stdio)
 
 	flag.StringVar(&opts.logicDir, "l", "", "Directory where logic files are located")
 	flag.StringVar(&opts.dataDir, "d", "", "Directory where data files are stored")
@@ -67,13 +68,13 @@ func main() {
 
 	if cliErr := opts.validate(); cliErr != nil {
 		fmt.Fprintf(stdio.Err, "%s\n", cliErr.Error())
-		exit = ioutil.ExitBadFlag
+		exit = stageleft.ExitCode(2)
 		return
 	}
 
 	b, err := buildWorldFromFiles(ctx, opts)
 	if err != nil {
-		exit = ioutil.GetExitCodeOr(err, ioutil.ExitCode(2))
+		exit = stageleft.ExitCodeFromErr(err, stageleft.ExitCode(2))
 		fmt.Fprintf(stdio.Err, "Error while parsing files: %s\n", err.Error())
 		return
 	}
@@ -85,13 +86,13 @@ func main() {
 		Items:     []entity.Selector{entity.With[logic.Song]{}},
 	}
 	if err := assumed.Fill(ctx, w, world.ConstGoal(true)); err != nil {
-		exit = ioutil.GetExitCodeOr(err, ioutil.ExitCode(2))
+		exit = stageleft.ExitCodeFromErr(err, stageleft.ExitCode(2))
 		fmt.Fprintf(stdio.Err, "Error during placement: %s\n", err.Error())
 		return
 	}
 
 	if err := showTokenPlacements(ctx, w, entity.With[logic.Song]{}); err != nil {
-		exit = ioutil.GetExitCodeOr(err, ioutil.ExitCode(2))
+		exit = stageleft.ExitCodeFromErr(err, stageleft.ExitCode(2))
 		fmt.Fprintf(stdio.Err, "Error during placement review: %s\n", err.Error())
 		return
 	}
@@ -130,7 +131,7 @@ func loadLocationFile(ctx context.Context, b *world.Builder, path string) (map[s
 		ent, err := b.Pool.Create(logic.Name(loc.Name))
 		if err != nil {
 			// bitpool ran out of IDs
-			panic(ioutil.AttachExitCode(err, ioutil.ExitCode(100)))
+			panic(stageleft.AttachExitCode(err, stageleft.ExitCode(100)))
 		}
 		for _, comp := range logic.GetAllLocationComponents(loc) {
 			ent.Add(comp)
@@ -152,7 +153,7 @@ func loadItemFile(ctx context.Context, b *world.Builder, path string) error {
 	for _, item := range items {
 		ent, err := b.Pool.Create(logic.Name(item.Name))
 		if err != nil {
-			panic(ioutil.AttachExitCode(err, ioutil.ExitCode(100)))
+			panic(stageleft.AttachExitCode(err, stageleft.ExitCode(100)))
 		}
 
 		ent.Add(logic.Token{})
@@ -191,7 +192,7 @@ func loadLogicFiles(ctx context.Context, b *world.Builder, locCache map[string]e
 			for evt, rule := range loc.Events {
 				ent, err := b.Pool.Create(logic.Name(evt))
 				if err != nil {
-					panic(ioutil.AttachExitCode(err, ioutil.ExitCode(100)))
+					panic(stageleft.AttachExitCode(err, stageleft.ExitCode(100)))
 				}
 				ent.Add(logic.Event{})
 				ent.Add(logic.RawRule(rule))
@@ -200,7 +201,7 @@ func loadLogicFiles(ctx context.Context, b *world.Builder, locCache map[string]e
 			for check, rule := range loc.Locations {
 				ent, err := b.Pool.Create(logic.Name(check))
 				if err != nil {
-					panic(ioutil.AttachExitCode(err, ioutil.ExitParseFailure))
+					panic(stageleft.AttachExitCode(err, stageleft.ExitCode(98)))
 				}
 				ent.Add(logic.RawRule(rule))
 			}
@@ -211,7 +212,7 @@ func loadLogicFiles(ctx context.Context, b *world.Builder, locCache map[string]e
 				exit := locCache[string(exit)]
 				edge, err := b.AddEdge(region, exit)
 				if err != nil {
-					panic(ioutil.AttachExitCode(err, ioutil.ExitParseFailure))
+					panic(stageleft.AttachExitCode(err, stageleft.ExitCode(98)))
 				}
 				edge.Add(logic.RawRule(raw))
 
@@ -219,7 +220,7 @@ func loadLogicFiles(ctx context.Context, b *world.Builder, locCache map[string]e
 				parser := rules.NewParser(lex)
 				rule, err := parser.ParseTotalRule()
 				if err != nil {
-					panic(ioutil.AttachExitCode(err, ioutil.ExitParseFailure))
+					panic(stageleft.AttachExitCode(err, stageleft.ExitCode(98)))
 				}
 				edge.Add(logic.ParsedRule{E: rule.Rule})
 			}
@@ -248,7 +249,7 @@ func showTokenPlacements(ctx context.Context, w world.World, qs ...entity.Select
 	if err != nil {
 		return fmt.Errorf("while querying placements: %w", err)
 	}
-	stdio, _ := ioutil.StdFromContext(ctx)
+	stdio, _ := dontio.StdFromContext(ctx)
 
 	for _, tok := range placed {
 		var itemName logic.Name

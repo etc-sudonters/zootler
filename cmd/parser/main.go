@@ -7,13 +7,13 @@ import (
 	"path/filepath"
 	"strings"
 
-	"sudonters/zootler/internal/ioutil"
 	"sudonters/zootler/internal/rules"
 
+	"github.com/etc-sudonters/substrate/dontio"
 	"muzzammil.xyz/jsonc"
 )
 
-var parseErrorColor ioutil.ForegroundColor = 141
+var parseErrorColor dontio.ForegroundColor = 141
 
 func main() {
 	var logicFileDir string
@@ -151,7 +151,7 @@ func parseAll[E ~string, R ~string, M map[E]R, N ~string](ctx string, m M, regio
 	}
 }
 
-const errColor ioutil.BackgroundColor = 210
+const errColor dontio.BackgroundColor = 210
 
 func manyVisitors(v ...rules.AstVisitor) rules.AstVisitor {
 	return manyVisit{v}
@@ -203,3 +203,5 @@ func (m manyVisit) VisitTuple(n *rules.Tuple) {
 func (m manyVisit) VisitUnary(n *rules.UnaryOp) {
 	m.visit(n)
 }
+
+func compressWhiteSpace(s string) string { return s }

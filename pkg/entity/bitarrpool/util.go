@@ -3,19 +3,19 @@ package bitarrpool
 import (
 	"fmt"
 	"reflect"
-	"sudonters/zootler/internal/bitset"
 	"sudonters/zootler/pkg/entity"
+
+	"github.com/etc-sudonters/substrate/skelly/set/bits"
 )
 
-type implSize = uint64
-type implSet = bitset.BitSet[implSize]
+type implSet = bits.Bitset64
 
 func newSet(k int) implSet {
-	return bitset.WithBuckets[implSize](k)
+	return bits.New(k)
 }
 
 func implBitSize() int {
-	return bitset.FieldSize[implSize]()
+	return 64
 }
 
 func getComponenter(b bitarrview) func(reflect.Type) (entity.Component, error) {

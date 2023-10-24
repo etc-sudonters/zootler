@@ -3,10 +3,11 @@ package world
 import (
 	"fmt"
 
-	"sudonters/zootler/internal/graph"
 	"sudonters/zootler/pkg/entity"
 	"sudonters/zootler/pkg/entity/bitarrpool"
 	"sudonters/zootler/pkg/logic"
+
+	"github.com/etc-sudonters/substrate/skelly/graph"
 )
 
 type Builder struct {

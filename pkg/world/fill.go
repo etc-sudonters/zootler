@@ -4,11 +4,12 @@ import (
 	"context"
 	"errors"
 
-	"sudonters/zootler/internal/bag"
-	"sudonters/zootler/internal/ioutil"
-	"sudonters/zootler/internal/queue"
 	"sudonters/zootler/pkg/entity"
 	"sudonters/zootler/pkg/logic"
+
+	"github.com/etc-sudonters/substrate/bag"
+	"github.com/etc-sudonters/substrate/skelly/queue"
+	"github.com/etc-sudonters/substrate/stageleft"
 )
 
 type ConstGoal bool
@@ -43,7 +44,7 @@ func (a *AssumedFill) Fill(ctx context.Context, w World, g Goal) error {
 
 	locs, err = w.Entities.Pool.Query(filt)
 	if err != nil {
-		return ioutil.AttachExitCode(err, ioutil.ExitQueryFail)
+		return stageleft.AttachExitCode(err, stageleft.ExitCode(99))
 	}
 
 	filt = make([]entity.Selector, len(a.Items)+1)
@@ -51,17 +52,17 @@ func (a *AssumedFill) Fill(ctx context.Context, w World, g Goal) error {
 	copy(filt[1:], a.Items)
 	items, err = w.Entities.Pool.Query(filt)
 	if err != nil {
-		return ioutil.AttachExitCode(err, ioutil.ExitQueryFail)
+		return stageleft.AttachExitCode(err, stageleft.ExitCode(99))
 	}
 
 	L := queue.From(locs)
 	I := queue.From(items)
 
 	var solved bool
-	maxTries := len(L) * len(I)
+	maxTries := L.Len() * I.Len()
 
 	for i := 0; i <= maxTries; i++ {
-		if len(L) == 0 || len(I) == 0 {
+		if L.Len() == 0 || I.Len() == 0 {
 			break
 		}
 
@@ -72,13 +73,13 @@ func (a *AssumedFill) Fill(ctx context.Context, w World, g Goal) error {
 		var loc entity.View
 		var item entity.View
 
-		bag.Shuffle(L)
-		bag.Shuffle(I)
-		loc, L, err = L.Pop()
+		bag.Shuffle(*L)
+		bag.Shuffle(*I)
+		loc, err = L.Pop()
 		if err != nil {
 			return err
 		}
-		item, I, err = I.Pop()
+		item, err = I.Pop()
 		if err != nil {
 			return err
 		}
@@ -94,8 +95,8 @@ func (a *AssumedFill) Fill(ctx context.Context, w World, g Goal) error {
 		if !solved {
 			loc.Remove(logic.Inhabited(item.Model()))
 			item.Remove(logic.Inhabits(loc.Model()))
-			L = L.Push(loc)
-			I = I.Push(item)
+			L.Push(loc)
+			I.Push(item)
 		}
 	}
 

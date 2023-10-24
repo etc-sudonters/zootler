@@ -4,10 +4,11 @@ import (
 	"context"
 	"sync"
 
-	"sudonters/zootler/internal/graph"
-	"sudonters/zootler/internal/set"
 	"sudonters/zootler/pkg/entity"
 	"sudonters/zootler/pkg/logic"
+
+	"github.com/etc-sudonters/substrate/skelly/graph"
+	set "github.com/etc-sudonters/substrate/skelly/set/hash"
 )
 
 type edge struct {
@@ -25,6 +26,15 @@ type World struct {
 	nodeCache map[graph.Node]entity.Model
 }
 
+type setVisitor struct {
+	s set.Hash[graph.Node]
+}
+
+func (s setVisitor) Visit(_ context.Context, g graph.Node) error {
+	s.s.Add(g)
+	return nil
+}
+
 func (w *World) FindReachableWorld(ctx context.Context) (set.Hash[graph.Node], error) {
 	reachable := set.New[graph.Node]()
 
@@ -32,7 +42,7 @@ func (w *World) FindReachableWorld(ctx context.Context) (set.Hash[graph.Node], e
 		Selector: &RulesAwareSelector[graph.Destination]{
 			w, graph.Successors,
 		},
-		Visitor: &graph.VisitSet{S: reachable},
+		Visitor: setVisitor{reachable},
 	}
 
 	spawns, err := w.Entities.Query([]entity.Selector{entity.With[logic.Spawn]{}})

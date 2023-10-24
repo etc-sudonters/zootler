@@ -3,8 +3,9 @@ package bitarrpool
 import (
 	"reflect"
 
-	"sudonters/zootler/internal/bitset"
 	"sudonters/zootler/pkg/entity"
+
+	"github.com/etc-sudonters/substrate/skelly/set/bits"
 )
 
 type bitarrpool struct {
@@ -18,7 +19,7 @@ var _ entity.View = (*bitarrview)(nil)
 
 func New(maxComponentId int) *bitarrpool {
 	var b bitarrpool
-	b.componentBucketCount = bitset.BucketsNeeded[implSize](maxComponentId)
+	b.componentBucketCount = bits.Buckets(maxComponentId)
 	b.entities = make([]bitarrview, 1, 128)
 	(&b.table).init()
 	return &b
@@ -57,7 +58,7 @@ func (p *bitarrpool) Query(qs []entity.Selector) ([]entity.View, error) {
 		}
 	}
 
-	if bitset.IsFieldEmpty(includeMask) && bitset.IsFieldEmpty(excludeMask) {
+	if bits.IsEmpty(includeMask) && bits.IsEmpty(excludeMask) {
 		// empty bitmask will never select anything
 		return nil, entity.ErrNoEntities
 	}

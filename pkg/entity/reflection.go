@@ -4,8 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
-
-	"sudonters/zootler/internal/bag"
 )
 
 func isTryDerefErr(e error) bool {
@@ -50,7 +48,7 @@ func AssignComponentTo(target interface{}, retrieve func(reflect.Type) (Componen
 	if acquired == nil {
 		panic(
 			fmt.Sprintf(
-				"retrieved nil component for %s", bag.NiceTypeName(targetType),
+				"retrieved nil component for %s", targetType.Name(),
 			))
 	}
 	acquiredValue := reflect.ValueOf(acquired)

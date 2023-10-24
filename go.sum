@@ -1,4 +1,8 @@
+github.com/etc-sudonters/substrate v0.0.0-20231020032745-ea011a82c3ef h1:ogjIBC4f3AvxcY7xjpLOUqsVceS8IEOliRViCCQ89sM=
+github.com/etc-sudonters/substrate v0.0.0-20231020032745-ea011a82c3ef/go.mod h1:fIQBB70tduyrZsUd4sab35FiYjSLB+cvHu0TVEYlfk4=
 golang.org/x/exp v0.0.0-20230626212559-97b1e661b5df h1:UA2aFVmmsIlefxMk29Dp2juaUSth8Pyn3Tq5Y5mJGME=
 golang.org/x/exp v0.0.0-20230626212559-97b1e661b5df/go.mod h1:FXUEEKJgO7OQYeo8N01OfiKP8RXMtf6e8aTskBGqWdc=
+golang.org/x/exp v0.0.0-20231006140011-7918f672742d h1:jtJma62tbqLibJ5sFQz8bKtEM8rJBtfilJ2qTU199MI=
+golang.org/x/exp v0.0.0-20231006140011-7918f672742d/go.mod h1:ldy0pHrwJyGW56pPQzzkH36rKxoZW1tw7ZJpeKx+hdo=
 muzzammil.xyz/jsonc v1.0.0 h1:B6kaT3wHueZ87mPz3q1nFuM1BlL32IG0wcq0/uOsQ18=
 muzzammil.xyz/jsonc v1.0.0/go.mod h1:rFv8tUUKe+QLh7v02BhfxXEf4ZHhYD7unR93HL/1Uvo=
