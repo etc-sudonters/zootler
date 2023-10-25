@@ -2,7 +2,6 @@ package entity
 
 import (
 	"errors"
-	"fmt"
 	"reflect"
 )
 
@@ -19,25 +18,31 @@ func isTryDerefErr(e error) bool {
 	return false
 }
 
-func AssignComponentTo(target interface{}, retrieve func(reflect.Type) (Component, error)) error {
+type ComponentGetter interface {
+	GetComponent(Model, reflect.Type) (Component, error)
+}
+
+func PierceComponentType(c Component) reflect.Type {
+	return reflect.TypeOf(c)
+}
+
+func AssignComponentTo(entity Model, target interface{}, retrieve ComponentGetter) error {
 	if target == nil {
 		return ErrNilComponentPtr
 	}
 
-	value := reflect.ValueOf(target)
-	typ := value.Type()
-
-	if typ.Kind() != reflect.Pointer || value.IsNil() {
+	rv := reflect.ValueOf(target)
+	if rv.Kind() != reflect.Pointer || rv.IsNil() {
 		return ErrNonNilPtrOnly
 	}
 
-	targetType := typ.Elem()
+	targetType := rv.Elem().Type()
 
-	acquired, err := retrieve(targetType)
+	acquired, err := retrieve.GetComponent(entity, targetType)
 
 	if err != nil {
 		if isTryDerefErr(err) && targetType.Kind() == reflect.Pointer {
-			acquired, err = retrieve(targetType.Elem())
+			acquired, err = retrieve.GetComponent(entity, targetType.Elem())
 		}
 
 		if err != nil {
@@ -46,11 +51,12 @@ func AssignComponentTo(target interface{}, retrieve func(reflect.Type) (Componen
 	}
 
 	if acquired == nil {
-		panic(
-			fmt.Sprintf(
-				"retrieved nil component for %s", targetType.Name(),
-			))
+		return ErrNilComponent{
+			Entity:    entity,
+			Component: targetType,
+		}
 	}
+
 	acquiredValue := reflect.ValueOf(acquired)
 
 	if acquiredValue.Kind() != reflect.Pointer && targetType.Kind() == reflect.Pointer {
@@ -59,6 +65,6 @@ func AssignComponentTo(target interface{}, retrieve func(reflect.Type) (Componen
 		acquiredValue = intermediate
 	}
 
-	value.Elem().Set(acquiredValue)
+	rv.Elem().Set(acquiredValue)
 	return nil
 }

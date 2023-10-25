@@ -264,7 +264,7 @@ func showTokenPlacements(ctx context.Context, w world.World, qs ...entity.Select
 		if err != nil {
 			return err
 		}
-		w.Entities.Get(entity.Model(placement), &placementName)
+		w.Entities.Get(entity.Model(placement), []interface{}{&placementName})
 		if placementName == "" {
 			return fmt.Errorf("%v did not have an attached name", placement)
 		}

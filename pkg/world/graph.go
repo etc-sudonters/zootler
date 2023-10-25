@@ -40,7 +40,7 @@ func (s RulesAwareSelector[T]) Select(g graph.Directed, n graph.Node) ([]T, erro
 
 	for _, c := range candidates {
 		edge := s.W.edgeCache[edgeTo(n, c)]
-		s.W.Entities.Get(edge, &rule)
+		s.W.Entities.Get(edge, []interface{}{&rule})
 
 		if rule == nil {
 			accessibleNeighbors = append(accessibleNeighbors, c)

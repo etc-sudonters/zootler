@@ -8,8 +8,10 @@ import (
 	"strings"
 	"testing"
 
-	"sudonters/zootler/internal/set"
 	"sudonters/zootler/pkg/entity"
+
+	set "github.com/etc-sudonters/substrate/skelly/set/hash"
+	"github.com/etc-sudonters/substrate/stageleft"
 )
 
 func dump(t *testing.T, v interface{}) {
@@ -20,17 +22,17 @@ func dumpView(w io.Writer, v interface{}) {
 	fmt.Fprintf(w, "Dump:\n%+v\n", v)
 }
 
-func expectedComponent(w io.Writer, v *bitview, expected entity.Component) {
+func expectedComponent(w io.Writer, v bitview, expected entity.Component) {
 	fmt.Fprintf(w, "expected component %s to be loaded on %d\n", expected, v.id)
 }
 
 func didNotExpectError(t *testing.T, err error) {
 	w := &strings.Builder{}
 	fmt.Fprintf(w, "did not expected error:\n%s", err)
-	t.Fatal(w.String())
+	t.Fatal(t.Name(), w.String(), stageleft.ShowPanicTrace())
 }
 
-func expectedEqualComponents[T entity.Component](w io.Writer, v *bitview, expect T, actual T) {
+func expectedEqualComponents[T entity.Component](w io.Writer, v bitview, expect T, actual T) {
 	fmt.Fprintf(w, "expected equal values for component %s on %d\n", entity.ComponentName(expectedComponent), v.id)
 	fmt.Fprint(w, "Actual ")
 	dumpView(w, actual)
@@ -38,98 +40,52 @@ func expectedEqualComponents[T entity.Component](w io.Writer, v *bitview, expect
 	dumpView(w, expect)
 }
 
-func TestCanRetrieveComponentFromView(t *testing.T) {
-	p := New(1000)
-	v, _ := p.Create()
-	ent := v.(*bitview)
-
-	var model entity.Model = 99999
-	err := ent.Get(&model)
-
-	if err != nil {
-		msg := &strings.Builder{}
-		expectedComponent(msg, ent, model)
-		dumpView(msg, ent)
-		t.Fatal(msg.String())
-	}
-
-	if model != ent.Model() {
-		msg := &strings.Builder{}
-		expectedEqualComponents(msg, ent, ent.Model(), model)
-		t.Fatal(msg.String())
-	}
-}
-
 func TestCanStoreAndRetrievePointerToComp(t *testing.T) {
+	defer func() {
+		if p := recover(); p != nil {
+			t.Fatal(t.Name(), p, stageleft.ShowPanicTrace())
+		}
+	}()
 	initialValue := 10
 	changedValue := 9999
 
-	p := New(1000)
-	v, _ := p.Create()
-	ent := v.(*bitview)
-	ent.Add(&myTestComponent{initialValue})
+	type TestCanStoreAndRetrievePointerToComp0 struct {
+		V int
+	}
 
-	var c *myTestComponent
+	p := New(100)
+	v, _ := p.Create()
+	v.Add(&TestCanStoreAndRetrievePointerToComp0{initialValue})
+
+	var c *TestCanStoreAndRetrievePointerToComp0
 	// ptrB -> ptrA, assigns ptrA
-	if err := ent.Get(&c); err != nil {
+	if err := v.Get(&c); err != nil {
 		didNotExpectError(t, err)
 	}
 
 	c.V = changedValue
 
-	var d *myTestComponent
-	if err := ent.Get(&d); err != nil {
+	var d *TestCanStoreAndRetrievePointerToComp0
+	if err := v.Get(&d); err != nil {
 		didNotExpectError(t, err)
 	}
 
 	if d.V != c.V {
 		msg := &strings.Builder{}
-		expectedEqualComponents(msg, ent, c, d)
-		t.Fatal(msg.String())
-	}
-}
-
-func TestCanStoreComponentAndRetrieveThroughPointer(t *testing.T) {
-	t.Skip("Not great this doesn't work, but we can store pointers and that's good enough")
-	initialValue := 10
-	changedValue := 9999
-
-	p := New(1000)
-	v, _ := p.Create()
-	ent := v.(*bitview)
-	// NOTE _not_ a pointer
-	ent.Add(myTestComponent{initialValue})
-
-	// NOTE _is_ pointer
-	t.Log("loading through pointer")
-	var c *myTestComponent
-	if err := ent.Get(&c); err != nil {
-		didNotExpectError(t, err)
-	}
-	t.Log("freshly fetched")
-	dump(t, c)
-	t.Log("changing value")
-	c.V = changedValue
-	dump(t, c)
-
-	// NOTE not pointer
-	t.Log("loading through not pointer")
-	var d myTestComponent
-	if err := ent.Get(&d); err != nil {
-		didNotExpectError(t, err)
-	}
-
-	if d.V != c.V {
-		msg := &strings.Builder{}
-		expectedEqualComponents(msg, ent, *c, d) // deref c to make types happy
+		expectedEqualComponents(msg, v.(bitview), c, d)
 		t.Fatal(msg.String())
 	}
 }
 
 func TestCanRemoveCustomComponent(t *testing.T) {
+	defer func() {
+		if p := recover(); p != nil {
+			t.Fatal(p)
+		}
+	}()
 	p := New(1000)
 	v, _ := p.Create()
-	ent := v.(*bitview)
+	ent := v.(bitview)
 	ent.Add(myTestComponent{})
 
 	var c myTestComponent
@@ -147,17 +103,21 @@ func TestCanRemoveCustomComponent(t *testing.T) {
 }
 
 func TestCanQueryForEntitiesByComponentExistence(t *testing.T) {
-	t.Log("sure would be nice to make this a nice big number")
-	componentsToMake := 10000
+	defer func() {
+		if p := recover(); p != nil {
+			t.Fatal(p)
+		}
+	}()
+	entitiesToMake := 10000
 	tagRatio := 7
 	p := New(10000)
 
 	totalEnts := set.New[entity.Model]()
 	taggedEnts := set.New[entity.Model]()
 
-	for i := 0; i < componentsToMake; i++ {
+	for i := 0; i < entitiesToMake; i++ {
 		v, _ := p.Create()
-		ent := v.(*bitview)
+		ent := v.(bitview)
 		totalEnts.Add(ent.Model())
 
 		if (i % tagRatio) == 0 {
@@ -166,20 +126,12 @@ func TestCanQueryForEntitiesByComponentExistence(t *testing.T) {
 		}
 	}
 
-	dump(t, p)
-
-	if len(totalEnts) != componentsToMake {
-		t.Logf("mismatched entity count\nexpected:\t%d\nactual:\t%d", len(totalEnts), componentsToMake)
-		t.FailNow()
+	if len(totalEnts) != entitiesToMake {
+		t.Fatalf("mismatched entity count\nexpected:\t%d\nactual:\t%d", len(totalEnts), entitiesToMake)
 	}
 
-	queryedFor, err := p.Query(
-		entity.With[myTestComponent]{},
-		entity.DebugSelector{
-			F:        func(s string, a ...any) {},
-			Selector: entity.With[myTestComponent]{},
-		},
-	)
+	filter := []entity.Selector{entity.With[myTestComponent]{}}
+	queryedFor, err := p.Query(filter)
 	if err != nil {
 		didNotExpectError(t, err)
 	}
@@ -204,6 +156,11 @@ func TestCanQueryForEntitiesByComponentExistence(t *testing.T) {
 }
 
 func TestCanUseMultipleComponents(t *testing.T) {
+	defer func() {
+		if p := recover(); p != nil {
+			t.Fatal(p)
+		}
+	}()
 	componentsToMake := 35
 	goodTagRatio := 7
 	badTagRation := 5
@@ -215,7 +172,7 @@ func TestCanUseMultipleComponents(t *testing.T) {
 
 	for i := 0; i <= componentsToMake; i++ {
 		v, _ := p.Create()
-		ent := v.(*bitview)
+		ent := v.(bitview)
 		totalEnts.Add(ent.Model())
 
 		if (i % goodTagRatio) == 0 {
@@ -230,7 +187,7 @@ func TestCanUseMultipleComponents(t *testing.T) {
 	}
 
 	comboTagSet := set.Intersection(goodTaggedEnts, badTaggedEnts)
-	comboQueries, err := p.Query(
+	comboQueries, err := p.Query([]entity.Selector{
 		entity.DebugSelector{
 			F:        func(string, ...any) {}, //t.Logf,
 			Selector: entity.With[myTestComponent]{},
@@ -238,7 +195,7 @@ func TestCanUseMultipleComponents(t *testing.T) {
 		entity.DebugSelector{
 			F:        t.Logf,
 			Selector: entity.With[anotherComponent]{},
-		},
+		}},
 	)
 
 	if err != nil {
@@ -258,16 +215,21 @@ func TestCanUseMultipleComponents(t *testing.T) {
 }
 
 func TestCanExcludeEntitiesBasedOnComponent(t *testing.T) {
-	componentsToMake := 1000
+	defer func() {
+		if p := recover(); p != nil {
+			t.Fatal(p)
+		}
+	}()
+	componentsToMake := 1001
 	firstTagRatio := 7
 	secondTagRatio := 5
-	p := New(int64(componentsToMake))
+	p := New(int(componentsToMake))
 
 	totalEnts := set.New[entity.Model]()
 	firstTagEnts := set.New[entity.Model]()
 	secondTagEnt := set.New[entity.Model]()
 
-	for i := 0; i <= componentsToMake; i++ {
+	for i := 1; i <= componentsToMake; i++ {
 		ent, _ := p.Create()
 
 		totalEnts.Add(ent.Model())
@@ -295,10 +257,10 @@ func TestCanExcludeEntitiesBasedOnComponent(t *testing.T) {
 		}
 	}
 
-	queriedAllUntagged, err := p.Query(
+	queriedAllUntagged, err := p.Query([]entity.Selector{
 		debuggify(entity.Without[myTestComponent]{}),
 		debuggify(entity.Without[anotherComponent]{}),
-	)
+	})
 
 	if err != nil {
 		didNotExpectError(t, err)
@@ -323,17 +285,24 @@ func TestCanExcludeEntitiesBasedOnComponent(t *testing.T) {
 }
 
 func TestCanFilterWithoutLoading(t *testing.T) {
-	componentsToMake := 10000
+	var lastI = 0
+	defer func() {
+		if p := recover(); p != nil {
+			t.Fatal(t.Name(), p, stageleft.ShowPanicTrace(), lastI)
+		}
+	}()
+	entitiesToMake := 10000
 	tagRatio := 7
-	p := New(int64(componentsToMake * 2))
+	p := New(10)
 
 	totalEnts := set.New[entity.Model]()
 	taggedEnts := set.New[entity.Model]()
 	taggedCount := 0
 
-	for i := 0; i < componentsToMake; i++ {
+	for i := 1; i <= entitiesToMake; i++ {
+		lastI = i
 		v, _ := p.Create()
-		ent := v.(*bitview)
+		ent := v.(bitview)
 		totalEnts.Add(ent.Model())
 
 		if (i % tagRatio) == 0 {
@@ -341,12 +310,6 @@ func TestCanFilterWithoutLoading(t *testing.T) {
 			taggedEnts.Add(ent.Model())
 			taggedCount += 1
 		}
-	}
-
-	if len(taggedEnts) != taggedCount {
-		t.Logf("expected to make %d entities", taggedCount)
-		t.Logf("actually made %d", len(taggedEnts))
-		t.FailNow()
 	}
 
 	queriedEnts, err := p.Query([]entity.Selector{entity.Without[myTestComponent]{}})
@@ -370,28 +333,28 @@ func TestCanFilterWithoutLoading(t *testing.T) {
 		t.Fail()
 	}
 
-	if len(queriedEnts) != (componentsToMake - taggedCount) {
-		t.Logf("expected %d elements", componentsToMake-taggedCount)
+	if len(queriedEnts) != (entitiesToMake - taggedCount) {
+		t.Logf("expected %d elements", entitiesToMake-taggedCount)
 		t.Logf("got %d elements", len(queriedEnts))
 		t.Fail()
 	}
 }
 
 func TestCanRetrieveArbitraryEntityWithComps(t *testing.T) {
+	defer func() {
+		if p := recover(); p != nil {
+			t.Fatal(p, stageleft.ShowPanicTrace())
+		}
+	}()
 	p := New(1000)
 	v, _ := p.Create()
-	ent := v.(*bitview)
+	ent := v.(bitview)
 	ent.Add(myTestComponent{99})
 
-	var c1 *myTestComponent
+	var c1 myTestComponent
 	var c2 *anotherComponent
 
-	p.Get(ent.id, &c1, &c2)
-
-	if c1 == nil {
-		t.Logf("expected to retrieve %T from %s", c1, ent)
-		t.Fail()
-	}
+	p.Get(ent.id, []interface{}{&c1, &c2})
 
 	if c1.V != 99 {
 		t.Logf("did not retrieve expected instance of %[1]T: %[1]v", c1)
