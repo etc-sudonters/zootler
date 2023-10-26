@@ -1,22 +1,26 @@
-package rules
+package rulesparser
 
 import "testing"
 
 func TestParseRealRule(t *testing.T) {
 	r := "can_play(Song_of_Time) or (logic_shadow_mq_invisible_blades and damage_multiplier != 'ohko')"
-	l := NewLexer("Parse Real Rule *guitar riff*", r)
-	p := NewParser(l)
+	l := NewRulesLexer(r)
+	p := NewRulesParser(l)
 
-	rule, err := p.ParseTotalRule()
+	rule, err := p.Parse()
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	if rule == nil {
-		t.FailNow()
+		t.Fatal("did not parse rule")
 	}
 
-	t.Fatalf("%s", rule.Repr())
+	if p.HasMore() {
+		t.Fatal("trailing unparsed content")
+	}
+
+	t.Fatal("task failed successfully")
 }
 
 func TestParseConstRule(t *testing.T) {
@@ -31,15 +35,15 @@ func TestParseConstRule(t *testing.T) {
 	for _, i := range inputs {
 		i := i
 		t.Run("Const"+i.raw, func(t *testing.T) {
-			l := NewLexer("Const"+i.raw, i.raw)
-			p := NewParser(l)
+			l := NewRulesLexer(i.raw)
+			p := NewRulesParser(l)
 
-			rule, err := p.ParseTotalRule()
+			rule, err := p.Parse()
 			if err != nil {
 				t.Fatalf("expected to successfully parse '%s': %s", i.raw, err)
 			}
 
-			switch r := rule.Rule.(type) {
+			switch r := rule.(type) {
 			case *Boolean:
 				if r.Value != i.expected {
 					t.Logf("expected to parse %s to ConstRule{ %t }", i.raw, i.expected)
@@ -48,7 +52,7 @@ func TestParseConstRule(t *testing.T) {
 				}
 				break
 			default:
-				t.Fatalf("expected to parse 'True' to ConstRule not %v", rule.Rule)
+				t.Fatalf("expected to parse 'True' to ConstRule not %v", rule)
 				break
 			}
 		})

@@ -1,20 +1,19 @@
-package world
+package logic
 
 import (
-	"sudonters/zootler/internal/rules"
-	"sudonters/zootler/pkg/entity"
+	"sudonters/zootler/internal/entity"
 )
 
 type Collection struct {
 	Name       string
-	Rule       rules.RawRule
+	Rule       RawRule
 	Components []entity.Component
 	Vanilla    string
 }
 
 type Transit struct {
 	Exit string
-	Rule rules.RawRule
+	Rule RawRule
 }
 
 type Region struct {

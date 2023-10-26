@@ -3,7 +3,7 @@ package logic
 import (
 	"io"
 
-	"sudonters/zootler/pkg/entity"
+	"sudonters/zootler/internal/entity"
 )
 
 /*

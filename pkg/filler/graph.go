@@ -1,22 +1,23 @@
-package world
+package filler
 
 import (
 	"sudonters/zootler/pkg/logic"
+	"sudonters/zootler/pkg/world"
 
 	"github.com/etc-sudonters/substrate/skelly/graph"
 )
 
 type RulesAwareSelector[T graph.Direction] struct {
-	W *World
+	W *world.World
 	S graph.Selector[T]
 }
 
-func edgeTo(n graph.Node, other interface{}) edge {
+func edgeTo(n graph.Node, other interface{}) world.Edge {
 	switch t := other.(type) {
 	case graph.Origination:
-		return edge{t, graph.Destination(n)}
+		return world.Edge{t, graph.Destination(n)}
 	case graph.Destination:
-		return edge{graph.Origination(n), t}
+		return world.Edge{graph.Origination(n), t}
 	}
 
 	panic("unreachable")
@@ -39,7 +40,7 @@ func (s RulesAwareSelector[T]) Select(g graph.Directed, n graph.Node) ([]T, erro
 	var rule logic.Rule
 
 	for _, c := range candidates {
-		edge := s.W.edgeCache[edgeTo(n, c)]
+		edge, _ := s.W.EdgeEntity(edgeTo(n, c))
 		s.W.Entities.Get(edge, []interface{}{&rule})
 
 		if rule == nil {

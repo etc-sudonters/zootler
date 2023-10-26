@@ -6,8 +6,8 @@ import (
 	"math/rand"
 	"os"
 
+	"sudonters/zootler/internal/entity"
 	"sudonters/zootler/internal/stack"
-	"sudonters/zootler/pkg/entity"
 	"sudonters/zootler/pkg/logic"
 	"sudonters/zootler/pkg/world"
 )

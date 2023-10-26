@@ -2,8 +2,8 @@ package bitpool
 
 import (
 	"fmt"
-	"sudonters/zootler/pkg/entity"
-	"sudonters/zootler/pkg/entity/componenttable"
+	"sudonters/zootler/internal/entity"
+	"sudonters/zootler/internal/entity/componenttable"
 
 	"github.com/etc-sudonters/substrate/skelly/set/bits"
 )

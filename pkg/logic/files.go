@@ -1,11 +1,11 @@
-package rules
+package logic
 
 import (
 	"fmt"
 	"os"
 	"strings"
 
-	"sudonters/zootler/pkg/entity"
+	"sudonters/zootler/internal/entity"
 
 	"muzzammil.xyz/jsonc"
 )
@@ -16,7 +16,6 @@ type (
 	EventName    string
 	SceneName    string
 	HintGroup    string
-	RawRule      string
 	SaveWarp     string
 	Dungeon      string
 )

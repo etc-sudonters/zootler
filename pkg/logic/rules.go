@@ -1,6 +1,6 @@
 package logic
 
-import "sudonters/zootler/pkg/entity"
+import "sudonters/zootler/internal/entity"
 
 type hasQuantityOf struct {
 	desired Name

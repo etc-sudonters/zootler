@@ -1,11 +1,12 @@
-package world
+package filler
 
 import (
 	"context"
 	"errors"
 
-	"sudonters/zootler/pkg/entity"
+	"sudonters/zootler/internal/entity"
 	"sudonters/zootler/pkg/logic"
+	"sudonters/zootler/pkg/world"
 
 	"github.com/etc-sudonters/substrate/bag"
 	"github.com/etc-sudonters/substrate/skelly/queue"
@@ -14,16 +15,16 @@ import (
 
 type ConstGoal bool
 
-func (c ConstGoal) Reachable(context.Context, World) (bool, error) {
+func (c ConstGoal) Reachable(context.Context, world.World) (bool, error) {
 	return bool(c), nil
 }
 
 type Goal interface {
-	Reachable(context.Context, World) (bool, error)
+	Reachable(context.Context, world.World) (bool, error)
 }
 
 type Filler interface {
-	Fill(context.Context, World, Goal) error
+	Fill(context.Context, world.World, Goal) error
 }
 
 type AssumedFill struct {
@@ -31,7 +32,7 @@ type AssumedFill struct {
 	Items     []entity.Selector
 }
 
-func (a *AssumedFill) Fill(ctx context.Context, w World, g Goal) error {
+func (a *AssumedFill) Fill(ctx context.Context, w world.World, g Goal) error {
 	var err error = nil
 	var locs []entity.View
 	var items []entity.View

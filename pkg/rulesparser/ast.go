@@ -1,8 +1,9 @@
-package rules
+package rulesparser
 
 import (
 	"fmt"
 	"strings"
+	"sudonters/zootler/internal/peruse"
 )
 
 type AstVisitor interface {
@@ -101,8 +102,8 @@ var (
 	UnaryNot   UnaryOpKind = "not"
 )
 
-func UnaryOpFromTok(t Item) UnaryOpKind {
-	switch t.Value {
+func UnaryOpFromTok(t peruse.Token) UnaryOpKind {
+	switch t.Literal {
 	case string(UnaryNot):
 		return UnaryNot
 	default:
@@ -110,8 +111,8 @@ func UnaryOpFromTok(t Item) UnaryOpKind {
 	}
 }
 
-func BoolOpFromTok(t Item) BoolOpKind {
-	switch s := strings.ToLower(t.Value); s {
+func BoolOpFromTok(t peruse.Token) BoolOpKind {
+	switch s := strings.ToLower(t.Literal); s {
 	case string(BoolOpAnd):
 		return BoolOpAnd
 	case string(BoolOpOr):
@@ -121,8 +122,8 @@ func BoolOpFromTok(t Item) BoolOpKind {
 	}
 }
 
-func BinOpFromTok(t Item) BinOpKind {
-	switch t.Value {
+func BinOpFromTok(t peruse.Token) BinOpKind {
+	switch t.Literal {
 	case string(BinOpLt):
 		return BinOpLt
 	case string(BinOpEq):

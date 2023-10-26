@@ -10,9 +10,10 @@ import (
 	"regexp"
 	"runtime/debug"
 
-	"sudonters/zootler/internal/rules"
-	"sudonters/zootler/pkg/entity"
+	"sudonters/zootler/internal/entity"
+	"sudonters/zootler/pkg/filler"
 	"sudonters/zootler/pkg/logic"
+	"sudonters/zootler/pkg/rulesparser"
 	"sudonters/zootler/pkg/world"
 
 	"github.com/etc-sudonters/substrate/dontio"
@@ -81,11 +82,11 @@ func main() {
 
 	w := b.Build()
 
-	assumed := &world.AssumedFill{
+	assumed := &filler.AssumedFill{
 		Locations: []entity.Selector{entity.With[logic.Song]{}},
 		Items:     []entity.Selector{entity.With[logic.Song]{}},
 	}
-	if err := assumed.Fill(ctx, w, world.ConstGoal(true)); err != nil {
+	if err := assumed.Fill(ctx, w, filler.ConstGoal(true)); err != nil {
 		exit = stageleft.ExitCodeFromErr(err, stageleft.ExitCode(2))
 		fmt.Fprintf(stdio.Err, "Error during placement: %s\n", err.Error())
 		return
@@ -105,7 +106,7 @@ func (arg missingRequired) Error() string {
 }
 
 func buildWorldFromFiles(ctx context.Context, opts cliOptions) (b *world.Builder, err error) {
-	b = world.NewBuilder(1)
+	b = world.NewBuilder()
 	locs, err := loadLocationFile(ctx, b, path.Join(opts.dataDir, "locations.json"))
 
 	if err != nil {
@@ -178,7 +179,7 @@ func loadLogicFiles(ctx context.Context, b *world.Builder, locCache map[string]e
 		}
 
 		fp := filepath.Join(path, entry.Name())
-		locs, err := rules.ReadLogicFile(fp)
+		locs, err := logic.ReadLogicFile(fp)
 		if err != nil {
 			return fmt.Errorf("failed to read logic file %s: %w", fp, err)
 		}
@@ -208,7 +209,6 @@ func loadLogicFiles(ctx context.Context, b *world.Builder, locCache map[string]e
 
 			for exit, rule := range loc.Exits {
 				raw := compressWhiteSpace(string(rule))
-				name := fmt.Sprintf("%s -> %s", loc.Region, exit)
 				exit := locCache[string(exit)]
 				edge, err := b.AddEdge(region, exit)
 				if err != nil {
@@ -216,13 +216,13 @@ func loadLogicFiles(ctx context.Context, b *world.Builder, locCache map[string]e
 				}
 				edge.Add(logic.RawRule(raw))
 
-				lex := rules.NewLexer(name, raw)
-				parser := rules.NewParser(lex)
-				rule, err := parser.ParseTotalRule()
+				lex := rulesparser.NewRulesLexer(raw)
+				parser := rulesparser.NewRulesParser(lex)
+				rule, err := parser.Parse()
 				if err != nil {
 					panic(stageleft.AttachExitCode(err, stageleft.ExitCode(98)))
 				}
-				edge.Add(logic.ParsedRule{E: rule.Rule})
+				edge.Add(logic.ParsedRule{R: rule})
 			}
 		}
 	}

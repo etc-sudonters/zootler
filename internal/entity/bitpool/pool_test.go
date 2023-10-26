@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"sudonters/zootler/pkg/entity"
+	"sudonters/zootler/internal/entity"
 
 	set "github.com/etc-sudonters/substrate/skelly/set/hash"
 	"github.com/etc-sudonters/substrate/stageleft"

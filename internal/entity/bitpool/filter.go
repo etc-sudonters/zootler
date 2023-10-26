@@ -1,7 +1,7 @@
 package bitpool
 
 import (
-	"sudonters/zootler/pkg/entity"
+	"sudonters/zootler/internal/entity"
 
 	"github.com/etc-sudonters/substrate/skelly/set/bits"
 )

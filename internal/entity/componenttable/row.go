@@ -1,6 +1,6 @@
 package componenttable
 
-import "sudonters/zootler/pkg/entity"
+import "sudonters/zootler/internal/entity"
 
 type Row struct {
 	id         entity.ComponentId

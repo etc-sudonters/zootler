@@ -3,7 +3,7 @@ package logic
 import (
 	"testing"
 
-	"sudonters/zootler/pkg/entity/hashpool"
+	"sudonters/zootler/internal/entity/hashpool"
 )
 
 func TestHasQuantityOf(t *testing.T) {

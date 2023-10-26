@@ -3,29 +3,26 @@ package world
 import (
 	"fmt"
 
-	"sudonters/zootler/pkg/entity"
-	"sudonters/zootler/pkg/entity/bitpool"
+	"sudonters/zootler/internal/entity"
+	"sudonters/zootler/internal/entity/bitpool"
 	"sudonters/zootler/pkg/logic"
 
 	"github.com/etc-sudonters/substrate/skelly/graph"
 )
 
 type Builder struct {
-	id        Id
 	Pool      Pool
 	graph     graph.Builder
-	edgeCache map[edge]entity.View
+	edgeCache map[Edge]entity.View
 	nodeCache map[graph.Node]entity.View
 	nameCache map[string]entity.View
 }
 
-// caller is responsible for setting a unique id if necessary
-func NewBuilder(id Id) *Builder {
+func NewBuilder() *Builder {
 	return &Builder{
-		id,
-		Pool{id, bitpool.New(300)},
+		Pool{bitpool.New(300)},
 		graph.Builder{G: graph.New()},
-		make(map[edge]entity.View),
+		make(map[Edge]entity.View),
 		make(map[graph.Node]entity.View),
 		make(map[string]entity.View),
 	}
@@ -33,7 +30,7 @@ func NewBuilder(id Id) *Builder {
 
 // after calling this it is no longer safe to interact with the builder
 func (w *Builder) Build() World {
-	edgeCache := make(map[edge]entity.Model, len(w.edgeCache))
+	edgeCache := make(map[Edge]entity.Model, len(w.edgeCache))
 	nodeCache := make(map[graph.Node]entity.Model, len(w.nodeCache))
 
 	for e, v := range w.edgeCache {
@@ -46,7 +43,6 @@ func (w *Builder) Build() World {
 	}
 
 	return World{
-		Id:        w.id,
 		Entities:  w.Pool,
 		Graph:     w.graph.G,
 		edgeCache: edgeCache,
@@ -78,7 +74,7 @@ func (w *Builder) AddEdge(origin, destination entity.View) (entity.View, error) 
 	o := graph.Origination(origin.Model())
 	d := graph.Destination(destination.Model())
 
-	if ent, ok := w.edgeCache[edge{o, d}]; ok {
+	if ent, ok := w.edgeCache[Edge{o, d}]; ok {
 		return ent, nil
 	}
 
@@ -97,7 +93,7 @@ func (w *Builder) AddEdge(origin, destination entity.View) (entity.View, error) 
 		Origination: entity.Model(o),
 	})
 
-	w.edgeCache[edge{o, d}] = ent
+	w.edgeCache[Edge{o, d}] = ent
 
 	return ent, nil
 }

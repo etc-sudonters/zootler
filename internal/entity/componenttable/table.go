@@ -3,8 +3,8 @@ package componenttable
 import (
 	"errors"
 	"reflect"
+	"sudonters/zootler/internal/entity"
 	"sudonters/zootler/internal/mirrors"
-	"sudonters/zootler/pkg/entity"
 
 	"github.com/etc-sudonters/substrate/stageleft"
 )
