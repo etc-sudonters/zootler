@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"strings"
 
-	"sudonters/zootler/internal/rules"
+	"sudonters/zootler/pkg/logic"
 )
 
 type filter struct {
@@ -15,7 +15,7 @@ type filter struct {
 	errsOnly bool
 }
 
-func (f filter) MatchRegion(r rules.RegionName) bool {
+func (f filter) MatchRegion(r logic.RegionName) bool {
 	if f.region != nil && !f.region.Match([]byte(r)) {
 		return false
 	}

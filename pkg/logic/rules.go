@@ -1,78 +1,90 @@
 package logic
 
-import "sudonters/zootler/internal/entity"
+import (
+	"io"
 
-type hasQuantityOf struct {
-	desired Name
-	qty     uint
+	"sudonters/zootler/internal/entity"
+)
+
+/*
+Most of OOTR's logic is placed in well structured json files. Rules for moving
+through an exit or collecting a token are encoded as strings that are parsed as
+Python expressions using Python's std ast module, rewriting and redirecting
+calls as necessary, before compiling the ast into function code objects that
+can be provided the current state of the world and produces a boolean response
+indicating if travel can continue to the desired node. As with any language,
+not everything is bootstrapped and these logic expressions are allowed to call
+into "built in" methods that cannot be expressed in the logic language or
+easily expressed -- "Beware of the Turing tar-pit in which everything is
+possible but nothing of interest is easy.", Alan Perlis, Epigrams of
+Programming -- we will consider the functionality offered by these "built ins"
+to be interfaces and the details to be implementation defined.
+*/
+
+// determines if we are able to progress on our path
+type Rule interface {
+	Fulfill(entity.Queryable) (bool, error)
 }
 
-// fulfilled if the specified trick is enabled
-type TrickEnabled struct {
-	Trick Name
-	// we only need to look up once
-	cache *bool
+// a rule that is always true or false
+type constRule bool
+
+func (c constRule) Fulfill(entity.Queryable) (bool, error) {
+	return bool(c), nil
 }
 
-// fulfilled if we've collected at least N of the desired token
-func HasQuantityOf(desired Name, qty uint) hasQuantityOf {
-	return hasQuantityOf{desired, qty}
+// premature optimization is the root of all evil
+func (c constRule) WriteTo(w io.Writer) (n int64, err error) {
+	var m int
+	if c {
+		m, err = w.Write([]byte("true"))
+	} else {
+		m, err = w.Write([]byte("false"))
+	}
+
+	n = int64(m)
+	return
 }
 
-func (h hasQuantityOf) Fulfill(q entity.Queryable) (bool, error) {
-	acquiredTokens, err := q.Query([]entity.Selector{
-		entity.With[Collected]{},
-		entity.With[Token]{},
-		entity.With[Name]{},
-	})
+var TrueRule Rule = constRule(true)
+var FalseRule Rule = constRule(false)
+
+// both embedded rules must be true for this rule to be true
+// short circuiting, RHS is never called if LHS is false
+type AndRule struct {
+	LHS Rule
+	RHS Rule
+}
+
+func (r AndRule) Fulfill(q entity.Queryable) (bool, error) {
+	ok, err := r.LHS.Fulfill(q)
 	if err != nil {
 		return false, err
 	}
 
-	count := 0
-
-	var tokName Name
-	for _, tok := range acquiredTokens {
-		err := tok.Get(&tokName)
-		if err != nil {
-			return false, err
-		}
-
-		if tokName == h.desired {
-			count++
-		}
+	if !ok {
+		return false, nil
 	}
 
-	return count == int(h.qty), nil
+	return r.RHS.Fulfill(q)
 }
 
-func (t *TrickEnabled) Fulfill(q entity.Queryable) (bool, error) {
-	if t.cache != nil {
-		return *t.cache, nil
-	}
+// either embedded rule must be true for this rule to be true
+// short circuits, RHS is never called if LHS is true
+type OrRule struct {
+	LHS Rule
+	RHS Rule
+}
 
-	enabledTricks, err := q.Query([]entity.Selector{
-		entity.With[Trick]{},
-		entity.With[Enabled]{},
-		entity.With[Name]{},
-	})
-
+func (r OrRule) Fulfill(q entity.Queryable) (bool, error) {
+	ok, err := r.LHS.Fulfill(q)
 	if err != nil {
 		return false, err
 	}
 
-	var tokName Name
-	for _, tok := range enabledTricks {
-		if err := tok.Get(&tokName); err != nil {
-			return false, err
-		}
-
-		if tokName == t.Trick {
-			*t.cache = true
-			return true, nil
-		}
+	if ok {
+		return true, nil
 	}
 
-	*t.cache = false
-	return false, nil
+	return r.RHS.Fulfill(q)
 }

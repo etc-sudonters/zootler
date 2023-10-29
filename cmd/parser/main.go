@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"sudonters/zootler/internal/rules"
+	"sudonters/zootler/pkg/rulesparser"
 
 	"github.com/etc-sudonters/substrate/dontio"
 	"muzzammil.xyz/jsonc"
@@ -61,9 +61,9 @@ func loadHelpers(logicDir string, filt filter, display bool, pretty bool) {
 
 	for name, helper := range helpers {
 		helper = compressWhiteSpace(helper)
-		l := rules.NewLexer(name, helper)
-		p := rules.NewParser(l)
-		totalRule, err := p.ParseTotalRule()
+		l := rulesparser.NewRulesLexer(helper)
+		p := rulesparser.NewRulesParser(l)
+		rule, err := p.Parse()
 		if err != nil {
 			fmt.Fprintf(os.Stdout, "Name:\t%s\n", name)
 			fmt.Fprintf(os.Stdout, "FAILED TO PARSE: %s\n", helper)
@@ -74,7 +74,7 @@ func loadHelpers(logicDir string, filt filter, display bool, pretty bool) {
 		if display && !filt.errsOnly {
 			fancy := newFancy()
 			single := newSingleLine()
-			totalRule.Rule.Visit(manyVisitors(fancy, single))
+			rule.Visit(manyVisitors(fancy, single))
 			fmt.Fprintf(os.Stdout, "Name:\t%s\n", name)
 			fmt.Fprintf(os.Stdout, "Helper:\t%s\n%s\n", single.b.String(), fancy.b.String())
 		}
@@ -94,7 +94,7 @@ func loadLogic(logicDir string, filt filter, pretty bool) {
 		}
 
 		path := filepath.Join(logicDir, entry.Name())
-		logicLocations, err := rules.ReadLogicFile(path)
+		logicLocations, err := rulesparser.ReadLogicFile(path)
 		if err != nil {
 			panic(err)
 		}
@@ -108,7 +108,7 @@ func loadLogic(logicDir string, filt filter, pretty bool) {
 	}
 }
 
-func ParseAllChecks(loc rules.RawLogicLocation, filt filter, pretty bool) {
+func ParseAllChecks(loc rulesparser.RawLogicLocation, filt filter, pretty bool) {
 	parseAll("Event", loc.Events, loc.Region, filt, pretty)
 	parseAll("Check", loc.Locations, loc.Region, filt, pretty)
 	parseAll("Exit", loc.Exits, loc.Region, filt, pretty)
@@ -125,8 +125,8 @@ func parseAll[E ~string, R ~string, M map[E]R, N ~string](ctx string, m M, regio
 		}
 		rule = R(compressWhiteSpace(string(rule)))
 		name := fmt.Sprintf("%s: %s: %s", ctx, region, check)
-		l := rules.NewLexer(name, string(rule))
-		p := rules.NewParser(l)
+		l := rulesparser.NewLexer(name, string(rule))
+		p := rulesparser.NewParser(l)
 		totalRule, err := p.ParseTotalRule()
 		if err != nil {
 			fmt.Fprint(os.Stdout, "Failed to parse rule\n")
@@ -153,15 +153,15 @@ func parseAll[E ~string, R ~string, M map[E]R, N ~string](ctx string, m M, regio
 
 const errColor dontio.BackgroundColor = 210
 
-func manyVisitors(v ...rules.AstVisitor) rules.AstVisitor {
+func manyVisitors(v ...rulesparser.AstVisitor) rulesparser.AstVisitor {
 	return manyVisit{v}
 }
 
 type manyVisit struct {
-	visitors []rules.AstVisitor
+	visitors []rulesparser.AstVisitor
 }
 
-func (m manyVisit) visit(n rules.Expression) {
+func (m manyVisit) visit(n rulesparser.Expression) {
 	for _, v := range m.visitors {
 		if v == nil {
 			continue
@@ -170,37 +170,37 @@ func (m manyVisit) visit(n rules.Expression) {
 	}
 }
 
-func (m manyVisit) VisitAttrAccess(n *rules.AttrAccess) {
+func (m manyVisit) VisitAttrAccess(n *rulesparser.AttrAccess) {
 	m.visit(n)
 }
-func (m manyVisit) VisitBinOp(n *rules.BinOp) {
+func (m manyVisit) VisitBinOp(n *rulesparser.BinOp) {
 	m.visit(n)
 }
-func (m manyVisit) VisitBoolOp(n *rules.BoolOp) {
+func (m manyVisit) VisitBoolOp(n *rulesparser.BoolOp) {
 	m.visit(n)
 }
-func (m manyVisit) VisitBoolean(n *rules.Boolean) {
+func (m manyVisit) VisitBoolean(n *rulesparser.Boolean) {
 	m.visit(n)
 }
-func (m manyVisit) VisitCall(n *rules.Call) {
+func (m manyVisit) VisitCall(n *rulesparser.Call) {
 	m.visit(n)
 }
-func (m manyVisit) VisitIdentifier(n *rules.Identifier) {
+func (m manyVisit) VisitIdentifier(n *rulesparser.Identifier) {
 	m.visit(n)
 }
-func (m manyVisit) VisitNumber(n *rules.Number) {
+func (m manyVisit) VisitNumber(n *rulesparser.Number) {
 	m.visit(n)
 }
-func (m manyVisit) VisitString(n *rules.String) {
+func (m manyVisit) VisitString(n *rulesparser.String) {
 	m.visit(n)
 }
-func (m manyVisit) VisitSubscript(n *rules.Subscript) {
+func (m manyVisit) VisitSubscript(n *rulesparser.Subscript) {
 	m.visit(n)
 }
-func (m manyVisit) VisitTuple(n *rules.Tuple) {
+func (m manyVisit) VisitTuple(n *rulesparser.Tuple) {
 	m.visit(n)
 }
-func (m manyVisit) VisitUnary(n *rules.UnaryOp) {
+func (m manyVisit) VisitUnary(n *rulesparser.UnaryOp) {
 	m.visit(n)
 }
 

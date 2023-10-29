@@ -19,4 +19,6 @@ type Queryable interface {
 	// load the specified components from the specified model, if a component
 	// isn't attached to the model its pointer should be set to nil
 	Get(Model, []interface{})
+	// return the specific model from the pool
+	Fetch(Model) (View, error)
 }

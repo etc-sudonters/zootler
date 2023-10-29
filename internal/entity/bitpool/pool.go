@@ -17,11 +17,16 @@ type bitpool struct {
 var _ entity.Pool = (*bitpool)(nil)
 var _ entity.View = bitview{}
 
-func New(maxComponentId int) *bitpool {
+type Settings struct {
+	MaxComponentId int
+	MaxEntityId    int
+}
+
+func New(s Settings) *bitpool {
 	var b bitpool
-	b.componentBucketCount = bits.Buckets(maxComponentId)
+	b.componentBucketCount = bits.Buckets(s.MaxComponentId)
 	b.entities = make([]bitview, 1, 128)
-	b.table = componenttable.New()
+	b.table = componenttable.New(s.MaxEntityId)
 	return &b
 }
 
@@ -77,6 +82,14 @@ func (p *bitpool) Get(m entity.Model, cs []interface{}) {
 	for i := range cs {
 		_ = entity.AssignComponentTo(m, cs[i], p.table.Getter())
 	}
+}
+
+func (p *bitpool) Fetch(m entity.Model) (entity.View, error) {
+	if int(m) >= len(p.entities) {
+		return nil, entity.ErrEntityNotExist
+	}
+
+	return p.entities[int(m)], nil
 }
 
 func (p *bitpool) addCompToEnt(b bitview, c entity.Component) error {

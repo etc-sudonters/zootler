@@ -13,7 +13,6 @@ type (
 		Origination entity.Model
 		Destination entity.Model
 	}
-	Name      string
 	Collected struct{}
 	Trick     struct{}
 	Enabled   struct{}

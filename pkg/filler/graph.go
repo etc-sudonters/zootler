@@ -1,6 +1,9 @@
 package filler
 
 import (
+	"errors"
+	"fmt"
+	"sudonters/zootler/internal/entity"
 	"sudonters/zootler/pkg/logic"
 	"sudonters/zootler/pkg/world"
 
@@ -8,23 +11,13 @@ import (
 )
 
 type RulesAwareSelector[T graph.Direction] struct {
-	W *world.World
-	S graph.Selector[T]
-}
-
-func edgeTo(n graph.Node, other interface{}) world.Edge {
-	switch t := other.(type) {
-	case graph.Origination:
-		return world.Edge{t, graph.Destination(n)}
-	case graph.Destination:
-		return world.Edge{graph.Origination(n), t}
-	}
-
-	panic("unreachable")
-
+	W            *world.World
+	S            graph.Selector[T]
+	Unfullfilled []T
 }
 
 func (s RulesAwareSelector[T]) Select(g graph.Directed, n graph.Node) ([]T, error) {
+	s.Unfullfilled = nil
 	candidates, err := s.S.Select(g, n)
 
 	if err != nil {
@@ -40,8 +33,16 @@ func (s RulesAwareSelector[T]) Select(g graph.Directed, n graph.Node) ([]T, erro
 	var rule logic.Rule
 
 	for _, c := range candidates {
-		edge, _ := s.W.EdgeEntity(edgeTo(n, c))
-		s.W.Entities.Get(edge, []interface{}{&rule})
+		edge, _ := s.W.Edge(world.Edge{
+			Origination: entity.Model(n),
+			Destination: entity.Model(c),
+		})
+		if err := edge.Get(&rule); err != nil {
+			if errors.Is(err, entity.ErrNotLoaded) {
+				panic(fmt.Errorf("edge %d exists without a rule: %w", edge.Model(), err))
+			}
+			return nil, err
+		}
 
 		if rule == nil {
 			accessibleNeighbors = append(accessibleNeighbors, c)
@@ -56,6 +57,8 @@ func (s RulesAwareSelector[T]) Select(g graph.Directed, n graph.Node) ([]T, erro
 
 		if fulfillment {
 			accessibleNeighbors = append(accessibleNeighbors, c)
+		} else {
+			s.Unfullfilled = append(s.Unfullfilled, c)
 		}
 	}
 

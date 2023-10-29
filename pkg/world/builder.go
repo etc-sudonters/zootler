@@ -1,61 +1,56 @@
 package world
 
 import (
+	"errors"
 	"fmt"
 
 	"sudonters/zootler/internal/entity"
 	"sudonters/zootler/internal/entity/bitpool"
-	"sudonters/zootler/pkg/logic"
 
+	"github.com/etc-sudonters/substrate/reiterate"
 	"github.com/etc-sudonters/substrate/skelly/graph"
 )
+
+var ErrOriginNotLoaded = errors.New("origin model is not loaded in graph")
+var ErrUntrackedGraphChange = errors.New("world graph has untracked changes")
 
 type Builder struct {
 	Pool      Pool
 	graph     graph.Builder
-	edgeCache map[Edge]entity.View
-	nodeCache map[graph.Node]entity.View
-	nameCache map[string]entity.View
+	nameCache map[Name]entity.View
 }
 
 func NewBuilder() *Builder {
 	return &Builder{
-		Pool{bitpool.New(300)},
+		Pool{bitpool.New(bitpool.Settings{
+			MaxComponentId: 300,
+			MaxEntityId:    2000,
+		})},
 		graph.Builder{G: graph.New()},
-		make(map[Edge]entity.View),
-		make(map[graph.Node]entity.View),
-		make(map[string]entity.View),
+		make(map[Name]entity.View, 128),
 	}
 }
 
 // after calling this it is no longer safe to interact with the builder
 func (w *Builder) Build() World {
-	edgeCache := make(map[Edge]entity.Model, len(w.edgeCache))
-	nodeCache := make(map[graph.Node]entity.Model, len(w.nodeCache))
-
-	for e, v := range w.edgeCache {
-		edgeCache[e] = v.Model()
-	}
-
-	for n, v := range w.nodeCache {
-		nodeCache[n] = v.Model()
-
-	}
-
 	return World{
-		Entities:  w.Pool,
-		Graph:     w.graph.G,
-		edgeCache: edgeCache,
-		nodeCache: nodeCache,
+		Entities: w.Pool,
+		Graph:    w.graph.G,
 	}
 }
 
-func (w *Builder) AddEntity(n logic.Name) (entity.View, error) {
+// unique names means we can forward declare entities w/o worry
+func (w *Builder) AddEntity(n Name) (entity.View, error) {
+	if ent, ok := w.nameCache[n]; ok {
+		return ent, nil
+	}
+
 	ent, err := w.Pool.Create(n)
 	if err != nil {
 		return nil, err
 	}
 
+	w.nameCache[n] = ent
 	return ent, nil
 }
 
@@ -64,110 +59,67 @@ func (w *Builder) AddNode(v entity.View) {
 }
 
 func (w *Builder) AddEdge(origin, destination entity.View) (entity.View, error) {
-	var oName logic.Name
-	var dName logic.Name
-	origin.Get(&oName)
-	destination.Get(&dName)
-
-	name := logic.Name(fmt.Sprintf("%s -> %s", oName, dName))
-
-	o := graph.Origination(origin.Model())
-	d := graph.Destination(destination.Model())
-
-	if ent, ok := w.edgeCache[Edge{o, d}]; ok {
-		return ent, nil
-	}
-
-	if err := w.graph.AddEdge(o, d); err != nil {
-		return nil, err
-	}
-
-	ent, err := w.Pool.Create(name)
-
+	// we require that origin exist in the graph already rather than just adding it
+	successors, err := w.graph.G.Successors(graph.Node(origin.Model()))
 	if err != nil {
+		if errors.Is(err, graph.ErrOriginNotFound) {
+			return nil, ErrOriginNotLoaded
+		}
 		return nil, err
 	}
 
-	ent.Add(logic.Edge{
-		Destination: entity.Model(d),
-		Origination: entity.Model(o),
+	var conns Connections
+
+	if err := origin.Get(&conns); err != nil {
+		if errors.Is(err, entity.ErrNotLoaded) {
+			conns = make(Connections, 4)
+			origin.Add(conns)
+		} else {
+			return nil, err
+		}
+	}
+
+	if reiterate.Contains(graph.Destination(destination.Model()), successors) {
+		edgeId, ok := conns[destination.Model()]
+		if !ok {
+			panic(ErrUntrackedGraphChange)
+		}
+
+		edge, err := w.Pool.Fetch(edgeId)
+		if err != nil {
+			panic(err)
+		}
+		return edge, nil
+	}
+
+	edge, err := w.Pool.Create(nameEdgeFrom(origin, destination))
+	if err != nil {
+		panic(err)
+	}
+
+	conns[destination.Model()] = edge.Model()
+	if err := w.graph.AddEdge(graph.Origination(origin.Model()), graph.Destination(destination.Model())); err != nil {
+		panic(err)
+	}
+
+	edge.Add(Edge{
+		Origination: origin.Model(),
+		Destination: origin.Model(),
 	})
 
-	w.edgeCache[Edge{o, d}] = ent
-
-	return ent, nil
+	return edge, nil
 }
 
-func DefaultItemPool() map[string]int {
+func nameEdgeFrom(origin, destination entity.View) Name {
+	var from Name
+	var to Name
 
-	return map[string]int{
-		"Arrows (10)":                          8,
-		"Arrows (30)":                          6,
-		"Arrows (5)":                           3,
-		"Biggoron Sword":                       1,
-		"Bolero of Fire":                       1,
-		"Bomb Bag":                             3,
-		"Bombchus (10)":                        3,
-		"Bombchus (20)":                        1,
-		"Bombchus (5)":                         1,
-		"Bombs (10)":                           2,
-		"Bombs (20)":                           2,
-		"Bombs (5)":                            8,
-		"Boomerang":                            1,
-		"Bottle with Blue Potion":              1,
-		"Bottle with Red Potion":               2,
-		"Bow":                                  3,
-		"Claim Check":                          1,
-		"Deku Nut Capacity":                    2,
-		"Deku Nuts (10)":                       1,
-		"Deku Nuts (5)":                        4,
-		"Deku Seeds (30)":                      4,
-		"Deku Shield":                          4,
-		"Deku Stick (1)":                       3,
-		"Deku Stick Capacity":                  2,
-		"Dins Fire":                            1,
-		"Double Defense":                       1,
-		"Eponas Song":                          1,
-		"Farores Wind":                         1,
-		"Fire Arrows":                          1,
-		"Goron Tunic":                          1,
-		"Heart Container":                      8,
-		"Hover Boots":                          1,
-		"Hylian Shield":                        2,
-		"Ice Arrows":                           1,
-		"Iron Boots":                           1,
-		"Kokiri Sword":                         1,
-		"Lens of Truth":                        1,
-		"Light Arrows":                         1,
-		"Magic Meter":                          2,
-		"Megaton Hammer":                       1,
-		"Minuet of Forest":                     1,
-		"Mirror Shield":                        1,
-		"Nayrus Love":                          1,
-		"Nocturne of Shadow":                   1,
-		"Piece of Heart (Treasure Chest Game)": 1,
-		"Piece of Heart":                       35,
-		"Prelude of Light":                     1,
-		"Progressive Hookshot":                 2,
-		"Progressive Scale":                    2,
-		"Progressive Strength Upgrade":         3,
-		"Progressive Wallet":                   2,
-		"Recovery Heart":                       11,
-		"Requiem of Spirit":                    1,
-		"Rupee (1)":                            1,
-		"Rupees (20)":                          6,
-		"Rupees (200)":                         6,
-		"Rupees (5)":                           23,
-		"Rupees (50)":                          7,
-		"Rutos Letter":                         1,
-		"Sarias Song":                          1,
-		"Serenade of Water":                    1,
-		"Slingshot":                            3,
-		"Song of Storms":                       1,
-		"Song of Time":                         1,
-		"Stone of Agony":                       1,
-		"Suns Song":                            1,
-		"Zeldas Lullaby":                       1,
-		"Zora Tunic":                           1,
+	if err := origin.Get(&from); err != nil {
+		panic(err)
 	}
+	if err := destination.Get(&to); err != nil {
+		panic(err)
+	}
+
+	return Name(fmt.Sprintf("%s -> %s", from, to))
 }

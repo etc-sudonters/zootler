@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"sudonters/zootler/internal/rules"
+	"sudonters/zootler/pkg/rulesparser"
 
 	"github.com/etc-sudonters/substrate/dontio"
 )
@@ -36,13 +36,13 @@ type FancyAstWriter struct {
 	indent int
 }
 
-func (w *FancyAstWriter) VisitAttrAccess(a *rules.AttrAccess) {
+func (w *FancyAstWriter) VisitAttrAccess(a *rulesparser.AttrAccess) {
 	w.writeObject(a)
 	w.writeProperty("Target", a.Target)
 	w.writeProperty("Attr", a.Attr)
 	w.writeObjectEnd()
 }
-func (w *FancyAstWriter) VisitBinOp(b *rules.BinOp) {
+func (w *FancyAstWriter) VisitBinOp(b *rulesparser.BinOp) {
 	w.writeObject(b)
 	w.writeKeywordProperty("Op", string(b.Op))
 	w.writeProperty("Left", b.Left)
@@ -50,7 +50,7 @@ func (w *FancyAstWriter) VisitBinOp(b *rules.BinOp) {
 	w.writeObjectEnd()
 }
 
-func (w *FancyAstWriter) VisitBoolOp(b *rules.BoolOp) {
+func (w *FancyAstWriter) VisitBoolOp(b *rulesparser.BoolOp) {
 	w.writeObject(b)
 	w.writeKeywordProperty("Op", string(b.Op))
 	w.writeProperty("Left", b.Left)
@@ -58,12 +58,12 @@ func (w *FancyAstWriter) VisitBoolOp(b *rules.BoolOp) {
 	w.writeObjectEnd()
 }
 
-func (w *FancyAstWriter) VisitBoolean(b *rules.Boolean) {
+func (w *FancyAstWriter) VisitBoolean(b *rulesparser.Boolean) {
 	w.writeObject(b)
 	w.writeBoolProperty("Value", b.Value)
 	w.writeObjectEnd()
 }
-func (w *FancyAstWriter) VisitCall(c *rules.Call) {
+func (w *FancyAstWriter) VisitCall(c *rulesparser.Call) {
 	w.writeObject(c)
 	w.writeProperty("Fn", c.Name)
 	w.writePropertyName("Args")
@@ -74,29 +74,29 @@ func (w *FancyAstWriter) VisitCall(c *rules.Call) {
 	w.writeArrEnd()
 	w.writeObjectEnd()
 }
-func (w *FancyAstWriter) VisitIdentifier(i *rules.Identifier) {
+func (w *FancyAstWriter) VisitIdentifier(i *rulesparser.Identifier) {
 	w.writeObject(i)
 	w.writeIdentifierProperty("Value", i.Value)
 	w.writeObjectEnd()
 }
 
-func (w *FancyAstWriter) VisitNumber(n *rules.Number) {
+func (w *FancyAstWriter) VisitNumber(n *rulesparser.Number) {
 	w.writeObject(n)
 	w.writeNumProperty("Value", n.Value)
 	w.writeObjectEnd()
 }
-func (w *FancyAstWriter) VisitString(s *rules.String) {
+func (w *FancyAstWriter) VisitString(s *rulesparser.String) {
 	w.writeObject(s)
 	w.writeStrProperty("Value", s.Value)
 	w.writeObjectEnd()
 }
-func (w *FancyAstWriter) VisitSubscript(s *rules.Subscript) {
+func (w *FancyAstWriter) VisitSubscript(s *rulesparser.Subscript) {
 	w.writeObject(s)
 	w.writeProperty("Target", s.Target)
 	w.writeProperty("Index", s.Index)
 	w.writeObjectEnd()
 }
-func (w *FancyAstWriter) VisitTuple(t *rules.Tuple) {
+func (w *FancyAstWriter) VisitTuple(t *rulesparser.Tuple) {
 	w.writeObject(t)
 	w.writePropertyName("Elems")
 	w.writeArrStart()
@@ -107,7 +107,7 @@ func (w *FancyAstWriter) VisitTuple(t *rules.Tuple) {
 	w.writeObjectEnd()
 }
 
-func (w *FancyAstWriter) VisitUnary(u *rules.UnaryOp) {
+func (w *FancyAstWriter) VisitUnary(u *rulesparser.UnaryOp) {
 	w.writeObject(u)
 	w.writeKeywordProperty("Op", string(u.Op))
 	w.writeProperty("Target", u.Target)
@@ -205,7 +205,7 @@ func (a *FancyAstWriter) writeKeywordProperty(name, kw string) {
 	a.writePropertyEnd()
 }
 
-func (a *FancyAstWriter) writeProperty(name string, value rules.Expression) {
+func (a *FancyAstWriter) writeProperty(name string, value rulesparser.Expression) {
 	a.writePropertyName(name)
 	value.Visit(a)
 	a.writePropertyEnd()
@@ -217,7 +217,7 @@ func (a *FancyAstWriter) writeArrStart() {
 	a.indent += 1
 }
 
-func (a *FancyAstWriter) writeArrElem(v rules.Expression) {
+func (a *FancyAstWriter) writeArrElem(v rulesparser.Expression) {
 	a.writeIndent()
 	v.Visit(a)
 	fmt.Fprintf(a.b, ",\n")

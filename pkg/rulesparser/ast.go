@@ -6,7 +6,7 @@ import (
 	"sudonters/zootler/internal/peruse"
 )
 
-type AstVisitor interface {
+type RuleVisitor interface {
 	VisitAttrAccess(*AttrAccess)
 	VisitBinOp(*BinOp)
 	VisitBoolOp(*BoolOp)
@@ -20,13 +20,9 @@ type AstVisitor interface {
 	VisitUnary(*UnaryOp)
 }
 
-type TotalRule struct {
-	Rule Expression
-}
-
 type (
 	Node interface {
-		Visit(AstVisitor)
+		Visit(RuleVisitor)
 	}
 
 	Expression interface {
@@ -147,14 +143,14 @@ func (s *Subscript) exprNode()  {}
 func (t *Tuple) exprNode()      {}
 func (u *UnaryOp) exprNode()    {}
 
-func (expr *AttrAccess) Visit(v AstVisitor) { v.VisitAttrAccess(expr) }
-func (expr *BinOp) Visit(v AstVisitor)      { v.VisitBinOp(expr) }
-func (expr *BoolOp) Visit(v AstVisitor)     { v.VisitBoolOp(expr) }
-func (expr *Boolean) Visit(v AstVisitor)    { v.VisitBoolean(expr) }
-func (expr *Call) Visit(v AstVisitor)       { v.VisitCall(expr) }
-func (expr *Identifier) Visit(v AstVisitor) { v.VisitIdentifier(expr) }
-func (expr *Number) Visit(v AstVisitor)     { v.VisitNumber(expr) }
-func (expr *String) Visit(v AstVisitor)     { v.VisitString(expr) }
-func (expr *Subscript) Visit(v AstVisitor)  { v.VisitSubscript(expr) }
-func (expr *Tuple) Visit(v AstVisitor)      { v.VisitTuple(expr) }
-func (expr *UnaryOp) Visit(v AstVisitor)    { v.VisitUnary(expr) }
+func (expr *AttrAccess) Visit(v RuleVisitor) { v.VisitAttrAccess(expr) }
+func (expr *BinOp) Visit(v RuleVisitor)      { v.VisitBinOp(expr) }
+func (expr *BoolOp) Visit(v RuleVisitor)     { v.VisitBoolOp(expr) }
+func (expr *Boolean) Visit(v RuleVisitor)    { v.VisitBoolean(expr) }
+func (expr *Call) Visit(v RuleVisitor)       { v.VisitCall(expr) }
+func (expr *Identifier) Visit(v RuleVisitor) { v.VisitIdentifier(expr) }
+func (expr *Number) Visit(v RuleVisitor)     { v.VisitNumber(expr) }
+func (expr *String) Visit(v RuleVisitor)     { v.VisitString(expr) }
+func (expr *Subscript) Visit(v RuleVisitor)  { v.VisitSubscript(expr) }
+func (expr *Tuple) Visit(v RuleVisitor)      { v.VisitTuple(expr) }
+func (expr *UnaryOp) Visit(v RuleVisitor)    { v.VisitUnary(expr) }

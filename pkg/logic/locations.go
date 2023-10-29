@@ -2,9 +2,6 @@ package logic
 
 import (
 	"encoding/json"
-	"fmt"
-	"io"
-	"os"
 	"strings"
 
 	"sudonters/zootler/internal/entity"
@@ -433,23 +430,4 @@ func (p *PlacementLocation) UnmarshalJSON(data []byte) error {
 	}
 
 	return nil
-}
-
-func ReadLocations(r io.Reader) ([]PlacementLocation, error) {
-	decoder := json.NewDecoder(r)
-	var locs []PlacementLocation
-	if err := decoder.Decode(&locs); err != nil {
-		return nil, fmt.Errorf("while loading locations %w", err)
-	}
-
-	return locs, nil
-}
-
-func ReadLocationFile(fp string) ([]PlacementLocation, error) {
-	fh, err := os.Open(fp)
-	if err != nil {
-		return nil, fmt.Errorf("when opening %s: %w", fp, err)
-	}
-
-	return ReadLocations(fh)
 }

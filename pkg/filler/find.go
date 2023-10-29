@@ -26,7 +26,7 @@ func FindReachableWorld(ctx context.Context, w *world.World) (set.Hash[graph.Nod
 
 	bfs := graph.BreadthFirst[graph.Destination]{
 		Selector: &RulesAwareSelector[graph.Destination]{
-			w, graph.Successors,
+			w, graph.Successors, nil,
 		},
 		Visitor: setVisitor{reachable},
 	}

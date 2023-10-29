@@ -7,6 +7,7 @@ import (
 )
 
 var ErrNoMoreIds = errors.New("no more ids available")
+var ErrEntityNotExist = errors.New("entity does not exist")
 var ErrNoEntities = errors.New("no entities")
 var ErrNotLoaded = errors.New("not loaded")
 var ErrNotAssigned = errors.New("not assigned")

@@ -6,6 +6,7 @@ import (
 	"sudonters/zootler/internal/entity"
 	"sudonters/zootler/internal/mirrors"
 
+	"github.com/etc-sudonters/substrate/skelly/set/bits"
 	"github.com/etc-sudonters/substrate/stageleft"
 )
 
@@ -19,20 +20,22 @@ func (c componentGetter) GetComponent(e entity.Model, t reflect.Type) (entity.Co
 	return c.Get(e, t)
 }
 
-func New() *Table {
+func New(maxEntities int) *Table {
 	t := new(Table)
 	t.rows = make([]*Row, 1, 32)
 	t.typemap = make(mirrors.TypeMap, 32)
 	t.rows[entity.INVALID_ENTITY] = nil
 	t.typemap[nil] = mirrors.TypeId(entity.INVALID_COMPONENT)
 	t.getter = componentGetter{t}
+	t.entityBuckets = bits.Buckets(maxEntities)
 	return t
 }
 
 type Table struct {
-	rows    []*Row
-	typemap mirrors.TypeMap
-	getter  entity.ComponentGetter
+	entityBuckets int
+	rows          []*Row
+	typemap       mirrors.TypeMap
+	getter        entity.ComponentGetter
 }
 
 func (t *Table) Set(e entity.Model, c entity.Component) entity.ComponentId {
@@ -101,7 +104,8 @@ func (t *Table) getOrCreateRowFor(typ reflect.Type) *Row {
 	}
 
 	r := new(Row)
-	r.Init(entity.ComponentId(id))
+	r.Init(entity.ComponentId(id), t.entityBuckets)
 	t.rows = append(t.rows, r)
+	r.typ = typ
 	return r
 }
