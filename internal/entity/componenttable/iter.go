@@ -3,9 +3,10 @@ package componenttable
 import (
 	"reflect"
 	"sudonters/zootler/internal/entity"
+	"sudonters/zootler/internal/reitertools"
 )
 
-func (t *Table) Rows() *tableIter {
+func (t *Table) Rows() reitertools.Iterator[RowData] {
 	return &tableIter{t, 0}
 }
 
@@ -14,8 +15,18 @@ type tableIter struct {
 	idx int
 }
 
+func (t tableIter) Index() int { return t.idx }
+
 type RowData struct {
 	r *Row
+}
+
+func (r RowData) Get(e entity.Model) entity.Component {
+	return r.r.Get(e)
+}
+
+func (r RowData) Components() reitertools.Iterator[RowEntry] {
+	return r.r.Components()
 }
 
 func (r RowData) Capacity() int {
@@ -45,4 +56,9 @@ func (t *tableIter) MoveNext() bool {
 
 func (t *tableIter) Current() RowData {
 	return RowData{t.t.rows[t.idx]}
+}
+
+type RowEntry struct {
+	Entity    entity.Model
+	Component entity.Component
 }

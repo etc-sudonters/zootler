@@ -2,6 +2,7 @@ package componenttable
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
 	"sudonters/zootler/internal/entity"
 	"sudonters/zootler/internal/mirrors"
@@ -10,6 +11,7 @@ import (
 	"github.com/etc-sudonters/substrate/stageleft"
 )
 
+var strType reflect.Type = mirrors.TypeOf[string]()
 var ErrCorruptedTable = errors.New("table became corrupted")
 
 type componentGetter struct {
@@ -40,6 +42,9 @@ type Table struct {
 
 func (t *Table) Set(e entity.Model, c entity.Component) entity.ComponentId {
 	typ := entity.PierceComponentType(c)
+	if typ == strType {
+		panic(fmt.Errorf("string component added to %d: %q", e, c))
+	}
 	row := t.getOrCreateRowFor(typ)
 	row.Set(e, c)
 	return row.id
@@ -77,6 +82,10 @@ func (t *Table) Get(e entity.Model, typ reflect.Type) (entity.Component, error) 
 
 func (t Table) Getter() entity.ComponentGetter {
 	return t.getter
+}
+
+func (t Table) Len() int {
+	return len(t.rows)
 }
 
 func (t Table) rowFor(typ reflect.Type) *Row {

@@ -23,8 +23,8 @@ type Builder struct {
 func NewBuilder() *Builder {
 	return &Builder{
 		Pool{bitpool.New(bitpool.Settings{
-			MaxComponentId: 300,
-			MaxEntityId:    2000,
+			MaxComponentId: 3000,
+			MaxEntityId:    20000,
 		})},
 		graph.Builder{G: graph.New()},
 		make(map[Name]entity.View, 128),
@@ -71,7 +71,7 @@ func (w *Builder) AddEdge(origin, destination entity.View) (entity.View, error) 
 	var conns Connections
 
 	if err := origin.Get(&conns); err != nil {
-		if errors.Is(err, entity.ErrNotLoaded) {
+		if errors.Is(err, entity.ErrNotLoaded) || errors.Is(err, entity.ErrNotAssigned) {
 			conns = make(Connections, 4)
 			origin.Add(conns)
 		} else {

@@ -3,6 +3,7 @@ package componenttable
 import (
 	"reflect"
 	"sudonters/zootler/internal/entity"
+	"sudonters/zootler/internal/reitertools"
 
 	"github.com/etc-sudonters/substrate/skelly/set/bits"
 )
@@ -12,6 +13,20 @@ type Row struct {
 	typ        reflect.Type
 	components []entity.Component
 	members    bits.Bitset64
+}
+
+func (r *Row) Components() reitertools.Iterator[RowEntry] {
+	i := reitertools.SubsliceIter(r.components, 1)
+	f := reitertools.Filter(i, func(c entity.Component, _ int) bool {
+		return c != nil
+	})
+	m := reitertools.Map(f, func(c entity.Component, idx int) RowEntry {
+		return RowEntry{
+			Entity:    entity.Model(idx),
+			Component: c,
+		}
+	})
+	return m
 }
 
 func (r *Row) Init(id entity.ComponentId, entityBuckets int) {

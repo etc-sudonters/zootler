@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"sudonters/zootler/pkg/logic"
 	"sudonters/zootler/pkg/rulesparser"
 
 	"github.com/etc-sudonters/substrate/dontio"
@@ -94,7 +95,7 @@ func loadLogic(logicDir string, filt filter, pretty bool) {
 		}
 
 		path := filepath.Join(logicDir, entry.Name())
-		logicLocations, err := rulesparser.ReadLogicFile(path)
+		logicLocations, err := logic.ReadLogicFile(path)
 		if err != nil {
 			panic(err)
 		}
@@ -108,7 +109,7 @@ func loadLogic(logicDir string, filt filter, pretty bool) {
 	}
 }
 
-func ParseAllChecks(loc rulesparser.RawLogicLocation, filt filter, pretty bool) {
+func ParseAllChecks(loc logic.RawLogicLocation, filt filter, pretty bool) {
 	parseAll("Event", loc.Events, loc.Region, filt, pretty)
 	parseAll("Check", loc.Locations, loc.Region, filt, pretty)
 	parseAll("Exit", loc.Exits, loc.Region, filt, pretty)
@@ -124,10 +125,9 @@ func parseAll[E ~string, R ~string, M map[E]R, N ~string](ctx string, m M, regio
 			continue
 		}
 		rule = R(compressWhiteSpace(string(rule)))
-		name := fmt.Sprintf("%s: %s: %s", ctx, region, check)
-		l := rulesparser.NewLexer(name, string(rule))
-		p := rulesparser.NewParser(l)
-		totalRule, err := p.ParseTotalRule()
+		l := rulesparser.NewRulesLexer(string(rule))
+		p := rulesparser.NewRulesParser(l)
+		totalRule, err := p.Parse()
 		if err != nil {
 			fmt.Fprint(os.Stdout, "Failed to parse rule\n")
 			fmt.Fprintf(os.Stdout, "Region:\t%s\nName:\t%s\nKind:\t%s\n", region, check, ctx)
@@ -139,7 +139,7 @@ func parseAll[E ~string, R ~string, M map[E]R, N ~string](ctx string, m M, regio
 		if !filt.errsOnly {
 			fancy := newFancy()
 			single := newSingleLine()
-			totalRule.Rule.Visit(manyVisitors(fancy, single))
+			totalRule.Visit(manyVisitors(fancy, single))
 			fmt.Fprintf(os.Stdout, "Region:\t%s\nName:\t%s\nKind:\t%s\n", region, check, ctx)
 			fmt.Fprintf(os.Stdout, "Raw:\t%s\n", rule)
 			fmt.Fprintf(os.Stdout, "Rule:\t%s\n", single.b.String())
@@ -153,12 +153,12 @@ func parseAll[E ~string, R ~string, M map[E]R, N ~string](ctx string, m M, regio
 
 const errColor dontio.BackgroundColor = 210
 
-func manyVisitors(v ...rulesparser.AstVisitor) rulesparser.AstVisitor {
+func manyVisitors(v ...rulesparser.RuleVisitor) rulesparser.RuleVisitor {
 	return manyVisit{v}
 }
 
 type manyVisit struct {
-	visitors []rulesparser.AstVisitor
+	visitors []rulesparser.RuleVisitor
 }
 
 func (m manyVisit) visit(n rulesparser.Expression) {
