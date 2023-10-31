@@ -24,24 +24,16 @@ func createComponentOverview(rows []componenttable.RowData, pool entity.Pool) li
 	l := list.New(
 		listItems,
 		overviewDelegate{pool},
-		defaultListWidth, defaultListHeight,
+		0, 0,
 	)
 	l.Title = "Components Available"
-	l.SetShowStatusBar(true)
 	l.SetFilteringEnabled(true)
-	l.Styles.Title = titleStyle
-	l.Styles.PaginationStyle = pagination
-	l.Styles.HelpStyle = helpStyle
 	l.SetShowHelp(false)
+	l.DisableQuitKeybindings()
 
-	panel := listpanel.New(l)
+	panel := listpanel.New(listpanel.WithList(l))
 	return panel
 }
-
-const (
-	defaultListHeight = 48
-	defaultListWidth  = 20
-)
 
 var (
 	titleStyle    = lipgloss.NewStyle().MarginLeft(2)
@@ -92,9 +84,9 @@ func (d overviewDelegate) Update(msg tea.Msg, m *list.Model) tea.Cmd {
 	case tea.KeyMsg:
 		switch keypress := msg.String(); keypress {
 		case "enter":
-			return panels.CreateListPanel(func() listpanel.Model {
+			return panels.CreateListPanel(func(s panels.Size) listpanel.Model {
 				cur := m.SelectedItem().(overviewItem)
-				return createComponentDrillIn(cur.r, d.pool)
+				return createComponentDrillIn(cur.r, d.pool, s)
 			})
 		}
 

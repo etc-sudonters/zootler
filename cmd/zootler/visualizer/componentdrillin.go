@@ -14,7 +14,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-func createComponentDrillIn(r componenttable.RowData, pool entity.Pool) listpanel.Model {
+func createComponentDrillIn(r componenttable.RowData, pool entity.Pool, s panels.Size) listpanel.Model {
 	listItems := make([]list.Item, 0, r.Len())
 	comps := r.Components()
 
@@ -23,12 +23,12 @@ func createComponentDrillIn(r componenttable.RowData, pool entity.Pool) listpane
 		listItems = append(listItems, drillinItem{cur})
 	}
 
-	l := list.New(listItems, drillInDelegate{pool}, defaultListWidth, defaultListHeight)
+	l := list.New(listItems, drillInDelegate{pool}, s.Width, s.Height)
 	l.Title = fmt.Sprintf("Component: %s (%d/%d)", r.Type().Name(), r.Len(), r.Capacity())
-	l.SetShowStatusBar(true)
 	l.SetFilteringEnabled(true)
 	l.SetShowHelp(false)
-	return listpanel.New(l)
+	l.DisableQuitKeybindings()
+	return listpanel.New(listpanel.WithList(l))
 }
 
 type drillinItem struct {
@@ -71,13 +71,13 @@ func (c drillInDelegate) Update(msg tea.Msg, m *list.Model) tea.Cmd {
 	case tea.KeyMsg:
 		switch keypress := msg.String(); keypress {
 		case "enter":
-			return panels.CreateListPanel(func() listpanel.Model {
+			return panels.CreateListPanel(func(s panels.Size) listpanel.Model {
 				tbl, err := bitpool.ExtractComponentTable(c.p)
 				if err != nil {
 					panic(err)
 				}
 				item := m.SelectedItem().(drillinItem)
-				return createComponentsForEntity(item.Entity, tbl)
+				return createComponentsForEntity(item.Entity, tbl, s)
 			})
 		}
 	}

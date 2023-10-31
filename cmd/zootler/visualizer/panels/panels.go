@@ -9,7 +9,15 @@ import (
 	"github.com/etc-sudonters/substrate/bag"
 )
 
-type createListPanel func() listpanel.Model
+type Opt func(*Model)
+
+type UpdateDelegate func(*Model, *listpanel.Model, int, tea.Msg) (bool, tea.Cmd)
+type CloseDelegate func(*Model, *listpanel.Model, int) (bool, tea.Cmd)
+
+type Size struct {
+	Height, Width int
+}
+type createListPanel func(Size) listpanel.Model
 
 func CreateListPanel(c createListPanel) tea.Cmd {
 	return func() tea.Msg {
@@ -17,69 +25,133 @@ func CreateListPanel(c createListPanel) tea.Cmd {
 	}
 }
 
-type PanelKeys struct {
+type Keys struct {
 	NextSibling, LastSibling, CloseCurrent key.Binding
 }
 
-type PanelStyles struct {
+type Styles struct {
 	Focused, Blurred lipgloss.Style
 }
 
-func defaultKeys() PanelKeys {
-	return PanelKeys{
+func WithUpdate(u UpdateDelegate) Opt {
+	return func(p *Model) {
+		p.updating = u
+	}
+}
+
+func WithPanels(p listpanel.Model, ps ...listpanel.Model) Opt {
+	return func(panels *Model) {
+		panels.p = append(panels.p, p)
+		panels.p = append(panels.p, ps...)
+	}
+}
+
+func WithKeys(k Keys) Opt {
+	return func(p *Model) {
+		p.keys = k
+	}
+}
+
+func WithMaxDisplay(n int) Opt {
+	return func(p *Model) {
+		p.maxDisplay = n
+	}
+}
+
+func WithClose(d CloseDelegate) Opt {
+	return func(p *Model) {
+		p.closing = d
+	}
+}
+
+func defaultKeys() Keys {
+	return Keys{
 		NextSibling:  key.NewBinding(key.WithKeys("tab")),
 		LastSibling:  key.NewBinding(key.WithKeys("shift+tab")),
 		CloseCurrent: key.NewBinding(key.WithKeys("X")),
 	}
 }
 
-func New(root listpanel.Model) panels {
-	var p panels
-	p.p = []listpanel.Model{root}
+func New(opts ...Opt) Model {
+	var p Model
 	p.keys = defaultKeys()
 	p.maxDisplay = 3
+
+	for _, o := range opts {
+		o(&p)
+	}
+
 	return p
 }
 
-type panels struct {
+type Model struct {
 	p []listpanel.Model
 
-	keys PanelKeys
+	keys Keys
 
 	idx        int
 	maxDisplay int
 
-	Styles PanelStyles
+	height, width int
+
+	Styles Styles
+
+	updating UpdateDelegate
+	closing  CloseDelegate
 }
 
-func (p panels) Init() tea.Cmd {
+func (p Model) Init() tea.Cmd {
 	return nil
 }
 
-func (p panels) current() *listpanel.Model {
+func (p Model) current() *listpanel.Model {
 	return &p.p[p.idx]
 }
 
-func (p panels) blurCurrent() {
+func (p Model) BlurCurrent() {
 	p.current().Blur()
 }
 
-func (p panels) focusCurrent() {
+func (p Model) FocusCurrent() {
 	p.current().Focus()
 }
 
-func (p *panels) addPanelToEnd(l listpanel.Model) {
+func (p *Model) Append(l listpanel.Model) {
 	p.p = append(p.p, l)
 	p.idx = len(p.p) - 1
 }
 
-func (p panels) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	var cmd tea.Cmd
+func (p *Model) PopCurrent() listpanel.Model {
+	panel := p.p[p.idx]
+	p.p = append(p.p[:p.idx], p.p[p.idx+1:]...)
+	p.idx = bag.Max(bag.Min(p.idx, len(p.p)-1), 0)
+	p.FocusCurrent()
+	return panel
+}
+
+func (p Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		p.height = msg.Height
+		p.width = msg.Width
+
+		cmds := make([]tea.Cmd, len(p.p))
+
+		for i := range p.p {
+			p.p[i], cmds[i] = p.p[i].Update(tea.WindowSizeMsg{
+				Height: p.height,
+				Width:  p.width / p.maxDisplay,
+			})
+		}
+
 	case createListPanel:
-		(&p).addPanelToEnd(msg())
-		p.focusCurrent()
+		(&p).Append(msg(Size{
+			Height: p.height,
+			Width:  p.width / p.maxDisplay,
+		}))
+		p.FocusCurrent()
 		return p, nil
 	case tea.KeyMsg:
 		switch {
@@ -88,51 +160,58 @@ func (p panels) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return p, nil
 			}
 
-			p.blurCurrent()
+			p.BlurCurrent()
 			p.idx++
-			p.focusCurrent()
+			p.FocusCurrent()
 			return p, nil
 		case key.Matches(msg, p.keys.LastSibling):
 			if p.idx == 0 {
 				return p, nil
 			}
 
-			p.blurCurrent()
+			p.BlurCurrent()
 			p.idx--
-			p.focusCurrent()
+			p.FocusCurrent()
 			return p, nil
 		case key.Matches(msg, p.keys.CloseCurrent):
-			if len(p.p) == 1 {
-				return p, tea.Quit
+			// don't close the root if we're not the only one left
+			if p.closing != nil {
+				cont, cmd := p.closing(&p, p.current(), len(p.p)-1)
+				cmds = append(cmds, cmd)
+				if !cont {
+					return p, tea.Batch(cmds...)
+				}
 			}
 
-			// don't close the root if we're not the only one left
 			if p.idx == 0 {
 				return p, nil
 			}
 
-			(&p).removeAtCurrent()
+			(&p).PopCurrent()
 			return p, nil
 		}
 	}
 
-	// current() would mean a deref dance
+	if p.updating != nil {
+		passMsg, delegateCmd := p.updating(&p, p.current(), p.idx, msg)
+
+		if !passMsg {
+			return p, delegateCmd
+		}
+
+		cmds = append(cmds, delegateCmd)
+	}
+
+	var cmd tea.Cmd
 	panel := p.p[p.idx]
 	panel, cmd = panel.Update(msg)
+	cmds = append(cmds, cmd)
 	p.p[p.idx] = panel
 
-	return p, cmd
+	return p, tea.Batch(cmds...)
 }
 
-func (p *panels) removeAtCurrent() {
-	p.p = append(p.p[:p.idx], p.p[p.idx+1:]...)
-	if p.idx == len(p.p) {
-		p.idx--
-	}
-	p.focusCurrent()
-}
-
-func (p panels) View() string {
+func (p Model) View() string {
 	if p.maxDisplay >= len(p.p) {
 		return p.renderAll()
 	}
@@ -140,7 +219,7 @@ func (p panels) View() string {
 	return p.renderWindow()
 }
 
-func (p panels) renderAll() string {
+func (p Model) renderAll() string {
 	views := make([]string, len(p.p))
 
 	for i, v := range p.p {
@@ -155,7 +234,7 @@ func (p panels) renderAll() string {
 	return lipgloss.JoinHorizontal(lipgloss.Top, views...)
 }
 
-func (p panels) renderWindow() string {
+func (p Model) renderWindow() string {
 	var views []string
 	spacing := (p.maxDisplay - 1) / 2
 
