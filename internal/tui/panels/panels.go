@@ -1,7 +1,7 @@
 package panels
 
 import (
-	"sudonters/zootler/cmd/zootler/visualizer/listpanel"
+	"sudonters/zootler/internal/tui/listpanel"
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
@@ -114,6 +114,14 @@ func (p Model) BlurCurrent() {
 
 func (p Model) FocusCurrent() {
 	p.current().Focus()
+}
+
+func (p Model) Index() int {
+	return p.idx
+}
+
+func (p Model) Len() int {
+	return len(p.p)
 }
 
 func (p *Model) Append(l listpanel.Model) {

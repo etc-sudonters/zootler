@@ -50,7 +50,7 @@ type Style struct {
 }
 
 type Keys struct {
-	NextTab, PrevTab key.Binding
+	CloseTab, NextTab, PrevTab key.Binding
 }
 
 func WithTab(name string, m tea.Model) Opt {
@@ -156,6 +156,8 @@ func (t Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, t.keys.PrevTab):
 			t.cur = bag.Max(t.cur-1, 0)
 			return t, cmd
+		case key.Matches(msg, t.keys.CloseTab):
+			return t, func() tea.Msg { return closeTab{} }
 		}
 	}
 

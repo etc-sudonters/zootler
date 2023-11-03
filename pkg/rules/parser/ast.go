@@ -1,12 +1,14 @@
-package rulesparser
+package parser
 
 import (
 	"fmt"
 	"strings"
 	"sudonters/zootler/internal/peruse"
+
+	"github.com/etc-sudonters/substrate/stageleft"
 )
 
-type RuleVisitor interface {
+type Visitor interface {
 	VisitAttrAccess(*AttrAccess)
 	VisitBinOp(*BinOp)
 	VisitBoolOp(*BoolOp)
@@ -20,13 +22,40 @@ type RuleVisitor interface {
 	VisitUnary(*UnaryOp)
 }
 
-type (
-	Node interface {
-		Visit(RuleVisitor)
+func Visit(v Visitor, node Expression) {
+	switch node := node.(type) {
+	case *AttrAccess:
+		v.VisitAttrAccess(node)
+	case *BinOp:
+		v.VisitBinOp(node)
+	case *BoolOp:
+		v.VisitBoolOp(node)
+	case *Boolean:
+		v.VisitBoolean(node)
+	case *Call:
+		v.VisitCall(node)
+	case *Identifier:
+		v.VisitIdentifier(node)
+	case *Number:
+		v.VisitNumber(node)
+	case *String:
+		v.VisitString(node)
+	case *Subscript:
+		v.VisitSubscript(node)
+	case *Tuple:
+		v.VisitTuple(node)
+	case *UnaryOp:
+		v.VisitUnary(node)
+	default:
+		panic(stageleft.AttachExitCode(
+			fmt.Errorf("unknown node type %T", node),
+			stageleft.ExitCode(86),
+		))
 	}
+}
 
+type (
 	Expression interface {
-		Node
 		exprNode()
 	}
 )
@@ -143,14 +172,14 @@ func (s *Subscript) exprNode()  {}
 func (t *Tuple) exprNode()      {}
 func (u *UnaryOp) exprNode()    {}
 
-func (expr *AttrAccess) Visit(v RuleVisitor) { v.VisitAttrAccess(expr) }
-func (expr *BinOp) Visit(v RuleVisitor)      { v.VisitBinOp(expr) }
-func (expr *BoolOp) Visit(v RuleVisitor)     { v.VisitBoolOp(expr) }
-func (expr *Boolean) Visit(v RuleVisitor)    { v.VisitBoolean(expr) }
-func (expr *Call) Visit(v RuleVisitor)       { v.VisitCall(expr) }
-func (expr *Identifier) Visit(v RuleVisitor) { v.VisitIdentifier(expr) }
-func (expr *Number) Visit(v RuleVisitor)     { v.VisitNumber(expr) }
-func (expr *String) Visit(v RuleVisitor)     { v.VisitString(expr) }
-func (expr *Subscript) Visit(v RuleVisitor)  { v.VisitSubscript(expr) }
-func (expr *Tuple) Visit(v RuleVisitor)      { v.VisitTuple(expr) }
-func (expr *UnaryOp) Visit(v RuleVisitor)    { v.VisitUnary(expr) }
+func (expr *AttrAccess) Visit(v Visitor) { v.VisitAttrAccess(expr) }
+func (expr *BinOp) Visit(v Visitor)      { v.VisitBinOp(expr) }
+func (expr *BoolOp) Visit(v Visitor)     { v.VisitBoolOp(expr) }
+func (expr *Boolean) Visit(v Visitor)    { v.VisitBoolean(expr) }
+func (expr *Call) Visit(v Visitor)       { v.VisitCall(expr) }
+func (expr *Identifier) Visit(v Visitor) { v.VisitIdentifier(expr) }
+func (expr *Number) Visit(v Visitor)     { v.VisitNumber(expr) }
+func (expr *String) Visit(v Visitor)     { v.VisitString(expr) }
+func (expr *Subscript) Visit(v Visitor)  { v.VisitSubscript(expr) }
+func (expr *Tuple) Visit(v Visitor)      { v.VisitTuple(expr) }
+func (expr *UnaryOp) Visit(v Visitor)    { v.VisitUnary(expr) }

@@ -2,7 +2,7 @@ package logic
 
 import (
 	"sudonters/zootler/internal/entity"
-	"sudonters/zootler/pkg/rulesparser"
+	rulesparser "sudonters/zootler/pkg/rules/parser"
 )
 
 type (

@@ -66,6 +66,7 @@ func (p *bitpool) Query(qs []entity.Selector) ([]entity.View, error) {
 	var entities []entity.View
 
 	for _, e := range p.entities {
+		e := e
 		if filter.test(e) {
 			entities = append(entities, e)
 		}

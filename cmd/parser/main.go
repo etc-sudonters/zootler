@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"sudonters/zootler/pkg/logic"
-	"sudonters/zootler/pkg/rulesparser"
+	rulesparser "sudonters/zootler/pkg/rules/parser"
 
 	"github.com/etc-sudonters/substrate/dontio"
 	"muzzammil.xyz/jsonc"
@@ -75,7 +75,7 @@ func loadHelpers(logicDir string, filt filter, display bool, pretty bool) {
 		if display && !filt.errsOnly {
 			fancy := newFancy()
 			single := newSingleLine()
-			rule.Visit(manyVisitors(fancy, single))
+			rulesparser.Visit(manyVisitors(fancy, single), rule)
 			fmt.Fprintf(os.Stdout, "Name:\t%s\n", name)
 			fmt.Fprintf(os.Stdout, "Helper:\t%s\n%s\n", single.b.String(), fancy.b.String())
 		}
@@ -139,7 +139,7 @@ func parseAll[E ~string, R ~string, M map[E]R, N ~string](ctx string, m M, regio
 		if !filt.errsOnly {
 			fancy := newFancy()
 			single := newSingleLine()
-			totalRule.Visit(manyVisitors(fancy, single))
+			rulesparser.Visit(manyVisitors(fancy, single), totalRule)
 			fmt.Fprintf(os.Stdout, "Region:\t%s\nName:\t%s\nKind:\t%s\n", region, check, ctx)
 			fmt.Fprintf(os.Stdout, "Raw:\t%s\n", rule)
 			fmt.Fprintf(os.Stdout, "Rule:\t%s\n", single.b.String())
@@ -153,12 +153,12 @@ func parseAll[E ~string, R ~string, M map[E]R, N ~string](ctx string, m M, regio
 
 const errColor dontio.BackgroundColor = 210
 
-func manyVisitors(v ...rulesparser.RuleVisitor) rulesparser.RuleVisitor {
+func manyVisitors(v ...rulesparser.Visitor) rulesparser.Visitor {
 	return manyVisit{v}
 }
 
 type manyVisit struct {
-	visitors []rulesparser.RuleVisitor
+	visitors []rulesparser.Visitor
 }
 
 func (m manyVisit) visit(n rulesparser.Expression) {
@@ -166,7 +166,7 @@ func (m manyVisit) visit(n rulesparser.Expression) {
 		if v == nil {
 			continue
 		}
-		n.Visit(v)
+		rulesparser.Visit(v, n)
 	}
 }
 

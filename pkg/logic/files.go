@@ -3,6 +3,7 @@ package logic
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 
 	"sudonters/zootler/internal/entity"
@@ -75,5 +76,32 @@ func ReadLogicFile(fp string) ([]RawLogicLocation, error) {
 		return nil, err
 	}
 
+	for i, l := range locs {
+		for evt, rule := range l.Events {
+			l.Events[evt] = compressWhiteSpace(rule)
+		}
+
+		for exit, rule := range l.Exits {
+			l.Exits[exit] = compressWhiteSpace(rule)
+		}
+
+		for location, rule := range l.Locations {
+			l.Locations[location] = compressWhiteSpace(rule)
+		}
+
+		locs[i] = l
+	}
+
 	return locs, nil
 }
+
+func compressWhiteSpace[S ~string](raw S) S {
+	r := string(raw)
+	r = trailWhiteSpace.ReplaceAllLiteralString(r, "")
+	r = leadWhiteSpace.ReplaceAllLiteralString(r, "")
+	return S(compressWhiteSpaceRe.ReplaceAllLiteralString(r, " "))
+}
+
+var compressWhiteSpaceRe *regexp.Regexp = regexp.MustCompile(`\s+`)
+var leadWhiteSpace *regexp.Regexp = regexp.MustCompile(`^\s+`)
+var trailWhiteSpace *regexp.Regexp = regexp.MustCompile(`\s+$`)

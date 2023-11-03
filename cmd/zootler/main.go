@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"runtime/debug"
 
-	"sudonters/zootler/cmd/zootler/visualizer"
+	"sudonters/zootler/cmd/zootler/tui"
 	"sudonters/zootler/internal/entity"
 	"sudonters/zootler/pkg/filler"
 	"sudonters/zootler/pkg/logic"
@@ -92,7 +92,7 @@ func main() {
 	w := b.Build()
 
 	if opts.visualizer {
-		v := visualizer.Visualize(w)
+		v := tui.Tui(w)
 		if err := v.Run(ctx); err != nil {
 			panic(err)
 		}

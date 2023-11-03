@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"sudonters/zootler/pkg/rulesparser"
+	rulesparser "sudonters/zootler/pkg/rules/parser"
 
 	"github.com/etc-sudonters/substrate/dontio"
 )
@@ -68,8 +68,8 @@ func (w *FancyAstWriter) VisitCall(c *rulesparser.Call) {
 	w.writeProperty("Fn", c.Name)
 	w.writePropertyName("Args")
 	w.writeArrStart()
-	for _, e := range c.Args {
-		w.writeArrElem(e)
+	for _, node := range c.Args {
+		w.writeArrElem(node)
 	}
 	w.writeArrEnd()
 	w.writeObjectEnd()
@@ -207,7 +207,7 @@ func (a *FancyAstWriter) writeKeywordProperty(name, kw string) {
 
 func (a *FancyAstWriter) writeProperty(name string, value rulesparser.Expression) {
 	a.writePropertyName(name)
-	value.Visit(a)
+	rulesparser.Visit(a, value)
 	a.writePropertyEnd()
 }
 
@@ -219,7 +219,7 @@ func (a *FancyAstWriter) writeArrStart() {
 
 func (a *FancyAstWriter) writeArrElem(v rulesparser.Expression) {
 	a.writeIndent()
-	v.Visit(a)
+	rulesparser.Visit(a, v)
 	fmt.Fprintf(a.b, ",\n")
 }
 

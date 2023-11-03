@@ -1,4 +1,4 @@
-package rulesparser
+package parser
 
 import "testing"
 

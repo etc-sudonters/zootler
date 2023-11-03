@@ -3,7 +3,7 @@ package rulebuilder
 import (
 	"context"
 	"sudonters/zootler/pkg/logic"
-	"sudonters/zootler/pkg/rulesparser"
+	rulesparser "sudonters/zootler/pkg/rules/parser"
 )
 
 func CompileRule(context.Context, rulesparser.Expression) (logic.Rule, error) {

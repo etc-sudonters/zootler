@@ -1,13 +1,13 @@
-package visualizer
+package tui
 
 import (
 	"fmt"
 	"io"
-	"sudonters/zootler/cmd/zootler/visualizer/listpanel"
-	"sudonters/zootler/cmd/zootler/visualizer/panels"
 	"sudonters/zootler/internal/entity"
 	"sudonters/zootler/internal/entity/bitpool"
 	"sudonters/zootler/internal/entity/componenttable"
+	"sudonters/zootler/internal/tui/listpanel"
+	"sudonters/zootler/internal/tui/panels"
 	"sudonters/zootler/pkg/world"
 
 	"github.com/charmbracelet/bubbles/list"

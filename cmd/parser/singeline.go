@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"sudonters/zootler/pkg/rulesparser"
+	rulesparser "sudonters/zootler/pkg/rules/parser"
 
 	"github.com/etc-sudonters/substrate/dontio"
 )
@@ -19,26 +19,26 @@ type singleLine struct {
 }
 
 func (s *singleLine) VisitAttrAccess(a *rulesparser.AttrAccess) {
-	a.Target.Visit(s)
+	rulesparser.Visit(s, a.Target)
 	s.b.WriteRune('.')
-	a.Attr.Visit(s)
+	rulesparser.Visit(s, a.Attr)
 }
 func (s *singleLine) VisitBinOp(b *rulesparser.BinOp) {
 	s.writeOpenParen()
 	s.b.WriteString(keywordColor.Paint(string(b.Op)))
 	s.b.WriteRune(' ')
-	b.Left.Visit(s)
+	rulesparser.Visit(s, b.Left)
 	s.b.WriteRune(' ')
-	b.Right.Visit(s)
+	rulesparser.Visit(s, b.Right)
 	s.writeCloseParen()
 }
 func (s *singleLine) VisitBoolOp(b *rulesparser.BoolOp) {
 	s.writeOpenParen()
 	s.b.WriteString(keywordColor.Paint(string(b.Op)))
 	s.b.WriteRune(' ')
-	b.Left.Visit(s)
+	rulesparser.Visit(s, b.Left)
 	s.b.WriteRune(' ')
-	b.Right.Visit(s)
+	rulesparser.Visit(s, b.Right)
 	s.writeCloseParen()
 }
 func (s *singleLine) VisitBoolean(b *rulesparser.Boolean) {
@@ -46,10 +46,10 @@ func (s *singleLine) VisitBoolean(b *rulesparser.Boolean) {
 }
 func (s *singleLine) VisitCall(c *rulesparser.Call) {
 	s.writeOpenParen()
-	c.Name.Visit(s)
+	rulesparser.Visit(s, c.Name)
 	for _, arg := range c.Args {
 		s.b.WriteRune(' ')
-		arg.Visit(s)
+		rulesparser.Visit(s, arg)
 	}
 	s.writeCloseParen()
 }
@@ -65,17 +65,17 @@ func (s *singleLine) VisitString(r *rulesparser.String) {
 func (s *singleLine) VisitSubscript(r *rulesparser.Subscript) {
 	s.writeOpenParen()
 	s.b.WriteString("[] ")
-	r.Target.Visit(s)
+	rulesparser.Visit(s, r.Target)
 	s.b.WriteRune(' ')
-	r.Index.Visit(s)
+	rulesparser.Visit(s, r.Index)
 	s.writeCloseParen()
 }
 func (s *singleLine) VisitTuple(t *rulesparser.Tuple) {
 	s.writeOpenParen()
-	t.Elems[0].Visit(s)
+	rulesparser.Visit(s, t.Elems[0])
 	for _, arg := range t.Elems[1:] {
 		s.b.WriteRune(' ')
-		arg.Visit(s)
+		rulesparser.Visit(s, arg)
 	}
 	s.writeCloseParen()
 }
@@ -83,7 +83,7 @@ func (s *singleLine) VisitUnary(u *rulesparser.UnaryOp) {
 	s.writeOpenParen()
 	s.b.WriteString(keywordColor.Paint(string(u.Op)))
 	s.b.WriteRune(' ')
-	u.Target.Visit(s)
+	rulesparser.Visit(s, u.Target)
 	s.writeCloseParen()
 }
 

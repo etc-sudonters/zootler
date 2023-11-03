@@ -1,17 +1,16 @@
-package visualizer
+package tui
 
 import (
 	"fmt"
 	"io"
 	"strings"
-	"sudonters/zootler/cmd/zootler/visualizer/listpanel"
-	"sudonters/zootler/cmd/zootler/visualizer/panels"
 	"sudonters/zootler/internal/entity"
 	"sudonters/zootler/internal/entity/componenttable"
+	"sudonters/zootler/internal/tui/listpanel"
+	"sudonters/zootler/internal/tui/panels"
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 )
 
 func createComponentOverview(rows []componenttable.RowData, pool entity.Pool) listpanel.Model {
@@ -34,15 +33,6 @@ func createComponentOverview(rows []componenttable.RowData, pool entity.Pool) li
 	panel := listpanel.New(listpanel.WithList(l))
 	return panel
 }
-
-var (
-	titleStyle    = lipgloss.NewStyle().MarginLeft(2)
-	itemStyle     = lipgloss.NewStyle().PaddingLeft(4)
-	selectedStyle = lipgloss.NewStyle().PaddingLeft(2).Foreground(lipgloss.Color("170"))
-	pagination    = list.DefaultStyles().PaginationStyle.PaddingLeft(4)
-	helpStyle     = list.DefaultStyles().HelpStyle.PaddingLeft(4).PaddingBottom(1)
-	quitStyle     = lipgloss.NewStyle().Margin(1, 0, 2, 4)
-)
 
 type overviewItem struct{ r componenttable.RowData }
 

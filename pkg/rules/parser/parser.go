@@ -1,4 +1,4 @@
-package rulesparser
+package parser
 
 import (
 	"fmt"
@@ -16,6 +16,12 @@ const (
 	PREFIX
 	FUNC
 )
+
+func Parse(raw string) (Expression, error) {
+	l := NewRulesLexer(raw)
+	p := NewRulesParser(l)
+	return p.Parse()
+}
 
 func NewRulesParser(l *peruse.StringLexer) *peruse.Parser[Expression] {
 	return peruse.NewParser(NewRulesGrammar(), l)
