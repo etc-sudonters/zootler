@@ -57,37 +57,39 @@ Notes:
 */
 
 func Rewrite(old ast.Expression, env Environment) ast.Expression {
-	r := rewriter{}
+	r := Rewriter{}
 	return r.Rewrite(old, env)
 }
 
-func NewRewriter(tricks map[string]bool) *rewriter {
-	return &rewriter{
-		tricks:        tricks,
-		skippedTrials: make(map[string]bool),
+func NewRewriter(tricks map[string]bool) *Rewriter {
+	return &Rewriter{
+		tricks:           tricks,
+		skippedTrials:    make(map[string]bool),
+		dungeonShortcuts: make(map[string]bool),
 	}
 }
 
-type rewriter struct {
-	testingEntityId int
-	tricks          map[string]bool
-	skippedTrials   map[string]bool
-	region          string
+type Rewriter struct {
+	testingEntityId  int
+	tricks           map[string]bool
+	skippedTrials    map[string]bool
+	dungeonShortcuts map[string]bool
+	region           string
 }
 
-func (r *rewriter) SetRegion(region string) {
+func (r *Rewriter) SetRegion(region string) {
 	r.region = region
 }
 
-func (r *rewriter) Rewrite(old ast.Expression, env Environment) ast.Expression {
+func (r *Rewriter) Rewrite(old ast.Expression, env Environment) ast.Expression {
 	return Evaluate(r, old, env)
 }
 
-func (r *rewriter) EvalAttrAccess(access *ast.AttrAccess, env Environment) ast.Expression {
+func (r *Rewriter) EvalAttrAccess(access *ast.AttrAccess, env Environment) ast.Expression {
 	panic(stageleft.NotImplErr)
 }
 
-func (r *rewriter) EvalBinOp(op *ast.BinOp, env Environment) ast.Expression {
+func (r *Rewriter) EvalBinOp(op *ast.BinOp, env Environment) ast.Expression {
 	left := r.Rewrite(op.Left, env)
 	right := r.Rewrite(op.Right, env)
 
@@ -110,6 +112,13 @@ func (r *rewriter) EvalBinOp(op *ast.BinOp, env Environment) ast.Expression {
 				r := right.(*ast.Number).Value
 				eq := l == r
 				return Literalify(eq)
+			case ast.ExprIdentifier:
+				l := left.(*ast.Identifier).Value
+				r := right.(*ast.Identifier).Value
+				eq := l == r
+				if eq { // can't know now if two _different_ identifiers are eq
+					return Literalify(eq)
+				}
 			}
 		}
 		break
@@ -131,14 +140,30 @@ func (r *rewriter) EvalBinOp(op *ast.BinOp, env Environment) ast.Expression {
 				r := right.(*ast.Number).Value
 				eq := l == r
 				return Literalify(!eq)
+			case ast.ExprIdentifier:
+				l := left.(*ast.Identifier).Value
+				r := right.(*ast.Identifier).Value
+				eq := l == r
+				if eq { // can't know now if two _different_ identifiers are eq
+					return Literalify(!eq)
+				}
 			}
 		}
 		break
 	case ast.BinOpLt:
 		if left.Type() == right.Type() && left.Type() == ast.ExprNumber {
-			return Literalify(left.(*ast.String).Value != right.(*ast.String).Value)
+			return Literalify(left.(*ast.Number).Value != right.(*ast.Number).Value)
 		}
 		panic(parseError("comparisons can only happen between numbers, cannot %T < %T", left, right))
+	case ast.BinOpContains:
+		if left.Type() == ast.ExprString && right.Type() == ast.ExprIdentifier {
+			sub := &ast.Subscript{
+				Target: right,
+				Index:  left,
+			}
+			return r.Rewrite(sub, env)
+		}
+		panic(parseError("invalid contains"))
 	default:
 		panic(parseError("unknown binary operator %q", op.Op))
 	}
@@ -150,7 +175,7 @@ func (r *rewriter) EvalBinOp(op *ast.BinOp, env Environment) ast.Expression {
 	}
 }
 
-func (r *rewriter) EvalBoolOp(op *ast.BoolOp, env Environment) ast.Expression {
+func (r *Rewriter) EvalBoolOp(op *ast.BoolOp, env Environment) ast.Expression {
 	left := r.Rewrite(op.Left, env)
 
 	// discard left side of bool wrapper if possible
@@ -185,7 +210,7 @@ func (r *rewriter) EvalBoolOp(op *ast.BoolOp, env Environment) ast.Expression {
 	return newOp
 }
 
-func (r *rewriter) EvalBoolean(bool *ast.Boolean) ast.Expression {
+func (r *Rewriter) EvalBoolean(bool *ast.Boolean) ast.Expression {
 	return bool
 }
 
@@ -194,7 +219,7 @@ func isMacro(call *ast.Call) bool {
 	return ok && ident.Value == "at" || ident.Value == "here"
 }
 
-func (r rewriter) doMacro(call *ast.Call, env Environment) ast.Expression {
+func (r Rewriter) doMacro(call *ast.Call, env Environment) ast.Expression {
 	ident := call.Callee.(*ast.Identifier)
 	var where string
 	var rule ast.Expression
@@ -223,7 +248,7 @@ func (r rewriter) doMacro(call *ast.Call, env Environment) ast.Expression {
 	return r.testingRunAt(where, r.Rewrite(rule, env), env)
 }
 
-func (r *rewriter) EvalCall(call *ast.Call, env Environment) ast.Expression {
+func (r *Rewriter) EvalCall(call *ast.Call, env Environment) ast.Expression {
 	// these are special, think macros
 	if isMacro(call) {
 		return r.doMacro(call, env)
@@ -243,7 +268,9 @@ func (r *rewriter) EvalCall(call *ast.Call, env Environment) ast.Expression {
 	return c
 }
 
-func (r *rewriter) doOptimize(fn Fn, c *ast.Call, env Environment) ast.Expression {
+// at best we can compile time evaluate a function to a constant
+// if we can't, we replace the function with our partially evaluated one
+func (r *Rewriter) doOptimize(fn Fn, c *ast.Call, env Environment) ast.Expression {
 	enclosed := env.Enclosed()
 	for i := range fn.Params {
 		arg := c.Args[i]
@@ -281,11 +308,13 @@ func (r *rewriter) doOptimize(fn Fn, c *ast.Call, env Environment) ast.Expressio
 
 }
 
+// if all the args compile evaluate to constants, then we can at least
+// partially evaluate the function body at compile time
 func canOptimize(c *ast.Call, env Environment) (Fn, bool) {
 	var defaultFn Fn
 	tryOptimize := true
 	for i := range c.Args {
-		tryOptimize = tryOptimize && CanReifyLiteral(c.Args[i]) || isIdentInEnv(c.Args[i], env)
+		tryOptimize = tryOptimize && CanReifyLiteral(c.Args[i]) || isIdentInCompileEnv(c.Args[i], env)
 		if !tryOptimize {
 			return defaultFn, false
 		}
@@ -306,7 +335,7 @@ func canOptimize(c *ast.Call, env Environment) (Fn, bool) {
 	return fn, true
 }
 
-func isIdentInEnv(expr ast.Expression, env Environment) bool {
+func isIdentInCompileEnv(expr ast.Expression, env Environment) bool {
 	ident, ok := expr.(*ast.Identifier)
 	if !ok {
 		return false
@@ -316,7 +345,7 @@ func isIdentInEnv(expr ast.Expression, env Environment) bool {
 	return ok
 }
 
-func (r *rewriter) EvalIdentifier(ident *ast.Identifier, env Environment) ast.Expression {
+func (r *Rewriter) EvalIdentifier(ident *ast.Identifier, env Environment) ast.Expression {
 	/*
 		Zootr's Priority:
 			1. at/here/TOD
@@ -331,7 +360,7 @@ func (r *rewriter) EvalIdentifier(ident *ast.Identifier, env Environment) ast.Ex
 		What we'll do:
 			1. at/here -> panic, these are special special
 			2. if it exists in the env
-				a. and it's a Fn|Int|Str|Bool: just return that
+				a. and it's a Int|Str|Bool: just return that
 				b. just return the identifier
 			3. resolve "static" values: settings mostly
 				* NOTE zootr runs ast.parse on the values pulled from the world and settings
@@ -345,6 +374,10 @@ func (r *rewriter) EvalIdentifier(ident *ast.Identifier, env Environment) ast.Ex
 		return Literalify(r.resolveTrick(ident.Value))
 	}
 
+	if v, ok := env.Get(ident.Value); ok && CanLiteralfy(v) {
+		return Literalify(v)
+	}
+
 	if literal, _ := r.tryLiteralFromEnv(ident, env); literal != nil {
 		return literal
 	}
@@ -352,14 +385,14 @@ func (r *rewriter) EvalIdentifier(ident *ast.Identifier, env Environment) ast.Ex
 	return ident
 }
 
-func (r *rewriter) resolveTrick(name string) bool {
+func (r *Rewriter) resolveTrick(name string) bool {
 	name = strings.TrimSuffix(name, "logic_")
 	return r.tricks[name] // if we don't fine it it's not on :brain:
 }
 
 // try to embed a value as a literal for evaluation now
 // if we can, we return an expression and true
-func (r *rewriter) tryLiteralFromEnv(name *ast.Identifier, env Environment) (expr ast.Expression, present bool) {
+func (r *Rewriter) tryLiteralFromEnv(name *ast.Identifier, env Environment) (expr ast.Expression, present bool) {
 	var v Value
 	v, present = env.Get(name.Value)
 	if !present {
@@ -377,15 +410,15 @@ func (r *rewriter) tryLiteralFromEnv(name *ast.Identifier, env Environment) (exp
 	return
 }
 
-func (r *rewriter) EvalNumber(num *ast.Number) ast.Expression {
+func (r *Rewriter) EvalNumber(num *ast.Number) ast.Expression {
 	return num
 }
 
-func (r *rewriter) EvalString(str *ast.String) ast.Expression {
+func (r *Rewriter) EvalString(str *ast.String) ast.Expression {
 	return str
 }
 
-func (r *rewriter) hasAtLeastOneOf(name string, env Environment) ast.Expression {
+func (r *Rewriter) hasAtLeastOneOf(name string, env Environment) ast.Expression {
 	/*
 		some strings are actual literals for has(name, 1)
 
@@ -405,7 +438,7 @@ func (r *rewriter) hasAtLeastOneOf(name string, env Environment) ast.Expression 
 	}
 }
 
-func (r *rewriter) EvalSubscript(subscript *ast.Subscript, env Environment) ast.Expression {
+func (r *Rewriter) EvalSubscript(subscript *ast.Subscript, env Environment) ast.Expression {
 	/*
 
 		```zoot
@@ -430,7 +463,11 @@ func (r *rewriter) EvalSubscript(subscript *ast.Subscript, env Environment) ast.
 
 	key, ok := subscript.Index.(*ast.Identifier)
 	if !ok {
-		panic(parseError("subscription can only be done with identifiers"))
+		if raw, ok := subscript.Index.(*ast.String); ok {
+			key = &ast.Identifier{Value: raw.Value}
+		} else {
+			panic(parseError("subscription can only be done with identifiers or strings"))
+		}
 	}
 
 	setting, ok := r.resolveSetting(target.Value).(map[string]bool)
@@ -441,14 +478,18 @@ func (r *rewriter) EvalSubscript(subscript *ast.Subscript, env Environment) ast.
 	return Literalify(setting[key.Value])
 }
 
-func (r *rewriter) EvalTuple(tup *ast.Tuple, env Environment) ast.Expression {
+func (r *Rewriter) EvalTuple(tup *ast.Tuple, env Environment) ast.Expression {
 	/*
 		arity 2
 		item = _.0 <- ident of item
 		count = _.1 <- number or settings ref
 	*/
+
+	s := astrender.NewSexpr(astrender.DontTheme())
+	ast.Visit(s, tup)
+
 	if len(tup.Elems) != 2 {
-		panic(parseError("tup must be 2 elements, got: %d", len(tup.Elems)))
+		panic(parseError("tup must be 2 elements, got: %d\n%s", len(tup.Elems), s.String()))
 	}
 
 	var token *ast.Identifier
@@ -460,11 +501,19 @@ func (r *rewriter) EvalTuple(tup *ast.Tuple, env Environment) ast.Expression {
 		var ok bool
 
 		if token, ok = t.(*ast.Identifier); !ok {
-			panic(parseError("tup must be (Ident, Num), got (%T, %T)", t, q))
+			panic(parseError("tup must be (Ident, Num), got (%T, %T)\n%s", t, q, s.String()))
 		}
 
 		if qty, ok = q.(*ast.Number); !ok {
-			panic(parseError("tup must be (Ident, Num), got (%T, %T)", t, q))
+			// we'll let runtime worry about this one
+			if ident, ok := q.(*ast.Identifier); ok {
+				return &ast.Call{
+					Callee: &ast.Identifier{Value: "has"},
+					Args:   []ast.Expression{token, ident},
+				}
+			}
+
+			panic(parseError("tup must be (Ident, Num), got (%T, %T)\n%s", t, q, s.String()))
 		}
 	}
 
@@ -474,7 +523,7 @@ func (r *rewriter) EvalTuple(tup *ast.Tuple, env Environment) ast.Expression {
 	}
 }
 
-func (r *rewriter) EvalUnary(unary *ast.UnaryOp, env Environment) ast.Expression {
+func (r *Rewriter) EvalUnary(unary *ast.UnaryOp, env Environment) ast.Expression {
 	switch unary.Op {
 	case ast.UnaryNot:
 		res := r.Rewrite(unary.Target, env)
@@ -490,7 +539,7 @@ func (r *rewriter) EvalUnary(unary *ast.UnaryOp, env Environment) ast.Expression
 	}
 }
 
-func (r *rewriter) testingRunAt(where string, rule ast.Expression, env Environment) ast.Expression {
+func (r *Rewriter) testingRunAt(where string, rule ast.Expression, env Environment) ast.Expression {
 	// hash the raw unrewritten rule first
 	s := astrender.NewSexpr(astrender.DontTheme())
 	ast.Visit(s, rule)
@@ -509,14 +558,18 @@ func (r *rewriter) testingRunAt(where string, rule ast.Expression, env Environme
 	return ident
 }
 
-func (r *rewriter) resolveSetting(block string) any {
-	if block == "skipped_trials" {
+func (r *Rewriter) resolveSetting(block string) any {
+	switch block {
+	case "skipped_trials":
 		return r.skippedTrials
+	case "dungeon_shortcuts":
+		return r.dungeonShortcuts
+	default:
+		panic(parseError("setting block %q doesn't exist", block))
 	}
-	panic(parseError("setting block %q doesn't exist", block))
 }
 
-func (r *rewriter) resolveEntity(name string, env Environment) *ast.Identifier {
+func (r *Rewriter) resolveEntity(name string, env Environment) *ast.Identifier {
 	/*
 		escape name
 		if it exists in the env, just return the identifier now

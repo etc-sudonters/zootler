@@ -5,12 +5,13 @@ type BoolOpKind string
 type UnaryOpKind string
 
 var (
-	BinOpEq    BinOpKind   = "=="
-	BinOpNotEq BinOpKind   = "!="
-	BinOpLt    BinOpKind   = "<"
-	BoolOpAnd  BoolOpKind  = "and"
-	BoolOpOr   BoolOpKind  = "or"
-	UnaryNot   UnaryOpKind = "not"
+	BinOpEq       BinOpKind   = "=="
+	BinOpNotEq    BinOpKind   = "!="
+	BinOpLt       BinOpKind   = "<"
+	BinOpContains BinOpKind   = "in"
+	BoolOpAnd     BoolOpKind  = "and"
+	BoolOpOr      BoolOpKind  = "or"
+	UnaryNot      UnaryOpKind = "not"
 )
 
 type ExprType string

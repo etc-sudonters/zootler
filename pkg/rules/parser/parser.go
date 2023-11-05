@@ -11,12 +11,12 @@ import (
 const (
 	_ peruse.Precedence = iota
 	LOWEST
+	OR
 	AND
-	ACCESS
+	NOT
 	EQ
-	LT
-	PREFIX
-	FUNC
+	INDEX
+	PARENS
 )
 
 func Parse(raw string) (ast.Expression, error) {
@@ -38,13 +38,14 @@ func NewRulesGrammar() peruse.Grammar[ast.Expression] {
 	g.Parse(TokenNumber, parseNumber)
 	g.Parse(TokenOpenParen, parseParenExpr)
 	g.Parse(TokenString, parseString)
-	g.Parse(TokenUnary, parsePrefixUnaryOp)
+	g.Parse(TokenUnaryNot, parsePrefixNot)
 
-	g.Infix(AND, parseBoolOpExpr, TokenAnd, TokenOr)
-	g.Infix(LOWEST, parseAttrAccess, TokenDot)
-	g.Infix(EQ, parseBinOp, TokenEq, TokenNotEq)
-	g.Infix(FUNC, parseCall, TokenOpenParen)
-	g.Infix(FUNC, parseSubscript, TokenOpenBracket)
+	g.Infix(OR, parseBoolOpExpr, TokenOr)
+	g.Infix(AND, parseBoolOpExpr, TokenAnd)
+	g.Infix(EQ, parseBinOp, TokenEq, TokenNotEq, TokenLt, TokenContains)
+	g.Infix(INDEX, parseAttrAccess, TokenDot)
+	g.Infix(INDEX, parseSubscript, TokenOpenBracket)
+	g.Infix(PARENS, parseCall, TokenOpenParen)
 
 	return g
 }
@@ -204,10 +205,10 @@ func parseBool(p *peruse.Parser[ast.Expression]) (ast.Expression, error) {
 	}
 }
 
-func parsePrefixUnaryOp(p *peruse.Parser[ast.Expression]) (ast.Expression, error) {
+func parsePrefixNot(p *peruse.Parser[ast.Expression]) (ast.Expression, error) {
 	thisTok := p.Cur
 	p.Consume()
-	target, err := p.ParseAt(PREFIX)
+	target, err := p.ParseAt(NOT)
 	if err != nil {
 		return nil, err
 	}
@@ -251,6 +252,8 @@ func BinOpFromTok(t peruse.Token) ast.BinOpKind {
 		return ast.BinOpEq
 	case string(ast.BinOpNotEq):
 		return ast.BinOpNotEq
+	case string(ast.BinOpContains):
+		return ast.BinOpContains
 	default:
 		panic(fmt.Errorf("invalid binop %q", t))
 	}

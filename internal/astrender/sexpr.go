@@ -9,14 +9,20 @@ import (
 	"github.com/etc-sudonters/substrate/dontio"
 )
 
+type IdentifierCallback func(ident *ast.Identifier) ast.Expression
+
 func NewSexpr(s ColorScheme) *sexprFormatter {
-	return &sexprFormatter{&strings.Builder{}, 0, s}
+	f := new(sexprFormatter)
+	f.scheme = s
+	f.Clear()
+	return f
 }
 
 type sexprFormatter struct {
-	b      *strings.Builder
-	depth  int
-	scheme ColorScheme
+	b          *strings.Builder
+	depth      int
+	scheme     ColorScheme
+	identifier IdentifierCallback
 }
 
 func (s sexprFormatter) String() string {
@@ -28,8 +34,12 @@ func (s *sexprFormatter) Clear() {
 	s.depth = 0
 }
 
-func (s sexprFormatter) SetColorScheme(scheme ColorScheme) {
+func (s *sexprFormatter) SetColorScheme(scheme ColorScheme) {
 	s.scheme = scheme
+}
+
+func (s *sexprFormatter) SetIdentifier(cb IdentifierCallback) {
+	s.identifier = cb
 }
 
 func (s *sexprFormatter) VisitAttrAccess(a *ast.AttrAccess) error {
@@ -73,6 +83,13 @@ func (s *sexprFormatter) VisitCall(c *ast.Call) error {
 	return nil
 }
 func (s *sexprFormatter) VisitIdentifier(i *ast.Identifier) error {
+	if s.identifier != nil {
+		expr := s.identifier(i)
+		if expr != nil {
+			return ast.Visit(s, expr)
+		}
+	}
+
 	s.b.WriteString(s.scheme.Identifier.Paint(i.Value))
 	return nil
 }

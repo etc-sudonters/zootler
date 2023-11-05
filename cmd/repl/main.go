@@ -20,7 +20,8 @@ import (
 
 func main() {
 	env := interpreter.NewEnv()
-	loadHelpers("inputs/logic", env)
+	rewriter := interpreter.NewRewriter(defaultTricks())
+	loadHelpers("inputs/logic", env, rewriter)
 
 	for name, value := range defaultSettings() {
 		env.Set(name, interpreter.Box(value))
@@ -41,39 +42,63 @@ func main() {
 		entity.With[logic.RawRule]{},
 		entity.With[world.Edge]{},
 		entity.With[world.FromName]{},
+		entity.With[world.Name]{},
 	})
 
 	if err != nil {
 		panic(err)
 	}
 
-	rewriter := interpreter.NewRewriter(defaultTricks())
 	var rule logic.RawRule
 	var region world.FromName
-	s := astrender.NewSexpr(astrender.DefaultColorScheme())
+	var edgeName world.Name
+	s := astrender.NewSexpr(astrender.DontTheme())
+	identGetter := func(ident *ast.Identifier) ast.Expression {
+		v, ok := env.Get(ident.Value)
+		if !ok {
+			return nil
+		}
+
+		if interpreter.CanLiteralfy(v) {
+			return interpreter.Literalify(v)
+		}
+
+		if fn, ok := v.(interpreter.Fn); ok {
+			return fn.Body
+		}
+
+		if fn, ok := v.(interpreter.PartiallyEvaluatedFn); ok {
+			return fn.Body
+		}
+
+		return nil
+	}
 
 	for _, bearer := range rules {
 		s.Clear()
 		bearer.Get(&rule)
 		bearer.Get(&region)
+		bearer.Get(&edgeName)
 		rewriter.SetRegion(string(region))
 
 		p, err := parser.Parse(string(rule))
 		if err != nil {
 			panic(err)
 		}
+		s.SetIdentifier(nil)
 		ast.Visit(s, p)
-		fmt.Printf("Name: %s\nRaw s-expr: %s\n", region, s.String())
+		fmt.Printf("Name: %s\nRaw s-expr: %s\n\n", edgeName, s.String())
 		s.Clear()
 
+		s.SetIdentifier(identGetter)
 		p = rewriter.Rewrite(p, env)
 		ast.Visit(s, p)
-		fmt.Printf("Rewritten: %s\n\n", s.String())
+		fmt.Printf("Rewritten: %s\n\n\n\n", s.String())
 		fmt.Scan()
 	}
 }
 
-func loadHelpers(logicDir string, env interpreter.Environment) {
+func loadHelpers(logicDir string, env interpreter.Environment, rewriter *interpreter.Rewriter) {
 	contents, err := os.ReadFile(filepath.Join(logicDir, "LogicHelpers.json"))
 	if err != nil {
 		panic(err)
@@ -98,8 +123,13 @@ func loadHelpers(logicDir string, env interpreter.Environment) {
 			continue
 		}
 
-		fn := toZootCallable(decl, rule, env)
-		env.Set(fn.Name, fn)
+		fn := toZootCallable(decl, rule)
+		fn.Body = rewriter.Rewrite(fn.Body, env)
+		if interpreter.CanReifyLiteral(fn.Body) && fn.Arity() == 0 {
+			env.Set(fn.Name, interpreter.ReifyLiteral(fn.Body))
+		} else {
+			env.Set(fn.Name, fn)
+		}
 	}
 
 	if !passed {
@@ -107,7 +137,7 @@ func loadHelpers(logicDir string, env interpreter.Environment) {
 	}
 }
 
-func toZootCallable(decl string, body ast.Expression, env interpreter.Environment) interpreter.Fn {
+func toZootCallable(decl string, body ast.Expression) interpreter.Fn {
 	var err error
 	if decl, declErr := parser.Parse(decl); declErr == nil {
 		switch decl := decl.(type) {
@@ -243,6 +273,9 @@ func defaultSettings() map[string]any {
 		"junk_ice_traps":                          "off",
 		"ice_trap_appearance":                     "junk_only",
 		"adult_trade_shuffle":                     false,
+		"bridge_tokens":                           100,
+		"ganon_bosskey_tokens":                    999,
+		"lacs_tokens":                             999,
 	}
 }
 

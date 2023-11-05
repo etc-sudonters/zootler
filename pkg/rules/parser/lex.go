@@ -14,6 +14,7 @@ const (
 	andWord    = "and"
 	orWord     = "or"
 	notWord    = "not"
+	inWord     = "in"
 
 	_ peruse.TokenType = iota
 	TokenDot
@@ -32,7 +33,8 @@ const (
 	TokenEq
 	TokenNotEq
 	TokenLt
-	TokenUnary
+	TokenUnaryNot
+	TokenContains
 )
 
 func TokenTypeString(i peruse.TokenType) string {
@@ -73,8 +75,10 @@ func TokenTypeString(i peruse.TokenType) string {
 		return "<NEQ>"
 	case TokenLt:
 		return "<LT>"
-	case TokenUnary:
+	case TokenUnaryNot:
 		return "<UNARY>"
+	case TokenContains:
+		return "<IN>"
 	default:
 		return "<UNKNOWN>"
 	}
@@ -146,7 +150,9 @@ func lexIdent(l *peruse.StringLexer, _ any) peruse.LexFn {
 	case word == falseWord:
 		return l.Emit(TokenFalse)
 	case word == notWord:
-		return l.Emit(TokenUnary)
+		return l.Emit(TokenUnaryNot)
+	case word == inWord:
+		return l.Emit(TokenContains)
 	}
 
 	if !atSeparator(l) {
