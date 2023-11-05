@@ -126,6 +126,7 @@ func lexRule(l *peruse.StringLexer, state any) peruse.LexFn {
 		l.Prev()
 		return lexInEq
 	case r == '\'':
+		l.Discard()
 		return lexStr
 	default:
 		return l.Error("unrecongized character %#U", r)
@@ -226,8 +227,11 @@ func lexInEq(l *peruse.StringLexer, _ any) peruse.LexFn {
 // opening ' is already scanned
 func lexStr(l *peruse.StringLexer, _ any) peruse.LexFn {
 	l.AcceptWhile(func(r rune) bool { return r != '\'' })
+	// sheer off ending '
+	next := l.Emit(TokenString)
 	l.Next()
-	return l.Emit(TokenString)
+	l.Discard()
+	return next
 }
 
 func isDigit(r rune) bool {

@@ -120,7 +120,7 @@ func (a application) View() string {
 	}
 
 	if a.showMsgs {
-		debugPieces = append(debugPieces, debugStyle.Render(fmt.Sprintf("Msg:\t%T%v", a.lastMsg, a.lastMsg)))
+		debugPieces = append(debugPieces, debugStyle.Render(fmt.Sprintf("Msg:\t%T", a.lastMsg)))
 	}
 
 	debugBar := lipgloss.JoinHorizontal(lipgloss.Top, debugPieces...)

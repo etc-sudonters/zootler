@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"regexp"
 	"runtime/debug"
 
 	"sudonters/zootler/cmd/zootler/tui"
@@ -121,16 +120,6 @@ type missingRequired string // option name
 func (arg missingRequired) Error() string {
 	return fmt.Sprintf("%s is required", string(arg))
 }
-
-func compressWhiteSpace(r string) string {
-	r = trailWhiteSpace.ReplaceAllLiteralString(r, "")
-	r = leadWhiteSpace.ReplaceAllLiteralString(r, "")
-	return compressWhiteSpaceRe.ReplaceAllLiteralString(r, " ")
-}
-
-var compressWhiteSpaceRe *regexp.Regexp = regexp.MustCompile(`\s+`)
-var leadWhiteSpace *regexp.Regexp = regexp.MustCompile(`^\s+`)
-var trailWhiteSpace *regexp.Regexp = regexp.MustCompile(`\s+$`)
 
 func showTokenPlacements(ctx context.Context, w world.World, qs ...entity.Selector) error {
 	filt := make([]entity.Selector, len(qs)+1)

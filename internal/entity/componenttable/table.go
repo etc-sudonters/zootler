@@ -45,7 +45,7 @@ func (t *Table) Set(e entity.Model, c entity.Component) entity.ComponentId {
 	if typ == strType {
 		panic(fmt.Errorf("string component added to %d: %q", e, c))
 	}
-	row := t.getOrCreateRowFor(typ)
+	row := t.RowOf(typ)
 	row.Set(e, c)
 	return row.id
 }
@@ -101,7 +101,7 @@ func (t Table) rowFor(typ reflect.Type) *Row {
 	return nil
 }
 
-func (t *Table) getOrCreateRowFor(typ reflect.Type) *Row {
+func (t *Table) RowOf(typ reflect.Type) *Row {
 	if r := t.rowFor(typ); r != nil {
 		return r
 	}

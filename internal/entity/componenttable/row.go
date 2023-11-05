@@ -17,16 +17,25 @@ type Row struct {
 
 func (r *Row) Components() reitertools.Iterator[RowEntry] {
 	i := reitertools.SubsliceIter(r.components, 1)
-	f := reitertools.Filter(i, func(c entity.Component, _ int) bool {
-		return c != nil
+	e := reitertools.EnumerateFrom(i, 1)
+	f := reitertools.Filter(e, func(i reitertools.Index[entity.Component]) bool {
+		return i.Elem != nil
 	})
-	m := reitertools.Map(f, func(c entity.Component, idx int) RowEntry {
+	m := reitertools.Map(f, func(i reitertools.Index[entity.Component]) RowEntry {
 		return RowEntry{
-			Entity:    entity.Model(idx),
-			Component: c,
+			Entity:    entity.Model(i.Index),
+			Component: i.Elem,
 		}
 	})
 	return m
+}
+
+func (r *Row) Len() int {
+	return r.members.Len()
+}
+
+func (r *Row) Capacity() int {
+	return len(r.components)
 }
 
 func (r *Row) Init(id entity.ComponentId, entityBuckets int) {

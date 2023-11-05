@@ -203,5 +203,3 @@ func (m manyVisit) VisitTuple(n *rulesparser.Tuple) {
 func (m manyVisit) VisitUnary(n *rulesparser.UnaryOp) {
 	m.visit(n)
 }
-
-func compressWhiteSpace(s string) string { return s }

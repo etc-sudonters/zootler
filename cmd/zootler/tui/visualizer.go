@@ -34,16 +34,18 @@ func (v tui) Run(ctx context.Context) error {
 	componentPanel := createComponentOverview(rows, v.w.Entities.Pool)
 	(&componentPanel).Focus()
 
-	components := panels.New(
-		panels.WithPanels(componentPanel),
-		panels.WithUpdate(popout),
-		panels.WithClose(closeTabForEmptyPanel("Components")),
-	)
+	/*
+		components := panels.New(
+			panels.WithPanels(componentPanel),
+			panels.WithUpdate(popout),
+			panels.WithClose(closeTabForEmptyPanel("Components")),
+		)
+	*/
 
 	rulesparsing := rulestab.NewParseTab(v.w.Entities.Pool)
 
 	tabs := foldertabs.New(
-		foldertabs.WithTab("Components", components),
+		//foldertabs.WithTab("Components", components),
 		foldertabs.WithTab("Rules", rulesparsing),
 		foldertabs.WithStyle(tabStyle),
 		foldertabs.WithKeys(tabKeys),

@@ -86,7 +86,7 @@ func loadConnections(ctx context.Context, f FileSystemLoader, b *world.Builder) 
 			if err != nil {
 				return fmt.Errorf("while linking %q to event %q: %w", loc.Region, event, err)
 			}
-			edge.Add(rule)
+			edge.Add(compressWhiteSpace(rule))
 		}
 
 		for exit, rule := range loc.Exits {
@@ -95,7 +95,7 @@ func loadConnections(ctx context.Context, f FileSystemLoader, b *world.Builder) 
 			if err != nil {
 				return fmt.Errorf("while adding edge from %q to %q: %w", loc.Region, exit, err)
 			}
-			edge.Add(rule)
+			edge.Add(compressWhiteSpace(rule))
 		}
 
 		for check, rule := range loc.Locations {
@@ -107,7 +107,7 @@ func loadConnections(ctx context.Context, f FileSystemLoader, b *world.Builder) 
 			if err != nil {
 				return fmt.Errorf("while linking check %q to %q: %w", check, loc.Region, err)
 			}
-			edge.Add(rule)
+			edge.Add(compressWhiteSpace(rule))
 		}
 	}
 
@@ -213,7 +213,7 @@ func ReadLogicDirectory(ctx context.Context, directory string) (reitertools.Iter
 
 	iter := reitertools.Filter(
 		reitertools.SliceIter(entries),
-		func(entry os.DirEntry, _ int) bool {
+		func(entry os.DirEntry) bool {
 			return strings.HasSuffix(entry.Name(), "json") && !strings.Contains(entry.Name(), "Helpers.json")
 		})
 
@@ -355,4 +355,8 @@ func importanceFrom(b *bool) logic.Importance {
 	} else {
 		return logic.ImportanceAdvancement
 	}
+}
+
+func compressWhiteSpace[S ~string](s S) S {
+	return S(strings.Join(strings.Fields(string(s)), " "))
 }

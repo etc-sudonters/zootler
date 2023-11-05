@@ -2,12 +2,12 @@ package logic
 
 import (
 	"sudonters/zootler/internal/entity"
-	rulesparser "sudonters/zootler/pkg/rules/parser"
+	"sudonters/zootler/pkg/rules/ast"
 )
 
 type (
 	ParsedRule struct {
-		R rulesparser.Expression
+		R ast.Expression
 	}
 	Edge struct {
 		Origination entity.Model

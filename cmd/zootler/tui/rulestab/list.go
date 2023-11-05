@@ -13,38 +13,49 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
 
 func createRuleList(p entity.Pool, s tea.WindowSizeMsg) listpanel.Model {
 	haveRules, err := p.Query([]entity.Selector{
 		entity.With[logic.RawRule]{},
+		entity.With[world.Name]{},
 	})
+
 	if err != nil {
 		panic(err)
 	}
 
-	items := make([]list.Item, len(haveRules))
+	items := make([]list.Item, 0, len(haveRules))
 
-	for i, hasRule := range haveRules {
-		var raw logic.RawRule
+	for _, ent := range haveRules {
+		var rule logic.RawRule
 		var name world.Name
-		hasRule := hasRule
-		hasRule.Get(&name)
-		hasRule.Get(&raw)
-		items[i] = hasRuleItem{
-			name:   string(name),
-			raw:    string(raw),
-			entity: hasRule,
+
+		if err := ent.Get(&rule); err != nil {
+			panic(err)
 		}
+		if err := ent.Get(&name); err != nil {
+			panic(err)
+		}
+
+		item := hasRuleItem{
+			raw:    string(rule),
+			name:   string(name),
+			entity: ent,
+		}
+		items = append(items, item)
 	}
 
 	l := list.New(items, hasRuleDelegate{}, s.Width, s.Height)
 	l.Title = fmt.Sprintf("Available Rules")
 	l.SetFilteringEnabled(true)
-	l.SetShowHelp(true)
+	l.SetShowHelp(false)
+	l.DisableQuitKeybindings()
+	l.SetShowPagination(false)
 
 	panel := listpanel.New(listpanel.WithList(l))
-	panel.Focus()
+	(&panel).Focus()
 	return panel
 }
 
@@ -56,7 +67,11 @@ type hasRuleItem struct {
 }
 
 func (d hasRuleItem) FilterValue() string {
-	return d.name
+	tags := d.name
+	if d.hasParsed {
+		tags += " parsed"
+	}
+	return tags
 }
 
 type hasRuleDelegate struct {
@@ -64,7 +79,7 @@ type hasRuleDelegate struct {
 
 func (d hasRuleDelegate) Render(w io.Writer, m list.Model, index int, item list.Item) {
 	var buf strings.Builder
-	hasRule := m.SelectedItem().(hasRuleItem)
+	hasRule := item.(hasRuleItem)
 
 	if hasRule.hasParsed {
 		buf.WriteRune('P')
@@ -81,29 +96,52 @@ func (d hasRuleDelegate) Render(w io.Writer, m list.Model, index int, item list.
 	}
 
 	buf.WriteRune(' ')
-	buf.WriteString(hasRule.name)
-	fmt.Fprint(w, buf.String())
+
+	name := hasRule.name
+	if strings.Contains(name, "->") {
+		var fromName world.FromName
+		var toName world.ToName
+
+		if err := hasRule.entity.Get(&fromName); err != nil {
+			panic(err)
+		}
+
+		if err := hasRule.entity.Get(&toName); err != nil {
+			panic(err)
+		}
+		name = fmt.Sprintf("%s\n%s", fromName, toName)
+	} else {
+		buf.WriteString(hasRule.name)
+		buf.WriteRune('\n')
+	}
+
+	fmt.Fprint(w, lipgloss.JoinHorizontal(lipgloss.Top, buf.String(), name))
 }
 
 func (d hasRuleDelegate) Height() int {
-	return 1
+	return 2
 }
 
 func (d hasRuleDelegate) Spacing() int {
-	return 0
+	return 1
 }
 
 func (d hasRuleDelegate) Update(msg tea.Msg, m *list.Model) tea.Cmd {
 	var cmds []tea.Cmd
-	item := m.SelectedItem().(hasRuleItem)
 	parseRule := key.NewBinding(key.WithKeys("P"))
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, parseRule):
+			if m.SelectedItem() == nil {
+				break
+			}
+			item := m.SelectedItem().(hasRuleItem)
 			if item.hasParsed {
 				cmds = append(cmds, func() tea.Msg { return changeRuleView(item.entity.Model()) })
 			} else {
+				item.hasParsed = true
+				cmds = append(cmds, m.SetItem(m.Index(), item))
 				cmds = append(cmds, func() tea.Msg {
 					ast, err := parser.Parse(item.raw)
 					return addRuleView{

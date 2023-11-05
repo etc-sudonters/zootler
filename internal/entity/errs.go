@@ -6,6 +6,7 @@ import (
 	"reflect"
 )
 
+var ErrInvalidEntity = errors.New("invalid entity")
 var ErrNoMoreIds = errors.New("no more ids available")
 var ErrEntityNotExist = errors.New("entity does not exist")
 var ErrNoEntities = errors.New("no entities")

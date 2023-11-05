@@ -14,6 +14,9 @@ import (
 var ErrOriginNotLoaded = errors.New("origin model is not loaded in graph")
 var ErrUntrackedGraphChange = errors.New("world graph has untracked changes")
 
+type FromName string
+type ToName string
+
 type Builder struct {
 	Pool      Pool
 	graph     graph.Builder
@@ -92,7 +95,8 @@ func (w *Builder) AddEdge(origin, destination entity.View) (entity.View, error) 
 		return edge, nil
 	}
 
-	edge, err := w.Pool.Create(nameEdgeFrom(origin, destination))
+	edgeName, fromName, toName := namesForEdge(origin, destination)
+	edge, err := w.Pool.Create(edgeName)
 	if err != nil {
 		panic(err)
 	}
@@ -106,11 +110,13 @@ func (w *Builder) AddEdge(origin, destination entity.View) (entity.View, error) 
 		Origination: origin.Model(),
 		Destination: origin.Model(),
 	})
+	edge.Add(fromName)
+	edge.Add(toName)
 
 	return edge, nil
 }
 
-func nameEdgeFrom(origin, destination entity.View) Name {
+func namesForEdge(origin, destination entity.View) (Name, FromName, ToName) {
 	var from Name
 	var to Name
 
@@ -121,5 +127,5 @@ func nameEdgeFrom(origin, destination entity.View) Name {
 		panic(err)
 	}
 
-	return Name(fmt.Sprintf("%s -> %s", from, to))
+	return Name(fmt.Sprintf("%s -> %s", from, to)), FromName(from), ToName(to)
 }

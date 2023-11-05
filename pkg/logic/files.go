@@ -3,7 +3,6 @@ package logic
 import (
 	"fmt"
 	"os"
-	"regexp"
 	"strings"
 
 	"sudonters/zootler/internal/entity"
@@ -77,16 +76,16 @@ func ReadLogicFile(fp string) ([]RawLogicLocation, error) {
 	}
 
 	for i, l := range locs {
-		for evt, rule := range l.Events {
-			l.Events[evt] = compressWhiteSpace(rule)
+		for evt, evtRule := range l.Events {
+			l.Events[evt] = compressWhiteSpace(evtRule)
 		}
 
-		for exit, rule := range l.Exits {
-			l.Exits[exit] = compressWhiteSpace(rule)
+		for exit, exitRule := range l.Exits {
+			l.Exits[exit] = compressWhiteSpace(exitRule)
 		}
 
-		for location, rule := range l.Locations {
-			l.Locations[location] = compressWhiteSpace(rule)
+		for location, locRule := range l.Locations {
+			l.Locations[location] = compressWhiteSpace(locRule)
 		}
 
 		locs[i] = l
@@ -95,13 +94,6 @@ func ReadLogicFile(fp string) ([]RawLogicLocation, error) {
 	return locs, nil
 }
 
-func compressWhiteSpace[S ~string](raw S) S {
-	r := string(raw)
-	r = trailWhiteSpace.ReplaceAllLiteralString(r, "")
-	r = leadWhiteSpace.ReplaceAllLiteralString(r, "")
-	return S(compressWhiteSpaceRe.ReplaceAllLiteralString(r, " "))
+func compressWhiteSpace[S ~string](s S) S {
+	return S(strings.Join(strings.Fields(string(s)), " "))
 }
-
-var compressWhiteSpaceRe *regexp.Regexp = regexp.MustCompile(`\s+`)
-var leadWhiteSpace *regexp.Regexp = regexp.MustCompile(`^\s+`)
-var trailWhiteSpace *regexp.Regexp = regexp.MustCompile(`\s+$`)
