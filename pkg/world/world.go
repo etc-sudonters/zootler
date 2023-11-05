@@ -20,13 +20,20 @@ type World struct {
 
 type Pool struct {
 	entity.Pool
+	ByName map[Name]entity.Model
 }
 
 func (p Pool) Create(name Name) (entity.View, error) {
+	if model, ok := p.ByName[name]; ok {
+		return p.Fetch(model)
+	}
+
 	view, err := p.Pool.Create()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create entity %q: %w", name, err)
 	}
+
+	p.ByName[name] = view.Model()
 
 	view.Add(name)
 	return view, nil

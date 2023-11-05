@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 	"sudonters/zootler/internal/astrender"
-	"sudonters/zootler/internal/entity"
 	"sudonters/zootler/pkg/rules/ast"
+	"sudonters/zootler/pkg/world"
 	"sudonters/zootler/pkg/worldloader"
 
 	"github.com/etc-sudonters/substrate/stageleft"
@@ -70,11 +70,11 @@ func NewRewriter(tricks map[string]bool) *Rewriter {
 }
 
 type Rewriter struct {
-	testingEntityId  int
 	tricks           map[string]bool
 	skippedTrials    map[string]bool
 	dungeonShortcuts map[string]bool
 	region           string
+	Builder          world.Builder
 }
 
 func (r *Rewriter) SetRegion(region string) {
@@ -552,8 +552,16 @@ func (r *Rewriter) testingRunAt(where string, rule ast.Expression, env Environme
 		return ident
 	}
 
-	r.testingEntityId++
-	env.Set(name, Entity{entity.Model(r.testingEntityId)})
+	ent, err := r.Builder.AddEntity(world.Name(name))
+	if err != nil {
+		panic(err)
+	}
+
+	origin, err := r.Builder
+
+	edge, err := r.Builder.AddEdge(nil, ent)
+
+	env.Set(name, Box(ent.Model()))
 
 	return ident
 }
@@ -578,29 +586,28 @@ func (r *Rewriter) resolveEntity(name string, env Environment) *ast.Identifier {
 		put escaped named + entity into environment
 		return escaped name
 	*/
-	name = worldloader.EscapeName(name)
-	ident := &ast.Identifier{Value: name}
+	escapedName := worldloader.EscapeName(name)
+	ident := &ast.Identifier{Value: escapedName}
 
-	ent, ok := env.Get(name)
-	if ok {
-		if _, ok = ent.(Entity); ok {
-			return ident
-		} else {
-			panic(fmt.Errorf("expected to resolve entity from %q but resolved %T", name, ent))
+	{
+		ent, ok := env.Get(escapedName)
+		if ok {
+			if _, ok = ent.(Entity); ok {
+				return ident
+			} else {
+				panic(fmt.Errorf("expected to resolve entity from %q but resolved %T", escapedName, ent))
+			}
 		}
 	}
 
-	if testingIsEntity(name) {
-		r.testingEntityId++
-		env.Set(name, Box(entity.Model(r.testingEntityId)))
-		return ident
+	ent, err := r.Builder.AddEntity(world.Name(name))
+	if err != nil {
+		panic(err)
 	}
 
-	return &ast.Identifier{Value: name}
-}
+	env.Set(escapedName, Box(ent.Model()))
 
-func testingIsEntity(name string) bool {
-	return strings.Contains(name, "_")
+	return ident
 }
 
 func parseError(reason string, v ...any) error {

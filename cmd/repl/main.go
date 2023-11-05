@@ -38,6 +38,22 @@ func main() {
 
 	w := b.Build()
 
+	tokens, err := w.Entities.Query([]entity.Selector{
+		entity.With[logic.Token]{},
+		entity.With[world.Name]{},
+	})
+
+	if err != nil {
+		panic(err)
+	}
+
+	var itemName world.Name
+
+	for _, t := range tokens {
+		t.Get(&itemName)
+		env.Set(worldloader.EscapeName(string(itemName)), interpreter.Box(t.Model()))
+	}
+
 	rules, err := w.Entities.Query([]entity.Selector{
 		entity.With[logic.RawRule]{},
 		entity.With[world.Edge]{},

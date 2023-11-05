@@ -115,5 +115,11 @@ func (t interpreter) EvalTuple(tup *ast.Tuple, env Environment) Value {
 }
 
 func (t interpreter) EvalUnary(unary *ast.UnaryOp, env Environment) Value {
-	panic("not implemented") // TODO: Implement
+	switch unary.Op {
+	case ast.UnaryNot:
+		v := t.Evaluate(unary.Target, env)
+		return Box(!IsTruthy(v))
+	default:
+		panic(parseError("unknown unary op %q", unary.Op))
+	}
 }

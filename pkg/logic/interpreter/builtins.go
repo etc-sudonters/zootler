@@ -1,8 +1,6 @@
 package interpreter
 
 //RuleParser.py
-type Zoot_At struct{}
-type Zoot_Here struct{}
 type Zoot_AtDay struct{}
 type Zoot_AtDampeTime struct{}
 type Zoot_AtNight struct{}
