@@ -43,7 +43,6 @@ func NewRulesGrammar() peruse.Grammar[ast.Expression] {
 	g.Infix(OR, parseBoolOpExpr, TokenOr)
 	g.Infix(AND, parseBoolOpExpr, TokenAnd)
 	g.Infix(EQ, parseBinOp, TokenEq, TokenNotEq, TokenLt, TokenContains)
-	g.Infix(INDEX, parseAttrAccess, TokenDot)
 	g.Infix(INDEX, parseSubscript, TokenOpenBracket)
 	g.Infix(PARENS, parseCall, TokenOpenParen)
 
@@ -170,20 +169,8 @@ func parseSubscript(p *peruse.Parser[ast.Expression], left ast.Expression, bp pe
 }
 
 func parseString(p *peruse.Parser[ast.Expression]) (ast.Expression, error) {
-	s := &ast.String{Value: p.Cur.Literal}
+	s := &ast.Literal{Value: p.Cur.Literal, Kind: ast.LiteralStr}
 	return s, nil
-}
-
-func parseAttrAccess(p *peruse.Parser[ast.Expression], target ast.Expression, bp peruse.Precedence) (ast.Expression, error) {
-	p.Consume()
-	attr, err := p.ParseAt(bp)
-	if err != nil {
-		return nil, err
-	}
-	return &ast.AttrAccess{
-		Target: target,
-		Attr:   attr,
-	}, nil
 }
 
 func parseNumber(p *peruse.Parser[ast.Expression]) (ast.Expression, error) {
@@ -191,18 +178,11 @@ func parseNumber(p *peruse.Parser[ast.Expression]) (ast.Expression, error) {
 	if err != nil {
 		return nil, fmt.Errorf("cannot parse %q as number", p.Cur)
 	}
-	return &ast.Number{n}, nil
+	return &ast.Literal{Value: n, Kind: ast.LiteralNum}, nil
 }
 
 func parseBool(p *peruse.Parser[ast.Expression]) (ast.Expression, error) {
-	switch p.Cur.Literal {
-	case trueWord:
-		return &ast.Boolean{Value: true}, nil
-	case falseWord:
-		return &ast.Boolean{Value: false}, nil
-	default:
-		return nil, fmt.Errorf("unexpected boolean value %s", p.Cur)
-	}
+	return &ast.Literal{Value: p.Cur.Literal == trueWord, Kind: ast.LiteralBool}, nil
 }
 
 func parsePrefixNot(p *peruse.Parser[ast.Expression]) (ast.Expression, error) {

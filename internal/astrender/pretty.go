@@ -27,13 +27,6 @@ func (p PrettyPrint) String() string {
 	return p.b.String()
 }
 
-func (w *PrettyPrint) VisitAttrAccess(a *ast.AttrAccess) error {
-	w.writeObject(a)
-	w.writeProperty("Target", a.Target)
-	w.writeProperty("Attr", a.Attr)
-	w.writeObjectEnd()
-	return nil
-}
 func (w *PrettyPrint) VisitBinOp(b *ast.BinOp) error {
 	w.writeObject(b)
 	w.writeKeywordProperty("Op", string(b.Op))
@@ -52,12 +45,22 @@ func (w *PrettyPrint) VisitBoolOp(b *ast.BoolOp) error {
 	return nil
 }
 
-func (w *PrettyPrint) VisitBoolean(b *ast.Boolean) error {
-	w.writeObject(b)
-	w.writeBoolProperty("Value", b.Value)
+func (w *PrettyPrint) VisitLiteral(l *ast.Literal) error {
+	w.writeObject(l)
+	switch l.Kind {
+	case ast.LiteralBool:
+		w.writeBoolProperty("Value", l.Value.(bool))
+	case ast.LiteralNum:
+		w.writeNumProperty("Value", l.Value.(float64))
+	case ast.LiteralStr:
+		w.writeStrProperty("Value", l.Value.(string))
+	default:
+		w.writeStrProperty("Value", fmt.Sprintf("%+v", l.Value))
+	}
 	w.writeObjectEnd()
 	return nil
 }
+
 func (w *PrettyPrint) VisitCall(c *ast.Call) error {
 	w.writeObject(c)
 	w.writeProperty("Fn", c.Callee)
@@ -77,18 +80,6 @@ func (w *PrettyPrint) VisitIdentifier(i *ast.Identifier) error {
 	return nil
 }
 
-func (w *PrettyPrint) VisitNumber(n *ast.Number) error {
-	w.writeObject(n)
-	w.writeNumProperty("Value", n.Value)
-	w.writeObjectEnd()
-	return nil
-}
-func (w *PrettyPrint) VisitString(s *ast.String) error {
-	w.writeObject(s)
-	w.writeStrProperty("Value", s.Value)
-	w.writeObjectEnd()
-	return nil
-}
 func (w *PrettyPrint) VisitSubscript(s *ast.Subscript) error {
 	w.writeObject(s)
 	w.writeProperty("Target", s.Target)

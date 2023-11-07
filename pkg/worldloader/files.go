@@ -35,7 +35,7 @@ func loadLocations(ctx context.Context, f FileSystemLoader, b *world.Builder) er
 
 		ent.Add(logic.Location{})
 		ent.Add(logic.GetAllLocationComponents(loc))
-		b.AddNode(ent)
+		b.Node(ent)
 	}
 	return nil
 }
@@ -74,7 +74,7 @@ func loadConnections(ctx context.Context, f FileSystemLoader, b *world.Builder) 
 		}
 
 		ent.Add(loc.Components())
-		b.AddNode(ent)
+		b.Node(ent)
 
 		for event, rule := range loc.Events {
 			evt, err := b.Pool.Create(world.Name(event))
@@ -82,7 +82,7 @@ func loadConnections(ctx context.Context, f FileSystemLoader, b *world.Builder) 
 				return fmt.Errorf("while creating event %q: %w", event, err)
 			}
 			evt.Add(logic.Token{})
-			edge, err := b.AddEdge(ent, evt)
+			edge, err := b.Edge(ent, evt)
 			if err != nil {
 				return fmt.Errorf("while linking %q to event %q: %w", loc.Region, event, err)
 			}
@@ -91,7 +91,7 @@ func loadConnections(ctx context.Context, f FileSystemLoader, b *world.Builder) 
 
 		for exit, rule := range loc.Exits {
 			ext, err := b.Pool.Create(world.Name(exit))
-			edge, err := b.AddEdge(ent, ext)
+			edge, err := b.Edge(ent, ext)
 			if err != nil {
 				return fmt.Errorf("while adding edge from %q to %q: %w", loc.Region, exit, err)
 			}
@@ -103,7 +103,7 @@ func loadConnections(ctx context.Context, f FileSystemLoader, b *world.Builder) 
 			if err != nil {
 				return fmt.Errorf("while creating check %q at %q: %w", loc.Region, check, err)
 			}
-			edge, err := b.AddEdge(ent, chk)
+			edge, err := b.Edge(ent, chk)
 			if err != nil {
 				return fmt.Errorf("while linking check %q to %q: %w", check, loc.Region, err)
 			}

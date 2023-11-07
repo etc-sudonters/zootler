@@ -17,7 +17,6 @@ const (
 	inWord     = "in"
 
 	_ peruse.TokenType = iota
-	TokenDot
 	TokenOpenParen
 	TokenCloseParen
 	TokenOpenBracket
@@ -43,8 +42,6 @@ func TokenTypeString(i peruse.TokenType) string {
 		return "<EOF>"
 	case peruse.ERR:
 		return "<ERR>"
-	case TokenDot:
-		return "<DOT>"
 	case TokenOpenParen:
 		return "<OPENPAREN>"
 	case TokenCloseParen:

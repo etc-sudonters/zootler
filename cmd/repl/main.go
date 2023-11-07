@@ -20,13 +20,17 @@ import (
 
 func main() {
 	env := interpreter.NewEnv()
-	rewriter := interpreter.NewRewriter(defaultTricks())
+	b := world.NewBuilder()
+	rewriter := interpreter.NewRewriter()
+	rewriter.Settings = make(map[string]any, 0)
+	rewriter.SkippedTrials = make(map[string]bool, 0)
+	rewriter.Tricks = defaultTricks()
+	rewriter.Builder = b
 	loadHelpers("inputs/logic", env, rewriter)
 
 	for name, value := range defaultSettings() {
 		env.Set(name, interpreter.Box(value))
 	}
-	b := world.NewBuilder()
 	loader := worldloader.FileSystemLoader{
 		LogicDirectory: "inputs/logic",
 		DataDirectory:  "inputs/data",
@@ -69,6 +73,7 @@ func main() {
 	var region world.FromName
 	var edgeName world.Name
 	s := astrender.NewSexpr(astrender.DontTheme())
+
 	identGetter := func(ident *ast.Identifier) ast.Expression {
 		v, ok := env.Get(ident.Value)
 		if !ok {
@@ -80,11 +85,17 @@ func main() {
 		}
 
 		if fn, ok := v.(interpreter.Fn); ok {
-			return fn.Body
+			return fn.Name
 		}
 
 		if fn, ok := v.(interpreter.PartiallyEvaluatedFn); ok {
-			return fn.Body
+			// lol
+			return &ast.BinOp{
+				// can't do an identifier here
+				Left:  &ast.Literal{Value: fn.Name, Kind: ast.LiteralStr},
+				Op:    "call",
+				Right: fn.Body,
+			}
 		}
 
 		return nil
@@ -96,6 +107,7 @@ func main() {
 		bearer.Get(&region)
 		bearer.Get(&edgeName)
 		rewriter.SetRegion(string(region))
+		fmt.Printf("Name: %s\n", edgeName)
 
 		p, err := parser.Parse(string(rule))
 		if err != nil {
@@ -103,13 +115,13 @@ func main() {
 		}
 		s.SetIdentifier(nil)
 		ast.Visit(s, p)
-		fmt.Printf("Name: %s\nRaw s-expr: %s\n\n", edgeName, s.String())
+		fmt.Printf("Raw %s\nRaw s-expr: %s\n\n", rule, s.String())
 		s.Clear()
 
 		s.SetIdentifier(identGetter)
 		p = rewriter.Rewrite(p, env)
 		ast.Visit(s, p)
-		fmt.Printf("Rewritten: %s\n\n\n\n", s.String())
+		fmt.Printf("Rewritten: %s\n\n\n", s.String())
 		fmt.Scan()
 	}
 }
@@ -128,24 +140,26 @@ func loadHelpers(logicDir string, env interpreter.Environment, rewriter *interpr
 
 	passed := true
 
-	for decl, helper := range helpers {
+	for raw, helper := range helpers {
 		helper = compressWhiteSpace(helper)
+		decl, err := parser.Parse(raw)
+		if err != nil {
+			passed = false
+			fmt.Fprintf(os.Stdout, "Name:\t%s\n", raw)
+			fmt.Fprintf(os.Stdout, "FAILED TO PARSE: %s\n", helper)
+			fmt.Fprintf(os.Stdout, "ERROR: %s\n", err.Error())
+			continue
+		}
 		rule, err := parser.Parse(helper)
 		if err != nil {
 			passed = false
-			fmt.Fprintf(os.Stdout, "Name:\t%s\n", decl)
+			fmt.Fprintf(os.Stdout, "Name:\t%s\n", raw)
 			fmt.Fprintf(os.Stdout, "FAILED TO PARSE: %s\n", helper)
 			fmt.Fprintf(os.Stdout, "ERROR: %s\n", err.Error())
 			continue
 		}
 
-		fn := toZootCallable(decl, rule)
-		fn.Body = rewriter.Rewrite(fn.Body, env)
-		if interpreter.CanReifyLiteral(fn.Body) && fn.Arity() == 0 {
-			env.Set(fn.Name, interpreter.ReifyLiteral(fn.Body))
-		} else {
-			env.Set(fn.Name, fn)
-		}
+		interpreter.FunctionDecl(decl, rule, env)
 	}
 
 	if !passed {
@@ -153,35 +167,35 @@ func loadHelpers(logicDir string, env interpreter.Environment, rewriter *interpr
 	}
 }
 
-func toZootCallable(decl string, body ast.Expression) interpreter.Fn {
-	var err error
-	if decl, declErr := parser.Parse(decl); declErr == nil {
-		switch decl := decl.(type) {
-		case *ast.Identifier:
-			return interpreter.Fn{
-				Name:   decl.Value,
-				Body:   body,
-				Params: nil,
-			}
-		case *ast.Call:
-			name := decl.Callee.(*ast.Identifier).Value
-			params := make([]string, len(decl.Args))
-			for i := range params {
-				params[i] = decl.Args[i].(*ast.Identifier).Value
-			}
-			return interpreter.Fn{
-				Name:   name,
-				Body:   body,
-				Params: params,
-			}
-		default:
-			err = fmt.Errorf("expected Ident or Call got %T", decl)
-		}
-	} else {
-		err = declErr
+func toZootCallable(rawDecl string, body ast.Expression) interpreter.Fn {
+	decl, err := parser.Parse(rawDecl)
+	if err != nil {
+		panic(err)
 	}
 
-	panic(err)
+	switch decl := decl.(type) {
+	// 0 arity function decls look like identifiers
+	case *ast.Identifier:
+		return interpreter.Fn{
+			Name:   decl,
+			Body:   body,
+			Params: nil,
+		}
+	// N arity decls look like calls
+	case *ast.Call:
+		name := decl.Callee.(*ast.Identifier)
+		params := make([]string, len(decl.Args))
+		for i := range params {
+			params[i] = decl.Args[i].(*ast.Identifier).Value
+		}
+		return interpreter.Fn{
+			Name:   name,
+			Body:   body,
+			Params: params,
+		}
+	default:
+		panic(fmt.Errorf("expected Ident or Call for decl, got %T", decl))
+	}
 }
 
 func compressWhiteSpace[S ~string](s S) S {
@@ -246,7 +260,7 @@ func defaultSettings() map[string]any {
 		"shuffle_beans":                           false,
 		"shuffle_expensive_merchants":             false,
 		"shuffle_frog_song_rupees":                false,
-		"shuffle_individual_ocarina_notes":        false,
+		"shuffle_individual_ocarina_notes":        true,
 		"shuffle_loach_reward":                    "off",
 		"logic_no_night_tokens_without_suns_song": false,
 		"start_with_consumables":                  true,

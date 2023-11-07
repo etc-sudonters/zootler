@@ -1,6 +1,7 @@
 package interpreter
 
 import (
+	"errors"
 	"fmt"
 	"sudonters/zootler/internal/entity"
 	"sudonters/zootler/pkg/rules/ast"
@@ -22,7 +23,9 @@ type Value interface {
 	Eq(Value) bool
 }
 
-type Boolean bool
+type Boolean struct {
+	Value bool
+}
 
 func (b Boolean) Type() Type { return BOOL_TYPE }
 
@@ -99,12 +102,24 @@ func (e Entity) Eq(o Value) bool {
 type Fn struct {
 	Params []string
 	Body   ast.Expression
-	Name   string
+	Name   *ast.Identifier
 }
 
 func (f Fn) Type() Type { return CALL_TYPE }
 
-func (f Fn) Eq(Value) bool { return false }
+func (f Fn) Eq(v Value) bool {
+	if v == nil {
+		return false
+	}
+
+	switch v := v.(type) {
+	case Fn:
+		return f.Name.Value == v.Name.Value
+
+	default:
+		return false
+	}
+}
 
 func (f Fn) Arity() int {
 	return len(f.Params)
@@ -119,10 +134,10 @@ func (f Fn) Call(t interpreter, args []Value) Value {
 	return t.Evaluate(f.Body, env)
 }
 
-func IsTruthy(v Value) bool {
+func (t interpreter) IsTruthy(v Value) bool {
 	switch v := v.(type) {
 	case Boolean:
-		return bool(v)
+		return bool(v.Value)
 	case Number:
 		return v.Value != 0
 	case String:
@@ -133,8 +148,13 @@ func IsTruthy(v Value) bool {
 			panic(entity.ErrInvalidEntity)
 		}
 		return true
+	case Callable:
+		if v.Arity() == 0 {
+			return t.IsTruthy(v.Call(t, nil))
+		}
+		panic(fmt.Errorf("%d arity func must be evaluated!", v.Arity()))
 	default:
-		panic(fmt.Errorf("unknown truthiness kind"))
+		panic(errors.New("unknown truthiness kind"))
 	}
 }
 
@@ -159,7 +179,7 @@ func (b BuiltIn) Call(t interpreter, args []Value) Value {
 func Box(v any) Value {
 	switch v := v.(type) {
 	case bool:
-		return Boolean(v)
+		return Boolean{Value: v}
 	case float64:
 		return Number{Value: v}
 	case int:
@@ -178,10 +198,8 @@ func Unbox(v Value) any {
 	case Number:
 		return v.Value
 	case Boolean:
-		return bool(v)
-	case String:
 		return v.Value
-	case Entity:
+	case String:
 		return v.Value
 	default:
 		panic(fmt.Errorf("cannot unbox %T", v))
@@ -193,17 +211,20 @@ func CanLiteralfy(v Value) bool {
 }
 
 func Literalify(v any) ast.Expression {
+	if v == nil {
+		panic(errors.New("nil value"))
+	}
 	switch v := v.(type) {
 	case float64:
-		return &ast.Number{Value: v}
+		return &ast.Literal{Value: v, Kind: ast.LiteralNum}
 	case Number:
 		return Literalify(v.Value)
 	case bool:
-		return &ast.Boolean{Value: v}
+		return &ast.Literal{Value: v, Kind: ast.LiteralBool}
 	case Boolean:
-		return Literalify(bool(v))
+		return Literalify(v.Value)
 	case string:
-		return &ast.String{Value: v}
+		return &ast.Literal{Value: v, Kind: ast.LiteralStr}
 	case String:
 		return Literalify(v.Value)
 	default:
@@ -211,21 +232,17 @@ func Literalify(v any) ast.Expression {
 	}
 }
 
-func ReifyLiteral(expr ast.Expression) Value {
-	switch v := expr.(type) {
-	case *ast.Number:
-		return Number{Value: v.Value}
-	case *ast.Boolean:
-		return Boolean(v.Value)
-	case *ast.String:
-		return String{Value: v.Value}
+func ReifyLiteral(expr *ast.Literal) Value {
+	switch expr.Kind {
+	case ast.LiteralNum:
+		return Number{Value: expr.Value.(float64)}
+	case ast.LiteralBool:
+		return Boolean{Value: expr.Value.(bool)}
+	case ast.LiteralStr:
+		return String{Value: expr.Value.(string)}
 	default:
-		panic(fmt.Errorf("cannot Deliteralfy %T", v))
+		panic(fmt.Errorf("cannot Deliteralfy %s", expr.Kind))
 	}
-}
-
-func CanReifyLiteral(expr ast.Expression) bool {
-	return expr.Type() == ast.ExprBoolean || expr.Type() == ast.ExprNumber || expr.Type() == ast.ExprString
 }
 
 type PartiallyEvaluatedFn struct {
@@ -244,4 +261,31 @@ func (f PartiallyEvaluatedFn) Arity() int {
 
 func (f PartiallyEvaluatedFn) Call(t interpreter, _ []Value) Value {
 	return t.Evaluate(f.Body, f.Env)
+}
+
+func FunctionDecl(decl, rule ast.Expression, env Environment) {
+	switch decl.Type() {
+	case ast.ExprIdentifier:
+		decl = &ast.Call{
+			Callee: decl,
+			Args:   nil,
+		}
+		fallthrough
+	case ast.ExprCall:
+		call := decl.(*ast.Call)
+		fn := Fn{
+			Params: []string{},
+			Body:   rule,
+			Name:   call.Callee.(*ast.Identifier),
+		}
+
+		for i := range call.Args {
+			name := call.Args[i].(*ast.Identifier)
+			fn.Params = append(fn.Params, name.Value)
+		}
+
+		env.Set(fn.Name.Value, fn)
+	default:
+		panic(parseError("function decl must be identifier or call got %T", decl))
+	}
 }

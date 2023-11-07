@@ -42,12 +42,6 @@ func (s *sexprFormatter) SetIdentifier(cb IdentifierCallback) {
 	s.identifier = cb
 }
 
-func (s *sexprFormatter) VisitAttrAccess(a *ast.AttrAccess) error {
-	ast.Visit(s, a.Target)
-	s.b.WriteRune('.')
-	ast.Visit(s, a.Attr)
-	return nil
-}
 func (s *sexprFormatter) VisitBinOp(b *ast.BinOp) error {
 	s.writeOpenParen()
 	s.b.WriteString(s.scheme.Keyword.Paint(string(b.Op)))
@@ -68,10 +62,21 @@ func (s *sexprFormatter) VisitBoolOp(b *ast.BoolOp) error {
 	s.writeCloseParen()
 	return nil
 }
-func (s *sexprFormatter) VisitBoolean(b *ast.Boolean) error {
-	fmt.Fprintf(s.b, s.scheme.Boolean.Paint("%t"), b.Value)
+
+func (s *sexprFormatter) VisitLiteral(l *ast.Literal) error {
+	switch l.Kind {
+	case ast.LiteralBool:
+		fmt.Fprintf(s.b, s.scheme.Boolean.Paint("%t"), l.Value)
+	case ast.LiteralNum:
+		fmt.Fprintf(s.b, s.scheme.Number.Paint("%.0f"), l.Value)
+	case ast.LiteralStr:
+		s.b.WriteString(s.scheme.String.Paint(l.Value.(string)))
+	default:
+		fmt.Fprintf(s.b, s.scheme.Property.Paint("%+v"), l.Value)
+	}
 	return nil
 }
+
 func (s *sexprFormatter) VisitCall(c *ast.Call) error {
 	s.writeOpenParen()
 	ast.Visit(s, c.Callee)
@@ -79,26 +84,23 @@ func (s *sexprFormatter) VisitCall(c *ast.Call) error {
 		s.b.WriteRune(' ')
 		ast.Visit(s, arg)
 	}
+
+	if len(c.Args) == 0 {
+		s.b.WriteString(" @")
+	}
+
 	s.writeCloseParen()
 	return nil
 }
 func (s *sexprFormatter) VisitIdentifier(i *ast.Identifier) error {
 	if s.identifier != nil {
 		expr := s.identifier(i)
-		if expr != nil {
+		if expr != nil && expr.Type() != ast.ExprIdentifier {
 			return ast.Visit(s, expr)
 		}
 	}
 
 	s.b.WriteString(s.scheme.Identifier.Paint(i.Value))
-	return nil
-}
-func (s *sexprFormatter) VisitNumber(n *ast.Number) error {
-	fmt.Fprintf(s.b, s.scheme.Number.Paint("%.0f"), n.Value)
-	return nil
-}
-func (s *sexprFormatter) VisitString(r *ast.String) error {
-	s.b.WriteString(s.scheme.String.Paint(r.Value))
 	return nil
 }
 func (s *sexprFormatter) VisitSubscript(r *ast.Subscript) error {

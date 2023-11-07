@@ -18,19 +18,21 @@ type FromName string
 type ToName string
 
 type Builder struct {
-	Pool      Pool
+	Pool      EntityPool
 	graph     graph.Builder
 	nameCache map[Name]entity.View
 }
 
 func NewBuilder() *Builder {
+	pool := bitpool.New(bitpool.Settings{
+		MaxComponentId: 3000,
+		MaxEntityId:    20000,
+	})
+
 	return &Builder{
-		Pool{bitpool.New(bitpool.Settings{
-			MaxComponentId: 3000,
-			MaxEntityId:    20000,
-		})},
-		graph.Builder{G: graph.New()},
-		make(map[Name]entity.View, 128),
+		Pool:      EntityPool{pool},
+		graph:     graph.Builder{G: graph.New()},
+		nameCache: make(map[Name]entity.View, 128),
 	}
 }
 
@@ -43,7 +45,7 @@ func (w *Builder) Build() World {
 }
 
 // unique names means we can forward declare entities w/o worry
-func (w *Builder) AddEntity(n Name) (entity.View, error) {
+func (w *Builder) Entity(n Name) (entity.View, error) {
 	if ent, ok := w.nameCache[n]; ok {
 		return ent, nil
 	}
@@ -57,11 +59,11 @@ func (w *Builder) AddEntity(n Name) (entity.View, error) {
 	return ent, nil
 }
 
-func (w *Builder) AddNode(v entity.View) {
+func (w *Builder) Node(v entity.View) {
 	w.graph.AddNode(graph.Node(v.Model()))
 }
 
-func (w *Builder) AddEdge(origin, destination entity.View) (entity.View, error) {
+func (w *Builder) Edge(origin, destination entity.View) (entity.View, error) {
 	// we require that origin exist in the graph already rather than just adding it
 	successors, err := w.graph.G.Successors(graph.Node(origin.Model()))
 	if err != nil {

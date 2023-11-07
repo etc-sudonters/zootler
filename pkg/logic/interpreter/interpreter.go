@@ -6,6 +6,13 @@ import (
 	"sudonters/zootler/pkg/rules/ast"
 )
 
+func parseError(reason string, v ...any) error {
+	reason = fmt.Sprintf(reason, v...)
+	return fmt.Errorf("%w: %s", parseErr, reason)
+}
+
+var parseErr = errors.New("parse error")
+
 var _ Evaluation[Value] = interpreter{}
 
 var UnknownIdentifierErr = errors.New("unknown identifier")
@@ -22,8 +29,8 @@ func (t interpreter) Evaluate(ex ast.Expression, env Environment) Value {
 	return Evaluate(t, ex, env)
 }
 
-func (t interpreter) EvalAttrAccess(access *ast.AttrAccess, env Environment) Value {
-	panic("not implemented") // TODO: Implement
+func (t interpreter) EvalLiteral(expr *ast.Literal, env Environment) Value {
+	return Box(expr.Value)
 }
 
 func (t interpreter) EvalBinOp(op *ast.BinOp, env Environment) Value {
@@ -32,14 +39,14 @@ func (t interpreter) EvalBinOp(op *ast.BinOp, env Environment) Value {
 
 	switch op.Op {
 	case ast.BinOpEq:
-		return Boolean(left.Eq(right))
+		return Boolean{Value: left.Eq(right)}
 	case ast.BinOpNotEq:
-		return Boolean(!left.Eq(right))
+		return Boolean{Value: !left.Eq(right)}
 	case ast.BinOpLt:
 		if left.Type() == right.Type() && left.Type() == NUM_TYPE {
 			l := left.(Number)
 			r := right.(Number)
-			return Boolean(l.Value < r.Value)
+			return Boolean{Value: l.Value < r.Value}
 		}
 		panic(fmt.Errorf("only numbers can be compared not %T and %T", left, right))
 	}
@@ -50,20 +57,16 @@ func (t interpreter) EvalBoolOp(op *ast.BoolOp, env Environment) Value {
 	left := t.Evaluate(op.Left, env)
 
 	if op.Op == ast.BoolOpOr {
-		if IsTruthy(left) {
+		if t.IsTruthy(left) {
 			return left
 		}
 	} else {
-		if !IsTruthy(left) {
+		if !t.IsTruthy(left) {
 			return left
 		}
 	}
 
 	return t.Evaluate(op.Right, env)
-}
-
-func (t interpreter) EvalBoolean(bool *ast.Boolean) Value {
-	return Boolean(bool.Value)
 }
 
 func (t interpreter) EvalCall(call *ast.Call, env Environment) Value {
@@ -98,14 +101,6 @@ func (t interpreter) EvalIdentifier(ident *ast.Identifier, env Environment) Valu
 	return v
 }
 
-func (t interpreter) EvalNumber(num *ast.Number) Value {
-	return Number{Value: num.Value}
-}
-
-func (t interpreter) EvalString(str *ast.String) Value {
-	return String{Value: str.Value}
-}
-
 func (t interpreter) EvalSubscript(subscript *ast.Subscript, env Environment) Value {
 	panic("not implemented") // TODO: Implement
 }
@@ -118,7 +113,7 @@ func (t interpreter) EvalUnary(unary *ast.UnaryOp, env Environment) Value {
 	switch unary.Op {
 	case ast.UnaryNot:
 		v := t.Evaluate(unary.Target, env)
-		return Box(!IsTruthy(v))
+		return Box(!t.IsTruthy(v))
 	default:
 		panic(parseError("unknown unary op %q", unary.Op))
 	}
