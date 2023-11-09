@@ -15,12 +15,12 @@ const (
 	NUM_TYPE
 	STR_TYPE
 	CALL_TYPE
-	ENT_TYPE
 )
 
 type Value interface {
 	Type() Type
 	Eq(Value) bool
+	String() string
 }
 
 type Boolean struct {
@@ -42,6 +42,10 @@ func (b Boolean) Eq(v Value) bool {
 	}
 }
 
+func (b Boolean) String() string {
+	return fmt.Sprintf("%t", b.Value)
+}
+
 type Number struct {
 	Value float64
 }
@@ -58,6 +62,10 @@ func (n Number) Eq(v Value) bool {
 	default:
 		return false
 	}
+}
+
+func (n Number) String() string {
+	return fmt.Sprintf("%f", n.Value)
 }
 
 type String struct {
@@ -78,63 +86,11 @@ func (s String) Eq(v Value) bool {
 	}
 }
 
-type Entity struct {
-	Value entity.Model
+func (s String) String() string {
+	return fmt.Sprintf("%q", s.Value)
 }
 
-func (e Entity) Type() Type {
-	return ENT_TYPE
-}
-
-func (e Entity) Eq(o Value) bool {
-	if o == nil {
-		return false
-	}
-
-	switch o := o.(type) {
-	case Entity:
-		return e.Value == o.Value
-	default:
-		return false
-	}
-}
-
-type Fn struct {
-	Params []string
-	Body   ast.Expression
-	Name   *ast.Identifier
-}
-
-func (f Fn) Type() Type { return CALL_TYPE }
-
-func (f Fn) Eq(v Value) bool {
-	if v == nil {
-		return false
-	}
-
-	switch v := v.(type) {
-	case Fn:
-		return f.Name.Value == v.Name.Value
-
-	default:
-		return false
-	}
-}
-
-func (f Fn) Arity() int {
-	return len(f.Params)
-}
-
-func (f Fn) Call(t interpreter, args []Value) Value {
-	env := t.globals.Enclosed()
-	for i := range args {
-		env.Set(f.Params[i], args[i])
-	}
-
-	return t.Evaluate(f.Body, env)
-}
-
-func (t interpreter) IsTruthy(v Value) bool {
+func (t Interpreter) IsTruthy(v Value) bool {
 	switch v := v.(type) {
 	case Boolean:
 		return bool(v.Value)
@@ -142,12 +98,6 @@ func (t interpreter) IsTruthy(v Value) bool {
 		return v.Value != 0
 	case String:
 		return v.Value != ""
-	case Entity:
-		if v.Value == entity.INVALID_ENTITY {
-			// this shouldn't ever happen but we need to catch it
-			panic(entity.ErrInvalidEntity)
-		}
-		return true
 	case Callable:
 		if v.Arity() == 0 {
 			return t.IsTruthy(v.Call(t, nil))
@@ -156,24 +106,6 @@ func (t interpreter) IsTruthy(v Value) bool {
 	default:
 		panic(errors.New("unknown truthiness kind"))
 	}
-}
-
-type Callable interface {
-	Arity() int
-	Call(t interpreter, args []Value) Value
-}
-
-type BuiltIn struct {
-	N int
-	F func(t interpreter, args []Value) Value
-}
-
-func (b BuiltIn) Arity() int {
-	return b.N
-}
-
-func (b BuiltIn) Call(t interpreter, args []Value) Value {
-	return b.F(t, args)
 }
 
 func Box(v any) Value {
@@ -242,50 +174,5 @@ func ReifyLiteral(expr *ast.Literal) Value {
 		return String{Value: expr.Value.(string)}
 	default:
 		panic(fmt.Errorf("cannot Deliteralfy %s", expr.Kind))
-	}
-}
-
-type PartiallyEvaluatedFn struct {
-	Body ast.Expression
-	Env  Environment
-	Name string
-}
-
-func (f PartiallyEvaluatedFn) Type() Type { return CALL_TYPE }
-
-func (f PartiallyEvaluatedFn) Eq(Value) bool { return false }
-
-func (f PartiallyEvaluatedFn) Arity() int {
-	return 0
-}
-
-func (f PartiallyEvaluatedFn) Call(t interpreter, _ []Value) Value {
-	return t.Evaluate(f.Body, f.Env)
-}
-
-func FunctionDecl(decl, rule ast.Expression, env Environment) {
-	switch decl.Type() {
-	case ast.ExprIdentifier:
-		decl = &ast.Call{
-			Callee: decl,
-			Args:   nil,
-		}
-		fallthrough
-	case ast.ExprCall:
-		call := decl.(*ast.Call)
-		fn := Fn{
-			Params: []string{},
-			Body:   rule,
-			Name:   call.Callee.(*ast.Identifier),
-		}
-
-		for i := range call.Args {
-			name := call.Args[i].(*ast.Identifier)
-			fn.Params = append(fn.Params, name.Value)
-		}
-
-		env.Set(fn.Name.Value, fn)
-	default:
-		panic(parseError("function decl must be identifier or call got %T", decl))
 	}
 }

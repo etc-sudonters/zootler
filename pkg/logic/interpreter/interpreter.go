@@ -13,27 +13,27 @@ func parseError(reason string, v ...any) error {
 
 var parseErr = errors.New("parse error")
 
-var _ Evaluation[Value] = interpreter{}
+var _ Evaluation[Value] = Interpreter{}
 
 var UnknownIdentifierErr = errors.New("unknown identifier")
 
-func New(globals Environment) interpreter {
-	return interpreter{globals}
+func New(globals Environment) Interpreter {
+	return Interpreter{globals}
 }
 
-type interpreter struct {
+type Interpreter struct {
 	globals Environment
 }
 
-func (t interpreter) Evaluate(ex ast.Expression, env Environment) Value {
+func (t Interpreter) Evaluate(ex ast.Expression, env Environment) Value {
 	return Evaluate(t, ex, env)
 }
 
-func (t interpreter) EvalLiteral(expr *ast.Literal, env Environment) Value {
+func (t Interpreter) EvalLiteral(expr *ast.Literal, env Environment) Value {
 	return Box(expr.Value)
 }
 
-func (t interpreter) EvalBinOp(op *ast.BinOp, env Environment) Value {
+func (t Interpreter) EvalBinOp(op *ast.BinOp, env Environment) Value {
 	left := t.Evaluate(op.Left, env)
 	right := t.Evaluate(op.Right, env)
 
@@ -53,7 +53,7 @@ func (t interpreter) EvalBinOp(op *ast.BinOp, env Environment) Value {
 	panic("unreachable")
 }
 
-func (t interpreter) EvalBoolOp(op *ast.BoolOp, env Environment) Value {
+func (t Interpreter) EvalBoolOp(op *ast.BoolOp, env Environment) Value {
 	left := t.Evaluate(op.Left, env)
 
 	if op.Op == ast.BoolOpOr {
@@ -69,7 +69,7 @@ func (t interpreter) EvalBoolOp(op *ast.BoolOp, env Environment) Value {
 	return t.Evaluate(op.Right, env)
 }
 
-func (t interpreter) EvalCall(call *ast.Call, env Environment) Value {
+func (t Interpreter) EvalCall(call *ast.Call, env Environment) Value {
 	callee := t.Evaluate(call.Callee, env)
 	fn, ok := callee.(Callable)
 	if !ok {
@@ -78,9 +78,11 @@ func (t interpreter) EvalCall(call *ast.Call, env Environment) Value {
 
 	if fn.Arity() != len(call.Args) {
 		panic(fmt.Errorf(
-			"Expected %d arguments but got %d",
+			"%q: Expected %d arguments but got %d: %s",
+			fn.(Value),
 			fn.Arity(),
 			len(call.Args),
+			call.Args,
 		))
 	}
 
@@ -92,7 +94,7 @@ func (t interpreter) EvalCall(call *ast.Call, env Environment) Value {
 	return fn.Call(t, args)
 }
 
-func (t interpreter) EvalIdentifier(ident *ast.Identifier, env Environment) Value {
+func (t Interpreter) EvalIdentifier(ident *ast.Identifier, env Environment) Value {
 	v, ok := env.Get(ident.Value)
 	if !ok {
 		panic(fmt.Errorf("%w: %q", UnknownIdentifierErr, ident.Value))
@@ -101,15 +103,15 @@ func (t interpreter) EvalIdentifier(ident *ast.Identifier, env Environment) Valu
 	return v
 }
 
-func (t interpreter) EvalSubscript(subscript *ast.Subscript, env Environment) Value {
+func (t Interpreter) EvalSubscript(subscript *ast.Subscript, env Environment) Value {
 	panic("not implemented") // TODO: Implement
 }
 
-func (t interpreter) EvalTuple(tup *ast.Tuple, env Environment) Value {
+func (t Interpreter) EvalTuple(tup *ast.Tuple, env Environment) Value {
 	panic("not implemented") // TODO: Implement
 }
 
-func (t interpreter) EvalUnary(unary *ast.UnaryOp, env Environment) Value {
+func (t Interpreter) EvalUnary(unary *ast.UnaryOp, env Environment) Value {
 	switch unary.Op {
 	case ast.UnaryNot:
 		v := t.Evaluate(unary.Target, env)

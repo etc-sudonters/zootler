@@ -4,13 +4,16 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 	"sudonters/zootler/internal/astrender"
+	"sudonters/zootler/internal/entity"
 	"sudonters/zootler/pkg/logic"
 	"sudonters/zootler/pkg/rules/ast"
 	"sudonters/zootler/pkg/world"
-	"sudonters/zootler/pkg/worldloader"
 )
+
+var _entityName = regexp.MustCompile("^[A-Z][A-Za-z_]+$")
 
 type eq int
 
@@ -22,29 +25,37 @@ const (
 	notSure
 )
 
-var _ Evaluation[ast.Expression] = Rewriter{}
+var _ Evaluation[ast.Expression] = Inliner{}
 
-func NewRewriter() *Rewriter {
-	return &Rewriter{}
+func NewInliner(globals Environment) *Inliner {
+	return &Inliner{Globals: globals}
 }
 
-type Rewriter struct {
-	Settings      map[string]any
-	Tricks        map[string]bool
-	SkippedTrials map[string]bool
-	Builder       *world.Builder
-	regionName    string
+// does compile time execution to resolve and inline as many things as possible
+// allows us to do stuff like cleave branches that are always false now
+// this includes recursing into function calls and either replacing it with a constant
+// or storing the partially executed function into the environment and replaces the general
+// call to the optimized call
+type Inliner struct {
+	Globals          Environment
+	Settings         map[string]any
+	Tricks           map[string]bool
+	SkippedTrials    map[string]bool
+	DungeonShortcuts map[string]bool
+	Builder          *world.Builder
+
+	regionName string
 }
 
-func (rw *Rewriter) SetRegion(r string) {
+func (rw *Inliner) SetRegion(r string) {
 	rw.regionName = r
 }
 
-func (rw Rewriter) Rewrite(expr ast.Expression, env Environment) ast.Expression {
+func (rw Inliner) Rewrite(expr ast.Expression, env Environment) ast.Expression {
 	return Evaluate(rw, expr, env)
 }
 
-func (rw Rewriter) areEq(left, right ast.Expression, env Environment) eq {
+func (rw Inliner) areEq(left, right ast.Expression, env Environment) eq {
 	if left.Type() == ast.ExprCall && right.Type() == ast.ExprCall {
 		lFn, rFn := left.(*ast.Call), right.(*ast.Call)
 
@@ -73,7 +84,7 @@ func (rw Rewriter) areEq(left, right ast.Expression, env Environment) eq {
 }
 
 // expr is already rewritten
-func (rw Rewriter) resolveToValue(expr ast.Expression, env Environment) Value {
+func (rw Inliner) resolveToValue(expr ast.Expression, env Environment) Value {
 	switch expr := expr.(type) {
 	case *ast.Literal:
 		return ReifyLiteral(expr)
@@ -99,7 +110,7 @@ func IsTruthy(v Value) bool {
 	}
 }
 
-func (rw Rewriter) fromEnv(i ast.Expression, env Environment) (Value, bool) {
+func (rw Inliner) fromEnv(i ast.Expression, env Environment) (Value, bool) {
 	if i.Type() == ast.ExprIdentifier {
 		return env.Get(i.(*ast.Identifier).Value)
 	}
@@ -107,26 +118,26 @@ func (rw Rewriter) fromEnv(i ast.Expression, env Environment) (Value, bool) {
 	return nil, false
 }
 
-func (rw Rewriter) entityLiteral(lit string, env Environment) (*ast.Identifier, bool) {
-	escaped := worldloader.EscapeName(lit)
-	v, ok := env.Get(escaped)
-	if !ok {
-		return nil, false
+func (rw Inliner) EvalLiteral(literal *ast.Literal, env Environment) ast.Expression {
+	if literal.Kind == ast.LiteralStr {
+		ident := &ast.Identifier{Value: literal.Value.(string)}
+		_, ok := env.Get(ident.Value)
+		if ok {
+			return ident
+		}
+
+		ent, err := rw.Builder.Entity(world.Name(ident.Value))
+		if err != nil {
+			panic(err)
+		}
+
+		env.Set(ident.Value, Entity{Value: ent.Model()})
+		return ident
 	}
-
-	if v.Type() != ENT_TYPE {
-		return nil, false
-	}
-
-	return &ast.Identifier{Value: escaped}, true
-
-}
-
-func (rw Rewriter) EvalLiteral(literal *ast.Literal, _ Environment) ast.Expression {
 	return literal
 }
 
-func (rw Rewriter) EvalBinOp(op *ast.BinOp, env Environment) ast.Expression {
+func (rw Inliner) EvalBinOp(op *ast.BinOp, env Environment) ast.Expression {
 	left := rw.Rewrite(op.Left, env)
 	right := rw.Rewrite(op.Right, env)
 
@@ -174,6 +185,10 @@ func (rw Rewriter) EvalBinOp(op *ast.BinOp, env Environment) ast.Expression {
 
 		return Literalify(l < r.Value.(float64))
 	case ast.BinOpContains:
+		if op.Left.Type() == ast.ExprLiteral {
+			// subscript assumes identifiers only
+			op.Left = &ast.Identifier{Value: op.Left.(*ast.Literal).Value.(string)}
+		}
 		return rw.Rewrite(&ast.Subscript{Target: op.Right, Index: op.Left}, env)
 	}
 
@@ -184,9 +199,10 @@ func (rw Rewriter) EvalBinOp(op *ast.BinOp, env Environment) ast.Expression {
 	}
 }
 
-func (rw Rewriter) isFuncPointer(expr ast.Expression, env Environment) (*ast.Identifier, bool) {
-	v := rw.resolveToValue(expr, env)
-	if v == nil {
+func (rw Inliner) isFuncPointer(expr ast.Expression, env Environment) (*ast.Identifier, bool) {
+	v, ok := rw.fromEnv(expr, env)
+
+	if !ok {
 		return nil, false
 	}
 
@@ -194,17 +210,10 @@ func (rw Rewriter) isFuncPointer(expr ast.Expression, env Environment) (*ast.Ide
 		return nil, false
 	}
 
-	switch v := v.(type) {
-	case Fn:
-		return v.Name, true
-	case PartiallyEvaluatedFn:
-		return &ast.Identifier{Value: v.Name}, false
-	default:
-		panic(errors.New("missed a callable type"))
-	}
+	return expr.(*ast.Identifier), true
 }
 
-func (rw Rewriter) make0ArityFnCall(expr ast.Expression, env Environment) (ast.Expression, bool) {
+func (rw Inliner) Make0ArityFnCall(expr ast.Expression, env Environment) (ast.Expression, bool) {
 	if ident, ok := rw.isFuncPointer(expr, env); ok {
 		fn, _ := rw.fromEnv(ident, env)
 		if fn.(Callable).Arity() != 0 {
@@ -220,10 +229,10 @@ func (rw Rewriter) make0ArityFnCall(expr ast.Expression, env Environment) (ast.E
 	return expr, false
 }
 
-func (rw Rewriter) EvalBoolOp(op *ast.BoolOp, env Environment) ast.Expression {
+func (rw Inliner) EvalBoolOp(op *ast.BoolOp, env Environment) ast.Expression {
 	left := rw.Rewrite(op.Left, env)
-	if call, ok := rw.make0ArityFnCall(left, env); ok {
-		left = call
+	if call, ok := rw.Make0ArityFnCall(left, env); ok {
+		left = rw.Rewrite(call, env)
 	}
 
 	if literal, ok := left.(*ast.Literal); ok && literal.Kind == ast.LiteralBool {
@@ -244,8 +253,8 @@ func (rw Rewriter) EvalBoolOp(op *ast.BoolOp, env Environment) ast.Expression {
 	}
 
 	right := rw.Rewrite(op.Right, env)
-	if call, ok := rw.make0ArityFnCall(right, env); ok {
-		right = call
+	if call, ok := rw.Make0ArityFnCall(right, env); ok {
+		right = rw.Rewrite(call, env)
 	}
 	if literal, ok := right.(*ast.Literal); ok && literal.Kind == ast.LiteralBool {
 		r := ReifyLiteral(literal).(Boolean).Value
@@ -270,7 +279,7 @@ func (rw Rewriter) EvalBoolOp(op *ast.BoolOp, env Environment) ast.Expression {
 	}
 }
 
-func (rw Rewriter) EvalUnary(unary *ast.UnaryOp, env Environment) ast.Expression {
+func (rw Inliner) EvalUnary(unary *ast.UnaryOp, env Environment) ast.Expression {
 	target := rw.Rewrite(unary.Target, env)
 	switch unary.Op {
 	case ast.UnaryNot:
@@ -302,7 +311,7 @@ func (rw Rewriter) EvalUnary(unary *ast.UnaryOp, env Environment) ast.Expression
 	}
 }
 
-func (rw Rewriter) EvalCall(call *ast.Call, env Environment) ast.Expression {
+func (rw Inliner) EvalCall(call *ast.Call, env Environment) ast.Expression {
 	if ident, ok := call.Callee.(*ast.Identifier); ok && (ident.Value == "here" || ident.Value == "at") {
 		var name string
 		var body ast.Expression
@@ -349,9 +358,10 @@ func (rw Rewriter) EvalCall(call *ast.Call, env Environment) ast.Expression {
 
 		enclosed.Set(fn.Params[i], a)
 	}
+
 	body := rw.Rewrite(fn.Body, enclosed)
 	switch body.(type) {
-	case *ast.Literal, *ast.Identifier:
+	case *ast.Literal:
 		return body
 	default:
 		addr := contentAddress(body)
@@ -362,11 +372,13 @@ func (rw Rewriter) EvalCall(call *ast.Call, env Environment) ast.Expression {
 			Name: newName,
 		}
 		env.Set(newName, partialFn)
-		return &ast.Identifier{Value: newName}
+		return &ast.Call{
+			Callee: &ast.Identifier{Value: newName},
+		}
 	}
 }
 
-func (rw Rewriter) identInEnv(expr ast.Expression, env Environment) bool {
+func (rw Inliner) identInEnv(expr ast.Expression, env Environment) bool {
 	ident, ok := expr.(*ast.Identifier)
 	if !ok {
 		return false
@@ -376,7 +388,7 @@ func (rw Rewriter) identInEnv(expr ast.Expression, env Environment) bool {
 	return ok
 }
 
-func (rw Rewriter) expandMacro(where string, rule ast.Expression, env Environment) *ast.Identifier {
+func (rw Inliner) expandMacro(where string, rule ast.Expression, env Environment) *ast.Identifier {
 	addr := contentAddress(rule)
 	eventName := fmt.Sprintf("%s@%s", where, addr)
 
@@ -417,12 +429,7 @@ func contentAddress(expr ast.Expression) string {
 	return fmt.Sprintf("sha256:%x", hash.Sum(nil))
 }
 
-func (rw Rewriter) EvalIdentifier(ident *ast.Identifier, env Environment) ast.Expression {
-	/*
-		if in rw.Settings rewrite(&ast.Subscript)
-		otherwise just return it
-	*/
-
+func (rw Inliner) EvalIdentifier(ident *ast.Identifier, env Environment) ast.Expression {
 	if v, ok := rw.fromEnv(ident, env); ok {
 		if CanLiteralfy(v) {
 			return Literalify(v)
@@ -432,21 +439,25 @@ func (rw Rewriter) EvalIdentifier(ident *ast.Identifier, env Environment) ast.Ex
 
 	name := ident.Value
 	if setting, ok := rw.Settings[name]; ok {
-		env.Set(name, Box(setting))
+		rw.Globals.Set(name, Box(setting))
 		return Literalify(setting)
 	}
 
 	if strings.HasPrefix(name, "logic_") {
 		v := rw.Tricks[strings.TrimPrefix(name, "logic_")]
-		env.Set(name, Box(v))
+		rw.Globals.Set(name, Box(v))
 		return Literalify(v)
+	}
+
+	if _entityName.MatchString(name) {
+		rw.Globals.Set(name, Box(entity.Model(1337)))
 	}
 
 	return ident
 }
 
 // lowers to a boolean from a passed settings dict
-func (rw Rewriter) EvalSubscript(subscript *ast.Subscript, env Environment) ast.Expression {
+func (rw Inliner) EvalSubscript(subscript *ast.Subscript, env Environment) ast.Expression {
 	if subscript.Target.Type() != ast.ExprIdentifier || subscript.Index.Type() != ast.ExprIdentifier {
 		panic("subscript only with identifiers")
 	}
@@ -461,12 +472,14 @@ func (rw Rewriter) EvalSubscript(subscript *ast.Subscript, env Environment) ast.
 		return Literalify(rw.SkippedTrials[value])
 	case "settings":
 		return Literalify(rw.Settings[value])
+	case "dungeon_shortcuts":
+		return Literalify(rw.DungeonShortcuts[value])
 	default:
 		panic(parseError("unknown subscript target %s[%s]", settings.Value, value))
 	}
 }
 
-func (rw Rewriter) EvalTuple(tup *ast.Tuple, env Environment) ast.Expression {
+func (rw Inliner) EvalTuple(tup *ast.Tuple, env Environment) ast.Expression {
 	if len(tup.Elems) != 2 {
 		panic(BadTupleErr)
 	}
@@ -475,18 +488,11 @@ func (rw Rewriter) EvalTuple(tup *ast.Tuple, env Environment) ast.Expression {
 	want := tup.Elems[1]
 	var ident *ast.Identifier
 	var qty float64
-	var ok bool
 
 	switch item := item.(type) {
 	case *ast.Identifier:
 		ident = item
 	case *ast.Literal:
-		if item.Kind == ast.LiteralStr {
-			ident, ok = rw.entityLiteral(ident.Value, env)
-			if ok {
-				break
-			}
-		}
 		panic(BadTupleErr)
 	default:
 		panic(BadTupleErr)
@@ -505,6 +511,9 @@ func (rw Rewriter) EvalTuple(tup *ast.Tuple, env Environment) ast.Expression {
 	default:
 		panic(BadTupleErr)
 	}
+
+	// ensure that we create the entity in the global env
+	rw.EvalIdentifier(ident, env)
 
 	return &ast.Call{
 		Callee: &ast.Identifier{Value: "has"},

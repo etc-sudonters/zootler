@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sudonters/zootler/internal/astrender"
 	"sudonters/zootler/internal/entity"
 	"sudonters/zootler/pkg/logic"
 	"sudonters/zootler/pkg/logic/interpreter"
@@ -21,7 +20,7 @@ import (
 func main() {
 	env := interpreter.NewEnv()
 	b := world.NewBuilder()
-	rewriter := interpreter.NewRewriter()
+	rewriter := interpreter.NewInliner(env)
 	rewriter.Settings = make(map[string]any, 0)
 	rewriter.SkippedTrials = make(map[string]bool, 0)
 	rewriter.Tricks = defaultTricks()
@@ -40,9 +39,31 @@ func main() {
 		panic(err)
 	}
 
-	w := b.Build()
+	I := interpreter.New(env)
 
-	tokens, err := w.Entities.Query([]entity.Selector{
+	/*
+		interpret := func(s string) {
+
+			discardError := func(f func() (ast.Expression, error)) ast.Expression {
+				expr, _ := f()
+				return expr
+			}
+
+			res := interpreter.Evaluate(
+				I,
+				rewriter.Rewrite(
+					discardError(func() (ast.Expression, error) {
+						return parser.Parse(s)
+					}),
+					env),
+				env,
+			)
+
+			fmt.Printf("%q: %v\n", s, res)
+		}
+	*/
+
+	tokens, err := b.Pool.Query([]entity.Selector{
 		entity.With[logic.Token]{},
 		entity.With[world.Name]{},
 	})
@@ -58,6 +79,8 @@ func main() {
 		env.Set(worldloader.EscapeName(string(itemName)), interpreter.Box(t.Model()))
 	}
 
+	w := b.Build()
+
 	rules, err := w.Entities.Query([]entity.Selector{
 		entity.With[logic.RawRule]{},
 		entity.With[world.Edge]{},
@@ -71,62 +94,66 @@ func main() {
 
 	var rule logic.RawRule
 	var region world.FromName
-	var edgeName world.Name
-	s := astrender.NewSexpr(astrender.DontTheme())
 
-	identGetter := func(ident *ast.Identifier) ast.Expression {
-		v, ok := env.Get(ident.Value)
-		if !ok {
-			return nil
+	dummyBuiltIn := func(name string, arity int) interpreter.BuiltIn {
+		return interpreter.BuiltIn{
+			N: arity,
+			F: func(i interpreter.Interpreter, args []interpreter.Value) interpreter.Value {
+				return interpreter.Box(false)
+			},
+			Name: name,
 		}
 
-		if interpreter.CanLiteralfy(v) {
-			return interpreter.Literalify(v)
-		}
-
-		if fn, ok := v.(interpreter.Fn); ok {
-			return fn.Name
-		}
-
-		if fn, ok := v.(interpreter.PartiallyEvaluatedFn); ok {
-			// lol
-			return &ast.BinOp{
-				// can't do an identifier here
-				Left:  &ast.Literal{Value: fn.Name, Kind: ast.LiteralStr},
-				Op:    "call",
-				Right: fn.Body,
-			}
-		}
-
-		return nil
 	}
 
+	addBuiltin := func(b interpreter.BuiltIn) {
+		env.Set(b.Name, b)
+	}
+
+	addBuiltin(dummyBuiltIn("has", 2))
+	addBuiltin(dummyBuiltIn("region_has_shortcuts", 1))
+	addBuiltin(dummyBuiltIn("has_bottle", 0))
+	addBuiltin(dummyBuiltIn("at_night", 0))
+	addBuiltin(dummyBuiltIn("at_day", 0))
+	addBuiltin(dummyBuiltIn("at_dampe_time", 0))
+	addBuiltin(dummyBuiltIn("has_medallions", 1))
+
+	// argument to rule
+	env.Set("age", interpreter.Box("child"))
+	env.Set("spot", interpreter.Box(false))
+	env.Set("tod", interpreter.Box(0))
+
+	// runtime needs to calculate these properties based on zootr's logic
+	env.Set("starting_age", interpreter.Box("adult"))
+	env.Set("skip_child_zelda", interpreter.Box(true))
+
+	// wat, these are all for projectile check
+	env.Set("child", interpreter.Box("child"))
+	env.Set("adult", interpreter.Box("adult"))
+	env.Set("both", interpreter.Box("both"))
+	env.Set("either", interpreter.Box("either"))
+
+	var results []interpreter.Value
+
 	for _, bearer := range rules {
-		s.Clear()
 		bearer.Get(&rule)
 		bearer.Get(&region)
-		bearer.Get(&edgeName)
 		rewriter.SetRegion(string(region))
-		fmt.Printf("Name: %s\n", edgeName)
-
 		p, err := parser.Parse(string(rule))
 		if err != nil {
 			panic(err)
 		}
-		s.SetIdentifier(nil)
-		ast.Visit(s, p)
-		fmt.Printf("Raw %s\nRaw s-expr: %s\n\n", rule, s.String())
-		s.Clear()
-
-		s.SetIdentifier(identGetter)
 		p = rewriter.Rewrite(p, env)
-		ast.Visit(s, p)
-		fmt.Printf("Rewritten: %s\n\n\n", s.String())
-		fmt.Scan()
+		if r, rewrote := rewriter.Make0ArityFnCall(p, env); rewrote {
+			p = rewriter.Rewrite(r, env)
+		}
+		val := I.Evaluate(p, env)
+		results = append(results, val)
 	}
+
 }
 
-func loadHelpers(logicDir string, env interpreter.Environment, rewriter *interpreter.Rewriter) {
+func loadHelpers(logicDir string, env interpreter.Environment, rewriter *interpreter.Inliner) {
 	contents, err := os.ReadFile(filepath.Join(logicDir, "LogicHelpers.json"))
 	if err != nil {
 		panic(err)
