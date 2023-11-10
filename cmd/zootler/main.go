@@ -88,6 +88,8 @@ func main() {
 		panic(err)
 	}
 
+	stampTokens(b)
+
 	w := b.Build()
 
 	if opts.visualizer {
@@ -154,4 +156,21 @@ func showTokenPlacements(ctx context.Context, w world.World, qs ...entity.Select
 	}
 
 	return nil
+}
+
+func stampTokens(b *world.Builder) {
+	tokens, err := b.Pool.Query([]entity.Selector{
+		entity.With[logic.Token]{},
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	var name world.Name
+
+	for _, token := range tokens {
+		token.Get(&name)
+		stamp := b.TypedStrs.Typed(string(name))
+		token.Add(stamp)
+	}
 }

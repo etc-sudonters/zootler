@@ -6,6 +6,7 @@ import (
 
 	"sudonters/zootler/internal/entity"
 	"sudonters/zootler/internal/entity/bitpool"
+	"sudonters/zootler/internal/mirrors"
 
 	"github.com/etc-sudonters/substrate/reiterate"
 	"github.com/etc-sudonters/substrate/skelly/graph"
@@ -21,6 +22,7 @@ type Builder struct {
 	Pool      EntityPool
 	graph     graph.Builder
 	nameCache map[Name]entity.View
+	TypedStrs mirrors.TypedStrings
 }
 
 func NewBuilder() *Builder {
@@ -33,6 +35,7 @@ func NewBuilder() *Builder {
 		Pool:      EntityPool{pool},
 		graph:     graph.Builder{G: graph.New()},
 		nameCache: make(map[Name]entity.View, 128),
+		TypedStrs: mirrors.NewTypedStrings(),
 	}
 }
 

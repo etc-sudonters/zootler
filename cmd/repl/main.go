@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sudonters/zootler/internal/entity"
+	"sudonters/zootler/internal/mirrors"
 	"sudonters/zootler/pkg/logic"
 	"sudonters/zootler/pkg/logic/interpreter"
 	"sudonters/zootler/pkg/rules/ast"
@@ -41,28 +42,6 @@ func main() {
 
 	I := interpreter.New(env)
 
-	/*
-		interpret := func(s string) {
-
-			discardError := func(f func() (ast.Expression, error)) ast.Expression {
-				expr, _ := f()
-				return expr
-			}
-
-			res := interpreter.Evaluate(
-				I,
-				rewriter.Rewrite(
-					discardError(func() (ast.Expression, error) {
-						return parser.Parse(s)
-					}),
-					env),
-				env,
-			)
-
-			fmt.Printf("%q: %v\n", s, res)
-		}
-	*/
-
 	tokens, err := b.Pool.Query([]entity.Selector{
 		entity.With[logic.Token]{},
 		entity.With[world.Name]{},
@@ -73,10 +52,13 @@ func main() {
 	}
 
 	var itemName world.Name
+	typedStrings := mirrors.NewTypedStrings()
 
 	for _, t := range tokens {
 		t.Get(&itemName)
-		env.Set(worldloader.EscapeName(string(itemName)), interpreter.Box(t.Model()))
+		escaped := worldloader.EscapeName(string(itemName))
+		env.Set(escaped, interpreter.Box(t.Model()))
+		t.Add(typedStrings.Typed(escaped))
 	}
 
 	w := b.Build()
@@ -103,7 +85,6 @@ func main() {
 			},
 			Name: name,
 		}
-
 	}
 
 	addBuiltin := func(b interpreter.BuiltIn) {
