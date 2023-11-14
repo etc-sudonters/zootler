@@ -15,6 +15,7 @@ import (
 	"sudonters/zootler/pkg/world/components"
 
 	"github.com/etc-sudonters/substrate/dontio"
+	"github.com/etc-sudonters/substrate/mirrors"
 	"github.com/etc-sudonters/substrate/stageleft"
 )
 
@@ -91,9 +92,11 @@ func main() {
 		return
 	}
 
+	song := entity.FilterBuilder{}.With(mirrors.TypeOf[components.Song]())
+
 	assumed := &filler.AssumedFill{
-		Locations: []entity.Selector{entity.With[components.Song]{}},
-		Items:     []entity.Selector{entity.With[components.Song]{}},
+		Locations: song.Clone(),
+		Items:     song.Clone(),
 	}
 	if err := assumed.Fill(ctx, w, filler.ConstGoal(true)); err != nil {
 		exit = stageleft.ExitCodeFromErr(err, stageleft.ExitCode(2))
@@ -101,7 +104,7 @@ func main() {
 		return
 	}
 
-	if err := showTokenPlacements(ctx, w, entity.With[components.Song]{}); err != nil {
+	if err := showTokenPlacements(ctx, w, song.Clone()); err != nil {
 		exit = stageleft.ExitCodeFromErr(err, stageleft.ExitCode(2))
 		fmt.Fprintf(stdio.Err, "Error during placement review: %s\n", err.Error())
 		return
@@ -114,20 +117,17 @@ func (arg missingRequired) Error() string {
 	return fmt.Sprintf("%s is required", string(arg))
 }
 
-func showTokenPlacements(ctx context.Context, w world.World, qs ...entity.Selector) error {
-	filt := make([]entity.Selector, len(qs)+1)
-	filt[0] = entity.With[logic.Inhabits]{}
-	copy(filt[1:], qs)
-
-	placed, err := w.Entities.Query(filt)
+func showTokenPlacements(ctx context.Context, w world.World, fb entity.FilterBuilder) error {
+	fb.With(mirrors.TypeOf[logic.Inhabits]())
+	placed, err := w.Entities.Query(fb.Build())
 	if err != nil {
 		return fmt.Errorf("while querying placements: %w", err)
 	}
 	stdio, _ := dontio.StdFromContext(ctx)
 
 	for _, tok := range placed {
-		var itemName world.Name
-		var placementName world.Name
+		var itemName components.Name
+		var placementName components.Name
 		var placement logic.Inhabits
 
 		err = tok.Get(&itemName)
@@ -150,14 +150,12 @@ func showTokenPlacements(ctx context.Context, w world.World, qs ...entity.Select
 }
 
 func stampTokens(b *world.Builder) {
-	tokens, err := b.Pool.Query([]entity.Selector{
-		entity.With[components.Token]{},
-	})
+	tokens, err := b.Pool.Query(entity.FilterBuilder{}.With(mirrors.TypeOf[components.Token]()).Build())
 	if err != nil {
 		panic(err)
 	}
 
-	var name world.Name
+	var name components.Name
 
 	for _, token := range tokens {
 		token.Get(&name)

@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"reflect"
 	"sudonters/zootler/internal/entity"
-	"sudonters/zootler/internal/mirrors"
 
-	"github.com/etc-sudonters/substrate/skelly/set/bits"
+	"github.com/etc-sudonters/substrate/mirrors"
+	"github.com/etc-sudonters/substrate/skelly/bitset"
 	"github.com/etc-sudonters/substrate/stageleft"
 )
 
@@ -29,7 +29,7 @@ func New(maxEntities int) *Table {
 	t.rows[entity.INVALID_ENTITY] = nil
 	t.typemap[nil] = mirrors.TypeId(entity.INVALID_COMPONENT)
 	t.getter = componentGetter{t}
-	t.entityBuckets = bits.Buckets(maxEntities)
+	t.entityBuckets = bitset.Buckets(maxEntities)
 	return t
 }
 

@@ -7,8 +7,9 @@ import (
 	"sudonters/zootler/internal/entity"
 	"sudonters/zootler/internal/entity/bitpool"
 	"sudonters/zootler/internal/entity/componenttable"
-	"sudonters/zootler/internal/mirrors"
+	"sudonters/zootler/pkg/world/components"
 
+	"github.com/etc-sudonters/substrate/mirrors"
 	"github.com/etc-sudonters/substrate/reiterate"
 	"github.com/etc-sudonters/substrate/skelly/graph"
 )
@@ -22,7 +23,7 @@ type ToName string
 type Builder struct {
 	Pool       WorldPool
 	Graph      graph.Builder
-	NameCache  map[Name]entity.View
+	NameCache  map[components.Name]entity.View
 	TypedStrs  mirrors.TypedStrings
 	Components *componenttable.Table
 }
@@ -37,7 +38,7 @@ func NewBuilder(pool entity.Pool, tbl *componenttable.Table) *Builder {
 	return &Builder{
 		Pool:       WorldPool{pool},
 		Graph:      graph.Builder{G: graph.New()},
-		NameCache:  make(map[Name]entity.View, 128),
+		NameCache:  make(map[components.Name]entity.View, 128),
 		TypedStrs:  mirrors.NewTypedStrings(),
 		Components: tbl,
 	}
@@ -52,7 +53,7 @@ func (w *Builder) Build() World {
 }
 
 // unique names means we can forward declare entities w/o worry
-func (w *Builder) Entity(n Name) (entity.View, error) {
+func (w *Builder) Entity(n components.Name) (entity.View, error) {
 	if ent, ok := w.NameCache[n]; ok {
 		return ent, nil
 	}
@@ -151,9 +152,9 @@ func (e edgeArchetype) Apply(entity entity.View) error {
 	return nil
 }
 
-func namesForEdge(origin, destination entity.View) (Name, FromName, ToName) {
-	var from Name
-	var to Name
+func namesForEdge(origin, destination entity.View) (components.Name, FromName, ToName) {
+	var from components.Name
+	var to components.Name
 
 	if err := origin.Get(&from); err != nil {
 		panic(err)
@@ -162,5 +163,5 @@ func namesForEdge(origin, destination entity.View) (Name, FromName, ToName) {
 		panic(err)
 	}
 
-	return Name(fmt.Sprintf("%s -> %s", from, to)), FromName(from), ToName(to)
+	return components.Name(fmt.Sprintf("%s -> %s", from, to)), FromName(from), ToName(to)
 }

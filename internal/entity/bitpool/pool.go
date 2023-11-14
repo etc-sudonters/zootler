@@ -2,11 +2,12 @@ package bitpool
 
 import (
 	"fmt"
+	"reflect"
 	"sudonters/zootler/internal/entity"
 	"sudonters/zootler/internal/entity/componenttable"
-	"sudonters/zootler/internal/mirrors"
 
-	"github.com/etc-sudonters/substrate/skelly/set/bits"
+	"github.com/etc-sudonters/substrate/mirrors"
+	"github.com/etc-sudonters/substrate/skelly/bitset"
 )
 
 type bitpool struct {
@@ -25,7 +26,7 @@ type Settings struct {
 
 func New(s Settings) *bitpool {
 	var b bitpool
-	b.componentBucketCount = bits.Buckets(s.MaxComponentId)
+	b.componentBucketCount = bitset.Buckets(s.MaxComponentId)
 	b.entities = make([]bitview, 1, 128)
 	b.table = componenttable.New(s.MaxEntityId)
 	return &b
@@ -33,7 +34,7 @@ func New(s Settings) *bitpool {
 
 func FromTable(tbl *componenttable.Table, maxComponentId int) *bitpool {
 	var b bitpool
-	b.componentBucketCount = bits.Buckets(maxComponentId)
+	b.componentBucketCount = bitset.Buckets(maxComponentId)
 	b.table = tbl
 	b.entities = make([]bitview, 128)
 	return &b
@@ -42,19 +43,18 @@ func FromTable(tbl *componenttable.Table, maxComponentId int) *bitpool {
 func (p *bitpool) Create() (entity.View, error) {
 	var view bitview
 	view.id = entity.Model(len(p.entities))
-	view.comps = bits.New(p.componentBucketCount)
+	view.comps = bitset.New(p.componentBucketCount)
 	view.p = p
 	p.entities = append(p.entities, view)
 	return view, nil
 }
 
 // return a subset of the population that matches the provided selectors
-func (p *bitpool) Query(qs []entity.Selector) ([]entity.View, error) {
+func (p *bitpool) Query(f entity.Filter) ([]entity.View, error) {
 	var filter filter
 	(&filter).init(p.componentBucketCount)
 
-	for _, q := range qs {
-		typ := q.Component()
+	getTypeId := func(typ reflect.Type) (entity.ComponentId, error) {
 		id, err := p.table.IdOf(typ)
 		if err != nil {
 			name := typ.Name()
@@ -63,19 +63,26 @@ func (p *bitpool) Query(qs []entity.Selector) ([]entity.View, error) {
 					name = n
 				}
 			}
-			return nil, fmt.Errorf("during component %s: %w", name, err)
+			return 0, fmt.Errorf("during component %s: %w", name, err)
 		}
 
-		switch q.Behavior() {
-		case entity.ComponentInclude:
-			filter.include(id)
-			break
-		case entity.ComponentExclude:
-			filter.exclude(id)
-			break
-		default:
-			return nil, fmt.Errorf("during component %s: unknown behavior: %s", typ.Name(), q.Behavior())
+		return id, nil
+	}
+
+	for _, typ := range f.With() {
+		id, err := getTypeId(typ)
+		if err != nil {
+			return nil, err
 		}
+		filter.include(id)
+	}
+
+	for _, typ := range f.Without() {
+		id, err := getTypeId(typ)
+		if err != nil {
+			return nil, err
+		}
+		filter.exclude(id)
 	}
 
 	var entities []entity.View

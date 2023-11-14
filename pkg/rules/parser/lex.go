@@ -2,8 +2,9 @@ package parser
 
 import (
 	"strings"
-	"sudonters/zootler/internal/peruse"
 	"unicode"
+
+	"github.com/etc-sudonters/substrate/peruse"
 )
 
 const (

@@ -9,18 +9,17 @@ import (
 	"sudonters/zootler/pkg/logic"
 	"sudonters/zootler/pkg/rules/parser"
 	"sudonters/zootler/pkg/world"
+	"sudonters/zootler/pkg/world/components"
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/etc-sudonters/substrate/mirrors"
 )
 
 func createRuleList(p entity.Pool, s tea.WindowSizeMsg) listpanel.Model {
-	haveRules, err := p.Query([]entity.Selector{
-		entity.With[logic.RawRule]{},
-		entity.With[world.Name]{},
-	})
+	haveRules, err := p.Query(entity.FilterBuilder{}.With(mirrors.TypeOf[logic.RawRule]()).With(mirrors.TypeOf[components.Name]()).Build())
 
 	if err != nil {
 		panic(err)
@@ -30,7 +29,7 @@ func createRuleList(p entity.Pool, s tea.WindowSizeMsg) listpanel.Model {
 
 	for _, ent := range haveRules {
 		var rule logic.RawRule
-		var name world.Name
+		var name components.Name
 
 		if err := ent.Get(&rule); err != nil {
 			panic(err)

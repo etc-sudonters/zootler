@@ -10,6 +10,7 @@ import (
 	"sudonters/zootler/pkg/world/components"
 
 	"github.com/etc-sudonters/substrate/bag"
+	"github.com/etc-sudonters/substrate/mirrors"
 	"github.com/etc-sudonters/substrate/skelly/queue"
 	"github.com/etc-sudonters/substrate/stageleft"
 )
@@ -29,8 +30,8 @@ type Filler interface {
 }
 
 type AssumedFill struct {
-	Locations []entity.Selector
-	Items     []entity.Selector
+	Locations entity.FilterBuilder
+	Items     entity.FilterBuilder
 }
 
 func (a *AssumedFill) Fill(ctx context.Context, w world.World, g Goal) error {
@@ -38,21 +39,15 @@ func (a *AssumedFill) Fill(ctx context.Context, w world.World, g Goal) error {
 	var locs []entity.View
 	var items []entity.View
 
-	var filt []entity.Selector
+	a.Locations.With(mirrors.TypeOf[components.Location]())
+	a.Items.With(mirrors.TypeOf[components.Token]())
 
-	filt = make([]entity.Selector, len(a.Locations)+1)
-	filt[0] = entity.With[components.Location]{}
-	copy(filt[1:], a.Locations)
-
-	locs, err = w.Entities.Pool.Query(filt)
+	locs, err = w.Entities.Pool.Query(a.Locations.Build())
 	if err != nil {
 		return stageleft.AttachExitCode(err, stageleft.ExitCode(99))
 	}
 
-	filt = make([]entity.Selector, len(a.Items)+1)
-	filt[0] = entity.With[components.Token]{}
-	copy(filt[1:], a.Items)
-	items, err = w.Entities.Pool.Query(filt)
+	items, err = w.Entities.Pool.Query(a.Items.Build())
 	if err != nil {
 		return stageleft.AttachExitCode(err, stageleft.ExitCode(99))
 	}

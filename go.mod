@@ -6,7 +6,7 @@ require (
 	github.com/charmbracelet/bubbles v0.16.1
 	github.com/charmbracelet/bubbletea v0.24.2
 	github.com/charmbracelet/lipgloss v0.9.1
-	github.com/etc-sudonters/substrate v0.0.0-20231029051626-fe8163067f27
+	github.com/etc-sudonters/substrate v0.0.0-20231114035743-c6cdf4d35b17
 	muzzammil.xyz/jsonc v1.0.0
 )
 

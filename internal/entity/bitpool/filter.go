@@ -3,17 +3,17 @@ package bitpool
 import (
 	"sudonters/zootler/internal/entity"
 
-	"github.com/etc-sudonters/substrate/skelly/set/bits"
+	"github.com/etc-sudonters/substrate/skelly/bitset"
 )
 
 type filter struct {
-	i bits.Bitset64
-	e bits.Bitset64
+	i bitset.Bitset64
+	e bitset.Bitset64
 }
 
 func (f *filter) init(k int) {
-	f.i = bits.New(k)
-	f.e = bits.New(k)
+	f.i = bitset.New(k)
+	f.e = bitset.New(k)
 }
 
 func (f filter) include(t entity.ComponentId) {
@@ -25,7 +25,7 @@ func (f filter) exclude(t entity.ComponentId) {
 }
 
 func (f filter) test(b bitview) bool {
-	if !bits.IsEmpty(f.i) && !b.comps.Intersect(f.i).Eq(f.i) {
+	if !bitset.IsEmpty(f.i) && !b.comps.Intersect(f.i).Eq(f.i) {
 		return false
 	}
 

@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"sudonters/zootler/internal/entity"
 
-	"github.com/etc-sudonters/substrate/skelly/set/bits"
+	"github.com/etc-sudonters/substrate/skelly/bitset"
 )
 
 type bitview struct {
 	id    entity.Model
-	comps bits.Bitset64
+	comps bitset.Bitset64
 	p     *bitpool
 }
 

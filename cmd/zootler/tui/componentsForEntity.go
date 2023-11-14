@@ -5,17 +5,17 @@ import (
 	"io"
 	"sudonters/zootler/internal/entity"
 	"sudonters/zootler/internal/entity/componenttable"
-	"sudonters/zootler/internal/mirrors"
 	"sudonters/zootler/internal/tui/listpanel"
 	"sudonters/zootler/internal/tui/panels"
-	"sudonters/zootler/pkg/world"
+	"sudonters/zootler/pkg/world/components"
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/etc-sudonters/substrate/mirrors"
 )
 
 func createComponentsForEntity(e entity.Model, tbl *componenttable.Table, s panels.Size) listpanel.Model {
-	name, _ := tbl.Get(e, mirrors.TypeOf[world.Name]())
+	name, _ := tbl.Get(e, mirrors.TypeOf[components.Name]())
 
 	listItems := make([]list.Item, 0, tbl.Len())
 	rows := tbl.Rows()
@@ -34,7 +34,7 @@ func createComponentsForEntity(e entity.Model, tbl *componenttable.Table, s pane
 	}
 
 	l := list.New(listItems, entityComponentDelegate{}, s.Width, s.Height)
-	l.Title = fmt.Sprintf("Entity %s (%d)", name.(world.Name), len(listItems))
+	l.Title = fmt.Sprintf("Entity %s (%d)", name.(components.Name), len(listItems))
 	l.SetFilteringEnabled(true)
 	l.SetShowHelp(false)
 	l.DisableQuitKeybindings()

@@ -4,14 +4,13 @@ import (
 	"errors"
 	"fmt"
 	"sudonters/zootler/internal/entity"
+	"sudonters/zootler/pkg/world/components"
 
 	"github.com/etc-sudonters/substrate/skelly/graph"
 )
 
 var ErrEntityNotConnected = errors.New("entity is not connected to other entities")
 var ErrEntitiesNotConnected = errors.New("the entities are not connected")
-
-type Name string
 
 type World struct {
 	Entities WorldPool
@@ -22,7 +21,7 @@ type WorldPool struct {
 	entity.Pool
 }
 
-func (p WorldPool) Create(name Name) (entity.View, error) {
+func (p WorldPool) Create(name components.Name) (entity.View, error) {
 	view, err := p.Pool.Create()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create entity %q: %w", name, err)

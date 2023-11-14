@@ -8,12 +8,13 @@ import (
 	"sudonters/zootler/pkg/logic"
 	"sudonters/zootler/pkg/world"
 
+	"github.com/etc-sudonters/substrate/mirrors"
 	"github.com/etc-sudonters/substrate/skelly/graph"
-	set "github.com/etc-sudonters/substrate/skelly/set/hash"
+	"github.com/etc-sudonters/substrate/skelly/hashset"
 )
 
 type setVisitor struct {
-	s set.Hash[graph.Node]
+	s hashset.Hash[graph.Node]
 }
 
 func (s setVisitor) Visit(_ context.Context, g graph.Node) error {
@@ -21,8 +22,8 @@ func (s setVisitor) Visit(_ context.Context, g graph.Node) error {
 	return nil
 }
 
-func FindReachableWorld(ctx context.Context, w *world.World) (set.Hash[graph.Node], error) {
-	reachable := set.New[graph.Node]()
+func FindReachableWorld(ctx context.Context, w *world.World) (hashset.Hash[graph.Node], error) {
+	reachable := hashset.New[graph.Node]()
 
 	bfs := graph.BreadthFirst[graph.Destination]{
 		Selector: &RulesAwareSelector[graph.Destination]{
@@ -31,7 +32,7 @@ func FindReachableWorld(ctx context.Context, w *world.World) (set.Hash[graph.Nod
 		Visitor: setVisitor{reachable},
 	}
 
-	spawns, err := w.Entities.Query([]entity.Selector{entity.With[logic.Spawn]{}})
+	spawns, err := w.Entities.Query(entity.FilterBuilder{}.With(mirrors.TypeOf[logic.Spawn]()).Build())
 	if err != nil {
 		return nil, err
 	}

@@ -10,7 +10,7 @@ import (
 
 	"sudonters/zootler/internal/entity"
 
-	set "github.com/etc-sudonters/substrate/skelly/set/hash"
+	"github.com/etc-sudonters/substrate/skelly/hashset"
 	"github.com/etc-sudonters/substrate/stageleft"
 )
 
@@ -112,8 +112,8 @@ func TestCanQueryForEntitiesByComponentExistence(t *testing.T) {
 	tagRatio := 7
 	p := New(10000)
 
-	totalEnts := set.New[entity.Model]()
-	taggedEnts := set.New[entity.Model]()
+	totalEnts := hashset.New[entity.Model]()
+	taggedEnts := hashset.New[entity.Model]()
 
 	for i := 0; i < entitiesToMake; i++ {
 		v, _ := p.Create()
@@ -143,7 +143,7 @@ func TestCanQueryForEntitiesByComponentExistence(t *testing.T) {
 
 	if !reflect.DeepEqual(
 		taggedEnts,
-		set.MapFromSlice(
+		hashset.MapFromSlice(
 			queryedFor,
 			func(u entity.View) entity.Model {
 				return u.Model()
@@ -166,9 +166,9 @@ func TestCanUseMultipleComponents(t *testing.T) {
 	badTagRation := 5
 	p := New(1000)
 
-	totalEnts := set.New[entity.Model]()
-	goodTaggedEnts := set.New[entity.Model]()
-	badTaggedEnts := set.New[entity.Model]()
+	totalEnts := hashset.New[entity.Model]()
+	goodTaggedEnts := hashset.New[entity.Model]()
+	badTaggedEnts := hashset.New[entity.Model]()
 
 	for i := 0; i <= componentsToMake; i++ {
 		v, _ := p.Create()
@@ -186,7 +186,7 @@ func TestCanUseMultipleComponents(t *testing.T) {
 		}
 	}
 
-	comboTagSet := set.Intersection(goodTaggedEnts, badTaggedEnts)
+	comboTagSet := hashset.Intersection(goodTaggedEnts, badTaggedEnts)
 	comboQueries, err := p.Query([]entity.Selector{
 		entity.DebugSelector{
 			F:        func(string, ...any) {}, //t.Logf,
@@ -202,7 +202,7 @@ func TestCanUseMultipleComponents(t *testing.T) {
 		didNotExpectError(t, err)
 	}
 
-	actualEntities := set.MapFromSlice(comboQueries, entity.View.Model)
+	actualEntities := hashset.MapFromSlice(comboQueries, entity.View.Model)
 
 	if !reflect.DeepEqual(
 		comboTagSet, actualEntities,
@@ -225,9 +225,9 @@ func TestCanExcludeEntitiesBasedOnComponent(t *testing.T) {
 	secondTagRatio := 5
 	p := New(int(componentsToMake))
 
-	totalEnts := set.New[entity.Model]()
-	firstTagEnts := set.New[entity.Model]()
-	secondTagEnt := set.New[entity.Model]()
+	totalEnts := hashset.New[entity.Model]()
+	firstTagEnts := hashset.New[entity.Model]()
+	secondTagEnt := hashset.New[entity.Model]()
 
 	for i := 1; i <= componentsToMake; i++ {
 		ent, _ := p.Create()
@@ -245,9 +245,9 @@ func TestCanExcludeEntitiesBasedOnComponent(t *testing.T) {
 		}
 	}
 
-	allEntitiesWithoutTags := set.Difference(
+	allEntitiesWithoutTags := hashset.Difference(
 		totalEnts,
-		set.Union(firstTagEnts, secondTagEnt),
+		hashset.Union(firstTagEnts, secondTagEnt),
 	)
 
 	debuggify := func(q entity.Selector) entity.DebugSelector {
@@ -266,7 +266,7 @@ func TestCanExcludeEntitiesBasedOnComponent(t *testing.T) {
 		didNotExpectError(t, err)
 	}
 
-	actualEntities := set.MapFromSlice(queriedAllUntagged, entity.View.Model)
+	actualEntities := hashset.MapFromSlice(queriedAllUntagged, entity.View.Model)
 
 	if actualEntities.Exists(entity.Model(firstTagRatio*secondTagRatio)) ||
 		actualEntities.Exists(entity.Model(firstTagRatio)) ||
@@ -295,8 +295,8 @@ func TestCanFilterWithoutLoading(t *testing.T) {
 	tagRatio := 7
 	p := New(10)
 
-	totalEnts := set.New[entity.Model]()
-	taggedEnts := set.New[entity.Model]()
+	totalEnts := hashset.New[entity.Model]()
+	taggedEnts := hashset.New[entity.Model]()
 	taggedCount := 0
 
 	for i := 1; i <= entitiesToMake; i++ {

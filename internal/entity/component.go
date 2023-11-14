@@ -1,6 +1,6 @@
 package entity
 
-import "sudonters/zootler/internal/mirrors"
+import "github.com/etc-sudonters/substrate/mirrors"
 
 type ComponentId uint64
 

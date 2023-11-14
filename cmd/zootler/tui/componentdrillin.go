@@ -8,7 +8,7 @@ import (
 	"sudonters/zootler/internal/entity/componenttable"
 	"sudonters/zootler/internal/tui/listpanel"
 	"sudonters/zootler/internal/tui/panels"
-	"sudonters/zootler/pkg/world"
+	"sudonters/zootler/pkg/world/components"
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
@@ -42,7 +42,7 @@ type drillInDelegate struct {
 }
 
 func (c drillInDelegate) Render(w io.Writer, m list.Model, index int, item list.Item) {
-	var name world.Name
+	var name components.Name
 
 	component := item.(drillinItem)
 	c.p.Get(component.Entity, []interface{}{&name})

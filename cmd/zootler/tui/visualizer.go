@@ -4,7 +4,6 @@ import (
 	"context"
 	"sudonters/zootler/cmd/zootler/tui/rulestab"
 	"sudonters/zootler/internal/entity/bitpool"
-	"sudonters/zootler/internal/reitertools"
 	"sudonters/zootler/internal/tui/application"
 	"sudonters/zootler/internal/tui/foldertabs"
 	"sudonters/zootler/internal/tui/listpanel"
@@ -14,6 +13,7 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/etc-sudonters/substrate/reiterate"
 )
 
 func Tui(w world.World) tui {
@@ -30,7 +30,7 @@ func (v tui) Run(ctx context.Context) error {
 		return err
 	}
 
-	rows := reitertools.ToSlice(tbl.Rows())
+	rows := reiterate.ToSlice(tbl.Rows())
 	componentPanel := createComponentOverview(rows, v.w.Entities.Pool)
 	(&componentPanel).Focus()
 

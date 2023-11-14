@@ -3,25 +3,25 @@ package componenttable
 import (
 	"reflect"
 	"sudonters/zootler/internal/entity"
-	"sudonters/zootler/internal/reitertools"
 
-	"github.com/etc-sudonters/substrate/skelly/set/bits"
+	"github.com/etc-sudonters/substrate/reiterate"
+	"github.com/etc-sudonters/substrate/skelly/bitset"
 )
 
 type Row struct {
 	id         entity.ComponentId
 	typ        reflect.Type
 	components []entity.Component
-	members    bits.Bitset64
+	members    bitset.Bitset64
 }
 
-func (r *Row) Components() reitertools.Iterator[RowEntry] {
-	i := reitertools.SubsliceIter(r.components, 1)
-	e := reitertools.EnumerateFrom(i, 1)
-	f := reitertools.Filter(e, func(i reitertools.Index[entity.Component]) bool {
+func (r *Row) Components() reiterate.Iterator[RowEntry] {
+	i := reiterate.SubsliceIter(r.components, 1)
+	e := reiterate.EnumerateFrom(i, 1)
+	f := reiterate.FilterIter(e, func(i reiterate.Index[entity.Component]) bool {
 		return i.Elem != nil
 	})
-	m := reitertools.Map(f, func(i reitertools.Index[entity.Component]) RowEntry {
+	m := reiterate.MapIter(f, func(i reiterate.Index[entity.Component]) RowEntry {
 		return RowEntry{
 			Entity:    entity.Model(i.Index),
 			Component: i.Elem,
@@ -41,7 +41,7 @@ func (r *Row) Capacity() int {
 func (r *Row) Init(id entity.ComponentId, entityBuckets int) {
 	r.id = id
 	r.components = make([]entity.Component, 0)
-	r.members = bits.New(entityBuckets)
+	r.members = bitset.New(entityBuckets)
 }
 
 func (row *Row) Set(e entity.Model, c entity.Component) {

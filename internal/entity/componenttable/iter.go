@@ -3,10 +3,11 @@ package componenttable
 import (
 	"reflect"
 	"sudonters/zootler/internal/entity"
-	"sudonters/zootler/internal/reitertools"
+
+	"github.com/etc-sudonters/substrate/reiterate"
 )
 
-func (t *Table) Rows() reitertools.Iterator[RowData] {
+func (t *Table) Rows() reiterate.Iterator[RowData] {
 	return &tableIter{t, 0}
 }
 
@@ -25,7 +26,7 @@ func (r RowData) Get(e entity.Model) entity.Component {
 	return r.r.Get(e)
 }
 
-func (r RowData) Components() reitertools.Iterator[RowEntry] {
+func (r RowData) Components() reiterate.Iterator[RowEntry] {
 	return r.r.Components()
 }
 

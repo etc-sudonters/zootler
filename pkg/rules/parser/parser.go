@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"sudonters/zootler/internal/peruse"
 	"sudonters/zootler/pkg/rules/ast"
+
+	"github.com/etc-sudonters/substrate/peruse"
 )
 
 const (
