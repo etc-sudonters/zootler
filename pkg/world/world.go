@@ -14,15 +14,15 @@ var ErrEntitiesNotConnected = errors.New("the entities are not connected")
 type Name string
 
 type World struct {
-	Entities EntityPool
+	Entities WorldPool
 	Graph    graph.Directed
 }
 
-type EntityPool struct {
+type WorldPool struct {
 	entity.Pool
 }
 
-func (p EntityPool) Create(name Name) (entity.View, error) {
+func (p WorldPool) Create(name Name) (entity.View, error) {
 	view, err := p.Pool.Create()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create entity %q: %w", name, err)

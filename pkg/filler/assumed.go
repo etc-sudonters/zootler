@@ -7,6 +7,7 @@ import (
 	"sudonters/zootler/internal/entity"
 	"sudonters/zootler/pkg/logic"
 	"sudonters/zootler/pkg/world"
+	"sudonters/zootler/pkg/world/components"
 
 	"github.com/etc-sudonters/substrate/bag"
 	"github.com/etc-sudonters/substrate/skelly/queue"
@@ -40,7 +41,7 @@ func (a *AssumedFill) Fill(ctx context.Context, w world.World, g Goal) error {
 	var filt []entity.Selector
 
 	filt = make([]entity.Selector, len(a.Locations)+1)
-	filt[0] = entity.With[logic.Location]{}
+	filt[0] = entity.With[components.Location]{}
 	copy(filt[1:], a.Locations)
 
 	locs, err = w.Entities.Pool.Query(filt)
@@ -49,7 +50,7 @@ func (a *AssumedFill) Fill(ctx context.Context, w world.World, g Goal) error {
 	}
 
 	filt = make([]entity.Selector, len(a.Items)+1)
-	filt[0] = entity.With[logic.Token]{}
+	filt[0] = entity.With[components.Token]{}
 	copy(filt[1:], a.Items)
 	items, err = w.Entities.Pool.Query(filt)
 	if err != nil {

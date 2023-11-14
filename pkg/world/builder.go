@@ -6,6 +6,7 @@ import (
 
 	"sudonters/zootler/internal/entity"
 	"sudonters/zootler/internal/entity/bitpool"
+	"sudonters/zootler/internal/entity/componenttable"
 	"sudonters/zootler/internal/mirrors"
 
 	"github.com/etc-sudonters/substrate/reiterate"
@@ -19,23 +20,26 @@ type FromName string
 type ToName string
 
 type Builder struct {
-	Pool      EntityPool
-	graph     graph.Builder
-	nameCache map[Name]entity.View
-	TypedStrs mirrors.TypedStrings
+	Pool       WorldPool
+	Graph      graph.Builder
+	NameCache  map[Name]entity.View
+	TypedStrs  mirrors.TypedStrings
+	Components *componenttable.Table
 }
 
-func NewBuilder() *Builder {
-	pool := bitpool.New(bitpool.Settings{
-		MaxComponentId: 3000,
-		MaxEntityId:    20000,
-	})
+func DefaultBuilder() *Builder {
+	tbl := componenttable.New(10000)
+	pool := bitpool.FromTable(tbl, 600)
+	return NewBuilder(pool, tbl)
+}
 
+func NewBuilder(pool entity.Pool, tbl *componenttable.Table) *Builder {
 	return &Builder{
-		Pool:      EntityPool{pool},
-		graph:     graph.Builder{G: graph.New()},
-		nameCache: make(map[Name]entity.View, 128),
-		TypedStrs: mirrors.NewTypedStrings(),
+		Pool:       WorldPool{pool},
+		Graph:      graph.Builder{G: graph.New()},
+		NameCache:  make(map[Name]entity.View, 128),
+		TypedStrs:  mirrors.NewTypedStrings(),
+		Components: tbl,
 	}
 }
 
@@ -43,13 +47,13 @@ func NewBuilder() *Builder {
 func (w *Builder) Build() World {
 	return World{
 		Entities: w.Pool,
-		Graph:    w.graph.G,
+		Graph:    w.Graph.G,
 	}
 }
 
 // unique names means we can forward declare entities w/o worry
 func (w *Builder) Entity(n Name) (entity.View, error) {
-	if ent, ok := w.nameCache[n]; ok {
+	if ent, ok := w.NameCache[n]; ok {
 		return ent, nil
 	}
 
@@ -58,17 +62,17 @@ func (w *Builder) Entity(n Name) (entity.View, error) {
 		return nil, err
 	}
 
-	w.nameCache[n] = ent
+	w.NameCache[n] = ent
 	return ent, nil
 }
 
 func (w *Builder) Node(v entity.View) {
-	w.graph.AddNode(graph.Node(v.Model()))
+	w.Graph.AddNode(graph.Node(v.Model()))
 }
 
 func (w *Builder) Edge(origin, destination entity.View) (entity.View, error) {
 	// we require that origin exist in the graph already rather than just adding it
-	successors, err := w.graph.G.Successors(graph.Node(origin.Model()))
+	successors, err := w.Graph.G.Successors(graph.Node(origin.Model()))
 	if err != nil {
 		if errors.Is(err, graph.ErrOriginNotFound) {
 			return nil, ErrOriginNotLoaded
@@ -107,18 +111,44 @@ func (w *Builder) Edge(origin, destination entity.View) (entity.View, error) {
 	}
 
 	conns[destination.Model()] = edge.Model()
-	if err := w.graph.AddEdge(graph.Origination(origin.Model()), graph.Destination(destination.Model())); err != nil {
+	if err := w.Graph.AddEdge(graph.Origination(origin.Model()), graph.Destination(destination.Model())); err != nil {
+		panic(err)
+	}
+	archetype := edgeArchetype{
+		origination:     origin.Model(),
+		destination:     destination.Model(),
+		originationName: fromName,
+		destinationName: toName,
+	}
+
+	if err := archetype.Apply(edge); err != nil {
 		panic(err)
 	}
 
-	edge.Add(Edge{
-		Origination: origin.Model(),
-		Destination: origin.Model(),
-	})
-	edge.Add(fromName)
-	edge.Add(toName)
-
 	return edge, nil
+}
+
+type edgeArchetype struct {
+	origination     entity.Model
+	originationName FromName
+	destination     entity.Model
+	destinationName ToName
+}
+
+func (e edgeArchetype) Apply(entity entity.View) error {
+	if err := entity.Add(Edge{
+		Origination: e.origination,
+		Destination: e.destination,
+	}); err != nil {
+		return err
+	}
+	if err := entity.Add(e.originationName); err != nil {
+		return err
+	}
+	if err := entity.Add(e.destinationName); err != nil {
+		return err
+	}
+	return nil
 }
 
 func namesForEdge(origin, destination entity.View) (Name, FromName, ToName) {

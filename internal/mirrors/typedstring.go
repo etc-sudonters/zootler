@@ -13,9 +13,9 @@ func NewTypedStrings() TypedStrings {
 	return TypedStrings{strings: make(map[string]reflect.Type)}
 }
 
-func (t TypedStrings) Typed(s string) any {
+func (t TypedStrings) Typed(s string) reflect.Type {
 	if typ, ok := t.strings[s]; ok {
-		return reflect.New(typ)
+		return typ
 	}
 
 	typ := reflect.StructOf([]reflect.StructField{
@@ -26,5 +26,22 @@ func (t TypedStrings) Typed(s string) any {
 		},
 	})
 	t.strings[s] = typ
-	return reflect.New(typ).Interface()
+	return typ
+}
+
+func (t TypedStrings) InstanceOf(s string) any {
+	return reflect.New(t.Typed(s)).Interface()
+}
+
+func TryGetLiteral(t reflect.Type) (string, bool) {
+	field, ok := t.FieldByName("TypedString")
+	if !ok {
+		return "", false
+	}
+
+	literal := field.Tag.Get("literal")
+	if literal == "" {
+		return "", false
+	}
+	return literal, true
 }

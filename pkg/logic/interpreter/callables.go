@@ -2,7 +2,6 @@ package interpreter
 
 import (
 	"fmt"
-	"sudonters/zootler/internal/entity"
 
 	"sudonters/zootler/pkg/rules/ast"
 )
@@ -12,37 +11,14 @@ type Callable interface {
 	Call(t Interpreter, args []Value) Value
 }
 
-type Entity struct {
-	Value entity.Model
+type BuiltInCallable interface {
+	Call(t Interpreter, args []Value) Value
 }
 
-func (e Entity) Type() Type {
-	return CALL_TYPE
-}
+type BuiltInFn func(Interpreter, []Value) Value
 
-func (e Entity) Arity() int {
-	return 0
-}
-
-func (e Entity) Call(t Interpreter, args []Value) Value {
-	return Box(false)
-}
-
-func (e Entity) Eq(o Value) bool {
-	if o == nil {
-		return false
-	}
-
-	switch o := o.(type) {
-	case Entity:
-		return e.Value == o.Value
-	default:
-		return false
-	}
-}
-
-func (e Entity) String() string {
-	return fmt.Sprintf("entity(%d)", e.Value)
+func (b BuiltInFn) Call(t Interpreter, args []Value) Value {
+	return b(t, args)
 }
 
 type Fn struct {
@@ -108,7 +84,7 @@ func (f PartiallyEvaluatedFn) Call(t Interpreter, _ []Value) Value {
 
 type BuiltIn struct {
 	N    int
-	F    func(t Interpreter, args []Value) Value
+	F    BuiltInCallable
 	Name string
 }
 
@@ -117,7 +93,7 @@ func (b BuiltIn) Arity() int {
 }
 
 func (b BuiltIn) Call(t Interpreter, args []Value) Value {
-	return b.F(t, args)
+	return b.F.Call(t, args)
 }
 
 func (b BuiltIn) Eq(v Value) bool {

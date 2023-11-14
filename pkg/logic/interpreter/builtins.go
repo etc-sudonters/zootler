@@ -1,13 +1,43 @@
 package interpreter
 
-//RuleParser.py
-type Zoot_AtDay struct{}
-type Zoot_AtDampeTime struct{}
-type Zoot_AtNight struct{}
+import (
+	"sudonters/zootler/internal/entity"
+	"sudonters/zootler/pkg/logic"
+)
+
+var (
+	AtDay   BuiltInFn = atTod
+	AtNigt  BuiltInFn = atTod
+	AtDampe BuiltInFn = atTod
+)
+
+func atTod(_ Interpreter, _ []Value) Value {
+	return Box(true)
+}
 
 // State.py
 // ("item name", qty) tuples and "raw_item_name" w/ implicit qty = 1, having more is fine
-type Zoot_HasQuantityOf struct{}
+type Zoot_HasQuantityOf struct {
+	Entities entity.Queryable
+	Selector logic.TypedStringSelector
+}
+
+func (z Zoot_HasQuantityOf) Call(t Interpreter, args []Value) Value {
+	kind := args[0].(Token)
+	qty := int(args[1].(Number).Value) // always safe
+
+	ents, err := z.Entities.Query([]entity.Selector{
+		entity.With[logic.Collected]{},
+		z.Selector.With(kind.Literal),
+	})
+
+	if err != nil {
+		panic(err)
+	}
+
+	return Box(qty <= len(ents))
+}
+
 type Zoot_HasAnyOf struct{}
 type Zoot_HasAllOf struct{}
 type Zoot_CountOf struct{}

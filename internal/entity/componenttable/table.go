@@ -61,7 +61,7 @@ func (t *Table) Unset(e entity.Model, typ reflect.Type) entity.ComponentId {
 func (t *Table) IdOf(typ reflect.Type) (entity.ComponentId, error) {
 	id, err := t.typemap.IdOf(typ)
 	if err != nil {
-		return 0, entity.ErrUnknownComponent{typ}
+		return 0, entity.ErrUnknownComponent{T: typ}
 	}
 	return entity.ComponentId(id), nil
 }

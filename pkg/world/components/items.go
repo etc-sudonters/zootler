@@ -1,10 +1,7 @@
-package logic
+package components
 
-import (
-	"sudonters/zootler/internal/entity"
-)
+// break import cycles
 
-//components
 type (
 	BossKey            struct{}
 	Bottle             struct{}
@@ -26,6 +23,9 @@ type (
 	SmallKey           struct{}
 	SpiritualStone     struct{}
 	Trade              struct{}
+	Song               struct{}
+	Location           struct{}
+	Token              struct{}
 )
 
 func (c BossKey) String() string            { return "BossKey" }
@@ -38,22 +38,8 @@ func (c HideoutSmallKey) String() string    { return "HideoutSmallKey" }
 func (c Item) String() string               { return "Item" }
 func (c Map) String() string                { return "Map" }
 func (c Refill) String() string             { return "Refill" }
-func (c Shop) String() string               { return "Shop" }
 func (c SmallKey) String() string           { return "SmallKey" }
 func (c Song) String() string               { return "Song" }
 func (c GoldSkulltulaToken) String() string { return "Token" }
-
-type PlacementItem struct {
-	Name       string
-	Type       entity.Component
-	Importance Importance
-	Components []entity.Component
-}
-
-type Importance int
-
-const (
-	ImportanceJunk        Importance = 1 << iota
-	ImportancePriority    Importance = 1 << iota
-	ImportanceAdvancement Importance = 1 << iota
-)
+func (c Location) String() string           { return "Location" }
+func (c Token) String() string              { return "Token" }

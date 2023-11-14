@@ -7,10 +7,10 @@ import (
 	"regexp"
 	"strings"
 	"sudonters/zootler/internal/astrender"
-	"sudonters/zootler/internal/entity"
 	"sudonters/zootler/pkg/logic"
 	"sudonters/zootler/pkg/rules/ast"
 	"sudonters/zootler/pkg/world"
+	"sudonters/zootler/pkg/world/components"
 )
 
 var _entityName = regexp.MustCompile("^[A-Z][A-Za-z_]+$")
@@ -43,12 +43,7 @@ type Inliner struct {
 	SkippedTrials    map[string]bool
 	DungeonShortcuts map[string]bool
 	Builder          *world.Builder
-
-	regionName string
-}
-
-func (rw *Inliner) SetRegion(r string) {
-	rw.regionName = r
+	RegionName       string
 }
 
 func (rw Inliner) Rewrite(expr ast.Expression, env Environment) ast.Expression {
@@ -126,12 +121,9 @@ func (rw Inliner) EvalLiteral(literal *ast.Literal, env Environment) ast.Express
 			return ident
 		}
 
-		ent, err := rw.Builder.Entity(world.Name(ident.Value))
-		if err != nil {
-			panic(err)
-		}
-
-		env.Set(ident.Value, Entity{Value: ent.Model()})
+		typ := rw.Builder.TypedStrs.Typed(ident.Value)
+		rw.Builder.Components.RowOf(typ)
+		env.Set(ident.Value, Token{Component: typ, Literal: ident.Value})
 		return ident
 	}
 	return literal
@@ -295,7 +287,7 @@ func (rw Inliner) EvalUnary(unary *ast.UnaryOp, env Environment) ast.Expression 
 			switch t := t.(type) {
 			case Boolean:
 				return Literalify(!t.Value)
-			case Callable, Entity:
+			case Callable:
 				break
 			default:
 				panic(parseError("can only negate literal bools"))
@@ -318,7 +310,7 @@ func (rw Inliner) EvalCall(call *ast.Call, env Environment) ast.Expression {
 
 		switch ident.Value {
 		case "here":
-			name = rw.regionName
+			name = rw.RegionName
 			body = call.Args[0]
 		case "at":
 			name = call.Args[0].(*ast.Literal).Value.(string)
@@ -404,9 +396,19 @@ func (rw Inliner) expandMacro(where string, rule ast.Expression, env Environment
 	if err != nil {
 		panic(err)
 	}
+
 	rw.Builder.Node(event)
-	event.Add(logic.Token{})
-	event.Add(logic.Event{})
+
+	arch := components.EventArchetype{}
+	if err := arch.Apply(event); err != nil {
+		panic(err)
+	}
+
+	event.Add(rw.Builder.TypedStrs.InstanceOf(eventName))
+	rw.Globals.Set(eventName, Token{
+		Literal:   eventName,
+		Component: rw.Builder.TypedStrs.Typed(eventName),
+	})
 
 	edge, err := rw.Builder.Edge(origin, event)
 	if err != nil {
@@ -415,9 +417,6 @@ func (rw Inliner) expandMacro(where string, rule ast.Expression, env Environment
 
 	rule = rw.Rewrite(rule, env)
 	edge.Add(rule)
-
-	env.Set(eventName, Box(event.Model()))
-
 	return &ast.Identifier{Value: eventName}
 }
 
@@ -450,7 +449,16 @@ func (rw Inliner) EvalIdentifier(ident *ast.Identifier, env Environment) ast.Exp
 	}
 
 	if _entityName.MatchString(name) {
-		rw.Globals.Set(name, Box(entity.Model(1337)))
+		entity, err := rw.Builder.Entity(world.Name(name))
+		if err != nil {
+			panic(err)
+		}
+
+		entity.Add(rw.Builder.TypedStrs.InstanceOf(logic.EscapeName(name)))
+		rw.Globals.Set(name, Token{
+			Literal:   name,
+			Component: rw.Builder.TypedStrs.Typed(logic.EscapeName(name)),
+		})
 	}
 
 	return ident

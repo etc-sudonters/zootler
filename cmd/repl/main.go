@@ -1,26 +1,30 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"sudonters/zootler/internal/entity"
+	"sudonters/zootler/internal/entity/bitpool"
+	"sudonters/zootler/internal/entity/componenttable"
 	"sudonters/zootler/internal/mirrors"
 	"sudonters/zootler/pkg/logic"
 	"sudonters/zootler/pkg/logic/interpreter"
 	"sudonters/zootler/pkg/rules/ast"
 	"sudonters/zootler/pkg/rules/parser"
 	"sudonters/zootler/pkg/world"
-	"sudonters/zootler/pkg/worldloader"
+	"sudonters/zootler/pkg/world/components"
 
 	"muzzammil.xyz/jsonc"
 )
 
 func main() {
+	tbl := componenttable.New(30000)
+	pool := bitpool.FromTable(tbl, 400)
+	b := world.NewBuilder(pool, tbl)
+
 	env := interpreter.NewEnv()
-	b := world.NewBuilder()
 	rewriter := interpreter.NewInliner(env)
 	rewriter.Settings = make(map[string]any, 0)
 	rewriter.SkippedTrials = make(map[string]bool, 0)
@@ -31,19 +35,11 @@ func main() {
 	for name, value := range defaultSettings() {
 		env.Set(name, interpreter.Box(value))
 	}
-	loader := worldloader.FileSystemLoader{
-		LogicDirectory: "inputs/logic",
-		DataDirectory:  "inputs/data",
-	}
-
-	if err := loader.LoadInto(context.TODO(), b); err != nil {
-		panic(err)
-	}
 
 	I := interpreter.New(env)
 
 	tokens, err := b.Pool.Query([]entity.Selector{
-		entity.With[logic.Token]{},
+		entity.With[components.Token]{},
 		entity.With[world.Name]{},
 	})
 
@@ -56,14 +52,17 @@ func main() {
 
 	for _, t := range tokens {
 		t.Get(&itemName)
-		escaped := worldloader.EscapeName(string(itemName))
-		env.Set(escaped, interpreter.Box(t.Model()))
-		t.Add(typedStrings.Typed(escaped))
+		literal := logic.EscapeName(string(itemName))
+		component := typedStrings.InstanceOf(literal)
+		t.Add(component)
+		env.Set(literal, interpreter.Token{
+			Component: typedStrings.Typed(literal),
+			Literal:   literal,
+		})
 	}
+	tbl.RowOf(mirrors.TypeOf[logic.Collected]())
 
-	w := b.Build()
-
-	rules, err := w.Entities.Query([]entity.Selector{
+	rules, err := b.Pool.Query([]entity.Selector{
 		entity.With[logic.RawRule]{},
 		entity.With[world.Edge]{},
 		entity.With[world.FromName]{},
@@ -80,9 +79,9 @@ func main() {
 	dummyBuiltIn := func(name string, arity int) interpreter.BuiltIn {
 		return interpreter.BuiltIn{
 			N: arity,
-			F: func(i interpreter.Interpreter, args []interpreter.Value) interpreter.Value {
+			F: interpreter.BuiltInFn(func(i interpreter.Interpreter, args []interpreter.Value) interpreter.Value {
 				return interpreter.Box(false)
-			},
+			}),
 			Name: name,
 		}
 	}
@@ -91,7 +90,14 @@ func main() {
 		env.Set(b.Name, b)
 	}
 
-	addBuiltin(dummyBuiltIn("has", 2))
+	addBuiltin(interpreter.BuiltIn{
+		N: 2,
+		F: interpreter.Zoot_HasQuantityOf{
+			Entities: b.Pool,
+			Selector: logic.TypedStringSelector{TypedStrs: b.TypedStrs},
+		},
+		Name: "has",
+	})
 	addBuiltin(dummyBuiltIn("region_has_shortcuts", 1))
 	addBuiltin(dummyBuiltIn("has_bottle", 0))
 	addBuiltin(dummyBuiltIn("at_night", 0))
@@ -119,7 +125,7 @@ func main() {
 	for _, bearer := range rules {
 		bearer.Get(&rule)
 		bearer.Get(&region)
-		rewriter.SetRegion(string(region))
+		rewriter.RegionName = string(region)
 		p, err := parser.Parse(string(rule))
 		if err != nil {
 			panic(err)

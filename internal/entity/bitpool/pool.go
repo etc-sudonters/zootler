@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sudonters/zootler/internal/entity"
 	"sudonters/zootler/internal/entity/componenttable"
+	"sudonters/zootler/internal/mirrors"
 
 	"github.com/etc-sudonters/substrate/skelly/set/bits"
 )
@@ -30,6 +31,14 @@ func New(s Settings) *bitpool {
 	return &b
 }
 
+func FromTable(tbl *componenttable.Table, maxComponentId int) *bitpool {
+	var b bitpool
+	b.componentBucketCount = bits.Buckets(maxComponentId)
+	b.table = tbl
+	b.entities = make([]bitview, 128)
+	return &b
+}
+
 func (p *bitpool) Create() (entity.View, error) {
 	var view bitview
 	view.id = entity.Model(len(p.entities))
@@ -48,7 +57,13 @@ func (p *bitpool) Query(qs []entity.Selector) ([]entity.View, error) {
 		typ := q.Component()
 		id, err := p.table.IdOf(typ)
 		if err != nil {
-			return nil, fmt.Errorf("during component %s: %w", typ.Name(), err)
+			name := typ.Name()
+			if name == "" {
+				if n, ok := mirrors.TryGetLiteral(typ); ok {
+					name = n
+				}
+			}
+			return nil, fmt.Errorf("during component %s: %w", name, err)
 		}
 
 		switch q.Behavior() {

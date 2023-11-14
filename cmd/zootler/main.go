@@ -12,7 +12,7 @@ import (
 	"sudonters/zootler/pkg/filler"
 	"sudonters/zootler/pkg/logic"
 	"sudonters/zootler/pkg/world"
-	"sudonters/zootler/pkg/worldloader"
+	"sudonters/zootler/pkg/world/components"
 
 	"github.com/etc-sudonters/substrate/dontio"
 	"github.com/etc-sudonters/substrate/stageleft"
@@ -77,16 +77,7 @@ func main() {
 		return
 	}
 
-	b := world.NewBuilder()
-	loader := worldloader.FileSystemLoader{
-		LogicDirectory: opts.logicDir,
-		DataDirectory:  opts.dataDir,
-	}
-
-	if err := loader.LoadInto(ctx, b); err != nil {
-		exit = stageleft.ExitCode(98)
-		panic(err)
-	}
+	b := world.DefaultBuilder()
 
 	stampTokens(b)
 
@@ -101,8 +92,8 @@ func main() {
 	}
 
 	assumed := &filler.AssumedFill{
-		Locations: []entity.Selector{entity.With[logic.Song]{}},
-		Items:     []entity.Selector{entity.With[logic.Song]{}},
+		Locations: []entity.Selector{entity.With[components.Song]{}},
+		Items:     []entity.Selector{entity.With[components.Song]{}},
 	}
 	if err := assumed.Fill(ctx, w, filler.ConstGoal(true)); err != nil {
 		exit = stageleft.ExitCodeFromErr(err, stageleft.ExitCode(2))
@@ -110,7 +101,7 @@ func main() {
 		return
 	}
 
-	if err := showTokenPlacements(ctx, w, entity.With[logic.Song]{}); err != nil {
+	if err := showTokenPlacements(ctx, w, entity.With[components.Song]{}); err != nil {
 		exit = stageleft.ExitCodeFromErr(err, stageleft.ExitCode(2))
 		fmt.Fprintf(stdio.Err, "Error during placement review: %s\n", err.Error())
 		return
@@ -160,7 +151,7 @@ func showTokenPlacements(ctx context.Context, w world.World, qs ...entity.Select
 
 func stampTokens(b *world.Builder) {
 	tokens, err := b.Pool.Query([]entity.Selector{
-		entity.With[logic.Token]{},
+		entity.With[components.Token]{},
 	})
 	if err != nil {
 		panic(err)

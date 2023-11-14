@@ -3,7 +3,7 @@ package interpreter
 import (
 	"errors"
 	"fmt"
-	"sudonters/zootler/internal/entity"
+	"reflect"
 	"sudonters/zootler/pkg/rules/ast"
 )
 
@@ -15,12 +15,39 @@ const (
 	NUM_TYPE
 	STR_TYPE
 	CALL_TYPE
+	TOK_TYPE
 )
 
 type Value interface {
 	Type() Type
 	Eq(Value) bool
 	String() string
+}
+
+type Token struct {
+	Component reflect.Type
+	Literal   string // :crossedfingers:
+}
+
+func (t Token) Type() Type {
+	return TOK_TYPE
+}
+
+func (t Token) Eq(o Value) bool {
+	if o == nil {
+		return false
+	}
+
+	switch o := o.(type) {
+	case Token:
+		return t.Literal == o.Literal
+	}
+
+	return false
+}
+
+func (t Token) String() string {
+	return fmt.Sprintf("<Token: %q>", t.Literal)
 }
 
 type Boolean struct {
@@ -98,6 +125,8 @@ func (t Interpreter) IsTruthy(v Value) bool {
 		return v.Value != 0
 	case String:
 		return v.Value != ""
+	case Token:
+		return v.Literal != "" && v.Component != nil
 	case Callable:
 		if v.Arity() == 0 {
 			return t.IsTruthy(v.Call(t, nil))
@@ -118,8 +147,6 @@ func Box(v any) Value {
 		return Number{Value: float64(v)}
 	case string:
 		return String{Value: v}
-	case entity.Model:
-		return Entity{Value: v}
 	default:
 		panic(fmt.Errorf("cannot box %T", v))
 	}

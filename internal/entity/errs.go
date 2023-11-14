@@ -16,11 +16,11 @@ var ErrNonNilPtrOnly = errors.New("non-nil pointers only")
 var ErrNilComponentPtr = errors.New("nil pointer to component")
 
 type ErrUnknownComponent struct {
-	reflect.Type
+	T reflect.Type
 }
 
 func (u ErrUnknownComponent) Error() string {
-	return fmt.Sprintf("unknown component: %s", u.Name())
+	return fmt.Sprintf("unknown component: %s", u.T.Name())
 }
 
 type ErrNilComponent struct {
