@@ -386,13 +386,13 @@ func (rw Inliner) expandMacro(where string, rule ast.Expression, env Environment
 
 	// creating and pushing an entity to the graph are idempotent
 	// because we might be referencing a place that doesn't exist yet
-	origin, err := rw.Builder.Entity(world.Name(where))
+	origin, err := rw.Builder.Entity(components.Name(where))
 	if err != nil {
 		panic(err)
 	}
 	rw.Builder.Node(origin)
 
-	event, err := rw.Builder.Entity(world.Name(eventName))
+	event, err := rw.Builder.Entity(components.Name(eventName))
 	if err != nil {
 		panic(err)
 	}
@@ -449,7 +449,7 @@ func (rw Inliner) EvalIdentifier(ident *ast.Identifier, env Environment) ast.Exp
 	}
 
 	if _entityName.MatchString(name) {
-		entity, err := rw.Builder.Entity(world.Name(name))
+		entity, err := rw.Builder.Entity(components.Name(name))
 		if err != nil {
 			panic(err)
 		}

@@ -28,6 +28,10 @@ func (t TokenArchetype) Apply(entity entity.View) error {
 		return err
 	}
 
+	if err := entity.Add(Token{}); err != nil {
+		return err
+	}
+
 	return nil
 }
 

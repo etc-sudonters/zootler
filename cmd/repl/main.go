@@ -8,7 +8,6 @@ import (
 	"sudonters/zootler/internal/entity"
 	"sudonters/zootler/internal/entity/bitpool"
 	"sudonters/zootler/internal/entity/componenttable"
-	"sudonters/zootler/internal/mirrors"
 	"sudonters/zootler/pkg/logic"
 	"sudonters/zootler/pkg/logic/interpreter"
 	"sudonters/zootler/pkg/rules/ast"
@@ -16,6 +15,8 @@ import (
 	"sudonters/zootler/pkg/world"
 	"sudonters/zootler/pkg/world/components"
 
+	"github.com/etc-sudonters/substrate/mirrors"
+	"github.com/etc-sudonters/substrate/skelly/hashset"
 	"muzzammil.xyz/jsonc"
 )
 
@@ -38,16 +39,16 @@ func main() {
 
 	I := interpreter.New(env)
 
-	tokens, err := b.Pool.Query([]entity.Selector{
-		entity.With[components.Token]{},
-		entity.With[world.Name]{},
-	})
+	tokens, err := b.Pool.Query(entity.FilterBuilder{}.
+		With(mirrors.TypeOf[components.Token]()).
+		With(mirrors.TypeOf[components.Name]()).
+		Build())
 
 	if err != nil {
 		panic(err)
 	}
 
-	var itemName world.Name
+	var itemName components.Name
 	typedStrings := mirrors.NewTypedStrings()
 
 	for _, t := range tokens {
@@ -60,14 +61,14 @@ func main() {
 			Literal:   literal,
 		})
 	}
-	tbl.RowOf(mirrors.TypeOf[logic.Collected]())
+	tbl.RowOf(mirrors.TypeOf[components.Collected]())
 
-	rules, err := b.Pool.Query([]entity.Selector{
-		entity.With[logic.RawRule]{},
-		entity.With[world.Edge]{},
-		entity.With[world.FromName]{},
-		entity.With[world.Name]{},
-	})
+	rules, err := b.Pool.Query(entity.FilterBuilder{}.
+		With(mirrors.TypeOf[logic.RawRule]()).
+		With(mirrors.TypeOf[world.Edge]()).
+		With(mirrors.TypeOf[world.FromName]()).
+		With(mirrors.TypeOf[components.Name]()).
+		Build())
 
 	if err != nil {
 		panic(err)
@@ -76,49 +77,47 @@ func main() {
 	var rule logic.RawRule
 	var region world.FromName
 
-	dummyBuiltIn := func(name string, arity int) interpreter.BuiltIn {
-		return interpreter.BuiltIn{
-			N: arity,
-			F: interpreter.BuiltInFn(func(i interpreter.Interpreter, args []interpreter.Value) interpreter.Value {
-				return interpreter.Box(false)
-			}),
-			Name: name,
-		}
-	}
+	env.SetBuiltIn("at_day", 0, interpreter.AtDay)
+	env.SetBuiltIn("at_night", 0, interpreter.AtNigt)
+	env.SetBuiltIn("at_dampe_time", 0, interpreter.AtDampe)
 
-	addBuiltin := func(b interpreter.BuiltIn) {
-		env.Set(b.Name, b)
-	}
-
-	addBuiltin(interpreter.BuiltIn{
-		N: 2,
-		F: interpreter.Zoot_HasQuantityOf{
-			Entities: b.Pool,
-			Selector: logic.TypedStringSelector{TypedStrs: b.TypedStrs},
-		},
-		Name: "has",
+	env.SetBuiltIn("has", 2, interpreter.Zoot_HasQuantityOf{
+		Entities: b.Pool,
+		Strs:     b.TypedStrs,
 	})
-	addBuiltin(dummyBuiltIn("region_has_shortcuts", 1))
-	addBuiltin(dummyBuiltIn("has_bottle", 0))
-	addBuiltin(dummyBuiltIn("at_night", 0))
-	addBuiltin(dummyBuiltIn("at_day", 0))
-	addBuiltin(dummyBuiltIn("at_dampe_time", 0))
-	addBuiltin(dummyBuiltIn("has_medallions", 1))
+
+	env.SetBuiltIn("has_medallions", 1, interpreter.Zoot_HasMedallions{
+		Has: interpreter.Zoot_HasQuantityOf{
+			Entities: b.Pool,
+			Strs:     b.TypedStrs,
+		},
+	})
+
+	env.SetBuiltIn("region_has_shortcuts", 1, interpreter.Zoot_RegionHasShortcuts{
+		// TODO: add to settings and peel off from there
+		RegionalShortcuts: hashset.New[string](),
+	})
+
+	env.SetBuiltIn("has_bottle", 0, interpreter.Zoot_HasBottle{
+		Has: interpreter.Zoot_HasQuantityOf{
+			Entities: b.Pool,
+			Strs:     b.TypedStrs,
+		},
+	})
 
 	// argument to rule
-	env.Set("age", interpreter.Box("child"))
-	env.Set("spot", interpreter.Box(false))
-	env.Set("tod", interpreter.Box(0))
+	env.SetBool("spot", false) // TODO absolutely not the correct thing
+	env.SetNumber("tod", 0)
+	env.SetString("age", "child")
 
 	// runtime needs to calculate these properties based on zootr's logic
-	env.Set("starting_age", interpreter.Box("adult"))
-	env.Set("skip_child_zelda", interpreter.Box(true))
+	env.SetBool("skip_child_zelda", true)
 
 	// wat, these are all for projectile check
-	env.Set("child", interpreter.Box("child"))
-	env.Set("adult", interpreter.Box("adult"))
-	env.Set("both", interpreter.Box("both"))
-	env.Set("either", interpreter.Box("either"))
+	env.SetString("child", "child")
+	env.SetString("adult", "adult")
+	env.SetString("both", "both")
+	env.SetString("either", "either")
 
 	var results []interpreter.Value
 
@@ -246,7 +245,7 @@ func defaultSettings() map[string]any {
 		"zora_fountain":                           "open",
 		"gerudo_fortress":                         "fast",
 		"dungeon_shortcuts_choice":                "off",
-		"starting_age":                            "random",
+		"starting_age":                            "adult",
 		"mq_dungeons_mode":                        "vanilla",
 		"empty_dungeons_mode":                     "none",
 		"shuffle_interior_entrances":              "off",

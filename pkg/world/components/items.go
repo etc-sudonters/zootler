@@ -23,23 +23,21 @@ type (
 	SmallKey           struct{}
 	SpiritualStone     struct{}
 	Trade              struct{}
-	Song               struct{}
 	Location           struct{}
 	Token              struct{}
 )
 
-func (c BossKey) String() string            { return "BossKey" }
+func (c BossKey) String() string            { return "Boss Key" }
 func (c Compass) String() string            { return "Compass" }
 func (c Drop) String() string               { return "Drop" }
-func (c DungeonReward) String() string      { return "DungeonReward" }
+func (c DungeonReward) String() string      { return "Dungeon Reward" }
 func (c Event) String() string              { return "Event" }
-func (c GanonBossKey) String() string       { return "GanonBossKey" }
-func (c HideoutSmallKey) String() string    { return "HideoutSmallKey" }
+func (c GanonBossKey) String() string       { return "Ganon Boss Key" }
+func (c HideoutSmallKey) String() string    { return "Hideout Small Key" }
 func (c Item) String() string               { return "Item" }
 func (c Map) String() string                { return "Map" }
 func (c Refill) String() string             { return "Refill" }
-func (c SmallKey) String() string           { return "SmallKey" }
-func (c Song) String() string               { return "Song" }
-func (c GoldSkulltulaToken) String() string { return "Token" }
+func (c SmallKey) String() string           { return "Small Key" }
+func (c GoldSkulltulaToken) String() string { return "Gold Skulltula Token" }
 func (c Location) String() string           { return "Location" }
-func (c Token) String() string              { return "Token" }
+func (c Token) String() string              { return "Collectable Token" }

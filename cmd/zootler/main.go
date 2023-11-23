@@ -10,9 +10,9 @@ import (
 	"sudonters/zootler/cmd/zootler/tui"
 	"sudonters/zootler/internal/entity"
 	"sudonters/zootler/pkg/filler"
-	"sudonters/zootler/pkg/logic"
 	"sudonters/zootler/pkg/world"
 	"sudonters/zootler/pkg/world/components"
+	"sudonters/zootler/pkg/world/filter"
 
 	"github.com/etc-sudonters/substrate/dontio"
 	"github.com/etc-sudonters/substrate/mirrors"
@@ -95,8 +95,8 @@ func main() {
 	song := entity.FilterBuilder{}.With(mirrors.TypeOf[components.Song]())
 
 	assumed := &filler.AssumedFill{
-		Locations: song.Clone(),
-		Items:     song.Clone(),
+		Locations: entity.BuildFilter(filter.Song),
+		Items:     entity.BuildFilter(filter.Song),
 	}
 	if err := assumed.Fill(ctx, w, filler.ConstGoal(true)); err != nil {
 		exit = stageleft.ExitCodeFromErr(err, stageleft.ExitCode(2))
@@ -118,8 +118,7 @@ func (arg missingRequired) Error() string {
 }
 
 func showTokenPlacements(ctx context.Context, w world.World, fb entity.FilterBuilder) error {
-	fb.With(mirrors.TypeOf[logic.Inhabits]())
-	placed, err := w.Entities.Query(fb.Build())
+	placed, err := w.Entities.Query(entity.BuildFilter(filter.Inhabits).Combine(fb).Build())
 	if err != nil {
 		return fmt.Errorf("while querying placements: %w", err)
 	}
@@ -128,7 +127,7 @@ func showTokenPlacements(ctx context.Context, w world.World, fb entity.FilterBui
 	for _, tok := range placed {
 		var itemName components.Name
 		var placementName components.Name
-		var placement logic.Inhabits
+		var placement components.Inhabits
 
 		err = tok.Get(&itemName)
 		if err != nil {

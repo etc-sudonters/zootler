@@ -5,8 +5,8 @@ import (
 	"sync"
 
 	"sudonters/zootler/internal/entity"
-	"sudonters/zootler/pkg/logic"
 	"sudonters/zootler/pkg/world"
+	"sudonters/zootler/pkg/world/components"
 
 	"github.com/etc-sudonters/substrate/mirrors"
 	"github.com/etc-sudonters/substrate/skelly/graph"
@@ -32,7 +32,7 @@ func FindReachableWorld(ctx context.Context, w *world.World) (hashset.Hash[graph
 		Visitor: setVisitor{reachable},
 	}
 
-	spawns, err := w.Entities.Query(entity.FilterBuilder{}.With(mirrors.TypeOf[logic.Spawn]()).Build())
+	spawns, err := w.Entities.Query(entity.FilterBuilder{}.With(mirrors.TypeOf[components.Spawn]()).Build())
 	if err != nil {
 		return nil, err
 	}

@@ -6,7 +6,12 @@ import (
 	"sudonters/zootler/pkg/rules/ast"
 )
 
+var _ Callable = (*Fn)(nil)
+var _ Callable = (*PartiallyEvaluatedFn)(nil)
+var _ Callable = (*BuiltIn)(nil)
+
 type Callable interface {
+	Value
 	Arity() int
 	Call(t Interpreter, args []Value) Value
 }

@@ -29,3 +29,23 @@ func (e Environment) Enclosed() Environment {
 	inner.parent = &e
 	return inner
 }
+
+func (e Environment) SetBuiltIn(name string, arity int, fn BuiltInCallable) {
+	e.Set(name, BuiltIn{
+		Name: name,
+		N:    arity,
+		F:    fn,
+	})
+}
+
+func (e Environment) SetString(name, value string) {
+	e.Set(name, Box(value))
+}
+
+func (e Environment) SetNumber(name string, value float64) {
+	e.Set(name, Box(value))
+}
+
+func (e Environment) SetBool(name string, value bool) {
+	e.Set(name, Box(value))
+}

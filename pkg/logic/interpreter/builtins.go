@@ -2,7 +2,10 @@ package interpreter
 
 import (
 	"sudonters/zootler/internal/entity"
-	"sudonters/zootler/pkg/logic"
+	"sudonters/zootler/pkg/world/components"
+
+	"github.com/etc-sudonters/substrate/mirrors"
+	"github.com/etc-sudonters/substrate/skelly/hashset"
 )
 
 var (
@@ -19,17 +22,18 @@ func atTod(_ Interpreter, _ []Value) Value {
 // ("item name", qty) tuples and "raw_item_name" w/ implicit qty = 1, having more is fine
 type Zoot_HasQuantityOf struct {
 	Entities entity.Queryable
-	Selector logic.TypedStringSelector
 }
 
 func (z Zoot_HasQuantityOf) Call(t Interpreter, args []Value) Value {
-	kind := args[0].(Token)
-	qty := int(args[1].(Number).Value) // always safe
+	token := args[0].(Token)
+	qty := int(args[1].(Number).Value)
 
-	ents, err := z.Entities.Query([]entity.Selector{
-		entity.With[logic.Collected]{},
-		z.Selector.With(kind.Literal),
-	})
+	filter := entity.FilterBuilder{}.
+		With(mirrors.TypeOf[components.Collected]()).
+		With(token.Component).
+		Build()
+
+	ents, err := z.Entities.Query(filter)
 
 	if err != nil {
 		panic(err)
@@ -38,23 +42,57 @@ func (z Zoot_HasQuantityOf) Call(t Interpreter, args []Value) Value {
 	return Box(qty <= len(ents))
 }
 
+type Zoot_HasMedallions struct {
+	Has Zoot_HasQuantityOf
+}
+
+func (z Zoot_HasMedallions) Call(t Interpreter, args []Value) Value {
+	return z.Has.Call(t, []Value{
+		Token{
+			Component: mirrors.TypeOf[components.Medallion](),
+			Literal:   "",
+		},
+		args[0],
+	})
+}
+
+type Zoot_RegionHasShortcuts struct {
+	RegionalShortcuts hashset.Hash[string]
+}
+
+func (z Zoot_RegionHasShortcuts) Call(t Interpreter, args []Value) Value {
+	region := args[0].(String)
+	return Box(z.RegionalShortcuts.Exists(region.Value))
+}
+
+type Zoot_HasBottle struct {
+	Has Zoot_HasQuantityOf
+}
+
+func (z Zoot_HasBottle) Call(t Interpreter, args []Value) Value {
+	return z.Has.Call(
+		t, []Value{
+			Token{
+				Component: mirrors.TypeOf[components.Bottle](),
+			},
+			Box(1),
+		})
+}
+
 type Zoot_HasAnyOf struct{}
 type Zoot_HasAllOf struct{}
 type Zoot_CountOf struct{}
 type Zoot_HeartCount struct{}
 type Zoot_HasHearts struct{}
-type Zoot_HasMedallions struct{}
 type Zoot_HasStones struct{}
 type Zoot_HasDungeonRewards struct{}
 type Zoot_HasOcarinaButtons struct{}
 type Zoot_HasItemGoal struct{}
 type Zoot_ItemCount struct{}
 type Zoot_ItemNameCount struct{}
-type Zoot_HasBottle struct{}
 type Zoot_HasFullItemGoal struct{}
 type Zoot_HasAllItemGoals struct{}
 type Zoot_HadNightStart struct{}
 type Zoot_CanLiveDmg struct{}
 type Zoot_GuaranteeHint struct{}
-type Zoot_RegionHasShortcuts struct{}
 type Zoot_HasNotesForSong struct{}

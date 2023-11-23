@@ -2,6 +2,8 @@ package components
 
 // jq -Mr 'reduce .[] as $x ([]; . + $x.categories // []) | .[]' data/locations.json
 type (
+	Placeable struct{} // ???: should this carry _what_ is placeable here
+
 	DefaultItem          string
 	RecoveryHeart        struct{}
 	ActorOverride        struct{}
