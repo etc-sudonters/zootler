@@ -5,7 +5,7 @@ import (
 	"io"
 	"strings"
 	"sudonters/zootler/internal/entity"
-	"sudonters/zootler/internal/entity/componenttable"
+	"sudonters/zootler/internal/entity/table"
 	"sudonters/zootler/internal/tui/listpanel"
 	"sudonters/zootler/internal/tui/panels"
 
@@ -13,7 +13,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-func createComponentOverview(rows []componenttable.RowData, pool entity.Pool) listpanel.Model {
+func createComponentOverview(rows []table.RowData, pool entity.Pool) listpanel.Model {
 	listItems := make([]list.Item, len(rows))
 
 	for i, r := range rows {
@@ -34,7 +34,7 @@ func createComponentOverview(rows []componenttable.RowData, pool entity.Pool) li
 	return panel
 }
 
-type overviewItem struct{ r componenttable.RowData }
+type overviewItem struct{ r table.RowData }
 
 func (r overviewItem) FilterValue() string { return r.r.Type().Name() }
 

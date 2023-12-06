@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"sudonters/zootler/internal/entity"
-	"sudonters/zootler/internal/entity/componenttable"
+	"sudonters/zootler/internal/entity/table"
 
 	"github.com/etc-sudonters/substrate/mirrors"
 	"github.com/etc-sudonters/substrate/skelly/bitset"
@@ -13,7 +13,7 @@ import (
 type bitpool struct {
 	componentBucketCount int
 	entities             []bitview
-	table                *componenttable.Table
+	table                *table.Table
 }
 
 var _ entity.Pool = (*bitpool)(nil)
@@ -28,11 +28,11 @@ func New(s Settings) *bitpool {
 	var b bitpool
 	b.componentBucketCount = bitset.Buckets(s.MaxComponentId)
 	b.entities = make([]bitview, 1, 128)
-	b.table = componenttable.New(s.MaxEntityId)
+	b.table = table.New(s.MaxEntityId)
 	return &b
 }
 
-func FromTable(tbl *componenttable.Table, maxComponentId int) *bitpool {
+func FromTable(tbl *table.Table, maxComponentId int) *bitpool {
 	var b bitpool
 	b.componentBucketCount = bitset.Buckets(maxComponentId)
 	b.table = tbl

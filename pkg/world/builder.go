@@ -6,7 +6,7 @@ import (
 
 	"sudonters/zootler/internal/entity"
 	"sudonters/zootler/internal/entity/bitpool"
-	"sudonters/zootler/internal/entity/componenttable"
+	"sudonters/zootler/internal/entity/table"
 	"sudonters/zootler/pkg/world/components"
 
 	"github.com/etc-sudonters/substrate/mirrors"
@@ -25,16 +25,16 @@ type Builder struct {
 	Graph      graph.Builder
 	NameCache  map[components.Name]entity.View
 	TypedStrs  mirrors.TypedStrings
-	Components *componenttable.Table
+	Components *table.Table
 }
 
 func DefaultBuilder() *Builder {
-	tbl := componenttable.New(10000)
+	tbl := table.New(10000)
 	pool := bitpool.FromTable(tbl, 600)
 	return NewBuilder(pool, tbl)
 }
 
-func NewBuilder(pool entity.Pool, tbl *componenttable.Table) *Builder {
+func NewBuilder(pool entity.Pool, tbl *table.Table) *Builder {
 	return &Builder{
 		Pool:       WorldPool{pool},
 		Graph:      graph.Builder{G: graph.New()},

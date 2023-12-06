@@ -12,6 +12,10 @@ github.com/containerd/console v1.0.4-0.20230313162750-1ae8d489ac81 h1:q2hJAaP1k2
 github.com/containerd/console v1.0.4-0.20230313162750-1ae8d489ac81/go.mod h1:YynlIjWYF8myEu6sdkwKIvGQq+cOckRm6So2avqoYAk=
 github.com/etc-sudonters/substrate v0.0.0-20231114035743-c6cdf4d35b17 h1:Gc/BRo4wBP2sUGpJPSWOHuSJ8AmCKVGPeh0iSSo3J8o=
 github.com/etc-sudonters/substrate v0.0.0-20231114035743-c6cdf4d35b17/go.mod h1:fIQBB70tduyrZsUd4sab35FiYjSLB+cvHu0TVEYlfk4=
+github.com/etc-sudonters/substrate v0.0.0-20231201033732-abf2b75e02ed h1:hLggIiQMG/VAngTdMFLS6z9wizjpRHImbxDV1gO+puk=
+github.com/etc-sudonters/substrate v0.0.0-20231201033732-abf2b75e02ed/go.mod h1:fIQBB70tduyrZsUd4sab35FiYjSLB+cvHu0TVEYlfk4=
+github.com/etc-sudonters/substrate v0.0.0-20231206010758-5a62143e0834 h1:ll/01M1XtXCSKHgegwCmGkqsYY4O+MPvrqS57Iemltk=
+github.com/etc-sudonters/substrate v0.0.0-20231206010758-5a62143e0834/go.mod h1:fIQBB70tduyrZsUd4sab35FiYjSLB+cvHu0TVEYlfk4=
 github.com/kylelemons/godebug v1.1.0 h1:RPNrshWIDI6G2gRW9EHilWtl7Z6Sb1BR0xunSBf0SNc=
 github.com/kylelemons/godebug v1.1.0/go.mod h1:9/0rRGxNHcop5bhtWyNeEfOS8JIWk580+fNqagV/RAw=
 github.com/lucasb-eyer/go-colorful v1.2.0 h1:1nnpGOrhyZZuNyfu1QjKiUICQ74+3FNCN69Aj6K7nkY=

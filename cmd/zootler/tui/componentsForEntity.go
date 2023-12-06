@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 	"sudonters/zootler/internal/entity"
-	"sudonters/zootler/internal/entity/componenttable"
+	"sudonters/zootler/internal/entity/table"
 	"sudonters/zootler/internal/tui/listpanel"
 	"sudonters/zootler/internal/tui/panels"
 	"sudonters/zootler/pkg/world/components"
@@ -14,7 +14,7 @@ import (
 	"github.com/etc-sudonters/substrate/mirrors"
 )
 
-func createComponentsForEntity(e entity.Model, tbl *componenttable.Table, s panels.Size) listpanel.Model {
+func createComponentsForEntity(e entity.Model, tbl *table.Table, s panels.Size) listpanel.Model {
 	name, _ := tbl.Get(e, mirrors.TypeOf[components.Name]())
 
 	listItems := make([]list.Item, 0, tbl.Len())

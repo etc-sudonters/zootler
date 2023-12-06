@@ -38,15 +38,16 @@ func main() {
 
 		trace.WriteString(string(grottoScrub.View.Name))
 
-		for parent := pathHere.Current(); pathHere.Advance() && pathHere.Error() == nil; {
+		for pathHere.Advance() && pathHere.Error() == nil {
+			parent := pathHere.Current()
+
 			segment, _ := logic.CastTuple[struct {
 				Name  NameComponent
 				Spawn *SpawnComponent
 			}](parent)
 
-			fmt.Fprintf(&trace, " <- %s", segment.View.Name)
-
 			if segment.View.Spawn == nil {
+				fmt.Fprintf(&trace, " <- %s", segment.View.Name)
 				pathHere.Accept(segment.Entity)
 			}
 		}

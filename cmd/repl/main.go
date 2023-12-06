@@ -7,7 +7,7 @@ import (
 	"strings"
 	"sudonters/zootler/internal/entity"
 	"sudonters/zootler/internal/entity/bitpool"
-	"sudonters/zootler/internal/entity/componenttable"
+	"sudonters/zootler/internal/entity/table"
 	"sudonters/zootler/pkg/logic"
 	"sudonters/zootler/pkg/logic/interpreter"
 	"sudonters/zootler/pkg/rules/ast"
@@ -21,7 +21,7 @@ import (
 )
 
 func main() {
-	tbl := componenttable.New(30000)
+	tbl := table.New(30000)
 	pool := bitpool.FromTable(tbl, 400)
 	b := world.NewBuilder(pool, tbl)
 

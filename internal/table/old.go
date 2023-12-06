@@ -1,4 +1,4 @@
-package componenttable
+package table
 
 import (
 	"errors"
@@ -15,15 +15,23 @@ var strType reflect.Type = mirrors.TypeOf[string]()
 var ErrCorruptedTable = errors.New("table became corrupted")
 
 type componentGetter struct {
-	*Table
+	*OldTable
 }
 
 func (c componentGetter) GetComponent(e entity.Model, t reflect.Type) (entity.Component, error) {
 	return c.Get(e, t)
 }
 
-func New(maxEntities int) *Table {
-	t := new(Table)
+type ITable interface {
+	ColumnFor(c entity.ComponentId) Column
+}
+
+type TTable struct {
+	columns []Column
+}
+
+func New(maxEntities int) *OldTable {
+	t := new(OldTable)
 	t.rows = make([]*Row, 1, 32)
 	t.typemap = make(mirrors.TypeMap, 32)
 	t.rows[entity.INVALID_ENTITY] = nil
@@ -33,14 +41,14 @@ func New(maxEntities int) *Table {
 	return t
 }
 
-type Table struct {
+type OldTable struct {
 	entityBuckets int
 	rows          []*Row
 	typemap       mirrors.TypeMap
 	getter        entity.ComponentGetter
 }
 
-func (t *Table) Set(e entity.Model, c entity.Component) entity.ComponentId {
+func (t *OldTable) Set(e entity.Model, c entity.Component) entity.ComponentId {
 	typ := entity.PierceComponentType(c)
 	if typ == strType {
 		panic(fmt.Errorf("string component added to %d: %q", e, c))
@@ -50,7 +58,7 @@ func (t *Table) Set(e entity.Model, c entity.Component) entity.ComponentId {
 	return row.id
 }
 
-func (t *Table) Unset(e entity.Model, typ reflect.Type) entity.ComponentId {
+func (t *OldTable) Unset(e entity.Model, typ reflect.Type) entity.ComponentId {
 	if r := t.rowFor(typ); r != nil {
 		r.Unset(e)
 		return r.id
@@ -58,7 +66,7 @@ func (t *Table) Unset(e entity.Model, typ reflect.Type) entity.ComponentId {
 	return entity.INVALID_COMPONENT
 }
 
-func (t *Table) IdOf(typ reflect.Type) (entity.ComponentId, error) {
+func (t *OldTable) IdOf(typ reflect.Type) (entity.ComponentId, error) {
 	id, err := t.typemap.IdOf(typ)
 	if err != nil {
 		return 0, entity.ErrUnknownComponent{T: typ}
@@ -66,7 +74,7 @@ func (t *Table) IdOf(typ reflect.Type) (entity.ComponentId, error) {
 	return entity.ComponentId(id), nil
 }
 
-func (t *Table) Get(e entity.Model, typ reflect.Type) (entity.Component, error) {
+func (t *OldTable) Get(e entity.Model, typ reflect.Type) (entity.Component, error) {
 	r := t.rowFor(typ)
 	if r == nil {
 		return nil, entity.ErrNotAssigned
@@ -80,15 +88,15 @@ func (t *Table) Get(e entity.Model, typ reflect.Type) (entity.Component, error) 
 	return c, nil
 }
 
-func (t Table) Getter() entity.ComponentGetter {
+func (t OldTable) Getter() entity.ComponentGetter {
 	return t.getter
 }
 
-func (t Table) Len() int {
+func (t OldTable) Len() int {
 	return len(t.rows)
 }
 
-func (t Table) rowFor(typ reflect.Type) *Row {
+func (t OldTable) rowFor(typ reflect.Type) *Row {
 	id, err := t.typemap.IdOf(typ)
 	if err != nil {
 		return nil
@@ -101,7 +109,7 @@ func (t Table) rowFor(typ reflect.Type) *Row {
 	return nil
 }
 
-func (t *Table) RowOf(typ reflect.Type) *Row {
+func (t *OldTable) RowOf(typ reflect.Type) *Row {
 	if r := t.rowFor(typ); r != nil {
 		return r
 	}

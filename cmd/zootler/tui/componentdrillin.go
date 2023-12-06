@@ -5,7 +5,7 @@ import (
 	"io"
 	"sudonters/zootler/internal/entity"
 	"sudonters/zootler/internal/entity/bitpool"
-	"sudonters/zootler/internal/entity/componenttable"
+	"sudonters/zootler/internal/entity/table"
 	"sudonters/zootler/internal/tui/listpanel"
 	"sudonters/zootler/internal/tui/panels"
 	"sudonters/zootler/pkg/world/components"
@@ -14,7 +14,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-func createComponentDrillIn(r componenttable.RowData, pool entity.Pool, s panels.Size) listpanel.Model {
+func createComponentDrillIn(r table.RowData, pool entity.Pool, s panels.Size) listpanel.Model {
 	listItems := make([]list.Item, 0, r.Len())
 	comps := r.Components()
 
@@ -32,7 +32,7 @@ func createComponentDrillIn(r componenttable.RowData, pool entity.Pool, s panels
 }
 
 type drillinItem struct {
-	componenttable.RowEntry
+	table.Entry
 }
 
 func (c drillinItem) FilterValue() string { return fmt.Sprintf("%+v", c.Component) }
