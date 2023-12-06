@@ -3,6 +3,7 @@ package table
 import (
 	"fmt"
 	"reflect"
+	"sudonters/zootler/internal/iters"
 
 	"github.com/etc-sudonters/substrate/mirrors"
 	"github.com/etc-sudonters/substrate/reiterate"
@@ -13,6 +14,35 @@ import (
 type IteratorWithLength[T any] interface {
 	reiterate.Iterator[T]
 	Len() int
+}
+
+type ResultIter struct {
+	tbl     *table
+	columns []ColumnId
+	rows    reiterate.Iterator[int]
+	len     int
+}
+
+func (r ResultIter) Len() int {
+	return r.len
+}
+
+func (r ResultIter) MoveNext() bool {
+	return r.rows.MoveNext()
+}
+
+func (r ResultIter) Current() RowTuple {
+	current := RowId(r.rows.Current())
+	values := make([]Value, len(r.columns))
+
+	for i, col := range r.columns {
+		values[i] = r.tbl.columns[col].column.Get(current)
+	}
+
+	return RowTuple{
+		Row:    current,
+		Values: values,
+	}
 }
 
 type Table interface {
@@ -28,7 +58,22 @@ type table struct {
 }
 
 func (t *table) Select(q Query) IteratorWithLength[RowTuple] {
-	panic("not implemented") // TODO: Implement
+	rows := bitset.New(bitset.Buckets(len(t.rows))).Complement()
+
+	for _, pred := range q.Where {
+		predCol := t.columns[pred.ColumnId()]
+		idx := pred.DecideIndex(predCol)
+		rows = rows.Intersect(idx.Index.Get(nil))
+	}
+
+	return ResultIter{
+		tbl: t,
+		columns: reiterate.Map[Selection, []Selection, ColumnId, []ColumnId](q.Load, func(s Selection) ColumnId {
+			return s.Column
+		}),
+		rows: iters.Bitset64(rows),
+		len:  rows.Len(),
+	}
 }
 
 func (t *table) Set(r RowTuple) {

@@ -16,7 +16,8 @@ type Column interface {
 }
 
 type ColumnData struct {
-	column Column
-	typ    reflect.Type
-	id     ColumnId
+	column  Column
+	typ     reflect.Type
+	id      ColumnId
+	indexes []Index
 }

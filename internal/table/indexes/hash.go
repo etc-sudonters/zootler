@@ -1,4 +1,4 @@
-package indicies
+package indexes
 
 import (
 	"sudonters/zootler/internal/table"
