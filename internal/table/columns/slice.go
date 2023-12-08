@@ -15,7 +15,6 @@ func NewSliceColumn(id table.ColumnId, entityBuckets int) *SliceColumn {
 	return r
 }
 
-// this should be used for components that belong to a majority of entities
 type SliceColumn struct {
 	id         table.ColumnId
 	typ        reflect.Type
