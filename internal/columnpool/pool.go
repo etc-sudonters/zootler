@@ -7,6 +7,7 @@ import (
 
 	"github.com/etc-sudonters/substrate/mirrors"
 	"github.com/etc-sudonters/substrate/skelly/bitset"
+	"github.com/etc-sudonters/substrate/stageleft"
 )
 
 type record struct {
@@ -51,7 +52,7 @@ func (cols *columnEntity) Model() entity.Model {
 }
 
 func (cols *columnEntity) Get(c interface{}) error {
-
+	panic(stageleft.NotImplErr)
 }
 
 func (cols *columnEntity) Add(c entity.Component) error {

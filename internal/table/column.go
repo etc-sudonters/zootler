@@ -19,14 +19,18 @@ type Column interface {
 	Unset(e RowId)
 }
 
-type ColumnData struct {
-	id      ColumnId
-	typ     reflect.Type
-	column  Column
-	indexes []Index
+type ColumnMetadata interface {
+	Type() reflect.Type
+	Id() ColumnId
 }
 
-func (c ColumnData) Col() Column {
+type ColumnData struct {
+	id     ColumnId
+	typ    reflect.Type
+	column Column
+}
+
+func (c ColumnData) Column() Column {
 	return c.column
 }
 
@@ -36,12 +40,6 @@ func (c ColumnData) Type() reflect.Type {
 
 func (c ColumnData) Id() ColumnId {
 	return c.id
-}
-
-func (c ColumnData) Indexes() []Index {
-	indexes := make([]Index, len(c.indexes))
-	copy(indexes, c.indexes)
-	return indexes
 }
 
 func BuildColumn(col Column, typ reflect.Type) *colbuilder {
@@ -64,26 +62,14 @@ func BuildColumnOf[T Value](col Column) *colbuilder {
 }
 
 type colbuilder struct {
-	typ     reflect.Type
-	column  Column
-	indexes []Index
-}
-
-func (c *colbuilder) CreateIndex(idx Index) {
-	c.indexes = append(c.indexes, idx)
+	typ    reflect.Type
+	column Column
 }
 
 func (c colbuilder) build(id ColumnId) ColumnData {
-	var indexes []Index
-	if len(c.indexes) > 0 {
-		indexes = make([]Index, len(c.indexes))
-		copy(indexes, c.indexes)
-	}
-
 	return ColumnData{
-		id:      id,
-		typ:     c.typ,
-		column:  c.column,
-		indexes: indexes,
+		id:     id,
+		typ:    c.typ,
+		column: c.column,
 	}
 }

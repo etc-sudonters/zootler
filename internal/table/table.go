@@ -1,47 +1,22 @@
 package table
 
 import (
-	"errors"
-	"fmt"
+	"github.com/etc-sudonters/substrate/skelly/bitset"
 )
 
-var _ Table = (*table)(nil)
-
-type Table interface {
-	InsertColumn(col ColumnData) (ColumnId, error)
-	RetrieveColumns(cols ...ColumnId) ([]ColumnData, error)
+type Table struct {
+	Cols []ColumnData
+	Rows []bitset.Bitset64
 }
 
-type table struct {
-	/*
-	 *	columns are 1 indexed but we handle that complexity internally
-	 *	this is to detect accidental creation of zero values columnids
-	 */
-	cols []ColumnData
+func (tbl *Table) CreateColumn(b colbuilder) (ColumnId, error) {
+	col := b.build(ColumnId(len(tbl.Cols)))
+	tbl.Cols = append(tbl.Cols, col)
+	return col.id, nil
 }
 
-func (tbl *table) InsertColumn(col ColumnData) (ColumnId, error) {
-	id := ColumnId(len(tbl.cols) + 1)
-	col.id = id
-	tbl.cols = append(tbl.cols, col)
-	return id, nil
-}
-
-func (tbl table) RetrieveColumns(cols ...ColumnId) ([]ColumnData, error) {
-	if len(cols) == 0 {
-		return nil, errors.New("no columns requested")
-	}
-
-	columns := make([]ColumnData, len(cols))
-
-	for i, id := range cols {
-		id := id - 1
-		if int(id) >= len(tbl.cols) || 0 >= id {
-			return nil, fmt.Errorf("invalid column %q requested", id)
-		}
-
-		columns[i] = tbl.cols[id]
-	}
-
-	return columns, nil
+func (tbl *Table) InsertRow() RowId {
+	id := RowId(len(tbl.Rows))
+	tbl.Rows = append(tbl.Rows, bitset.New(-1))
+	return id
 }
