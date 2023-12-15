@@ -42,7 +42,7 @@ func (c ColumnData) Id() ColumnId {
 	return c.id
 }
 
-func BuildColumn(col Column, typ reflect.Type) *colbuilder {
+func BuildColumn(col Column, typ reflect.Type) *ColumnBuilder {
 	if col == nil {
 		panic("nil column")
 	}
@@ -51,22 +51,26 @@ func BuildColumn(col Column, typ reflect.Type) *colbuilder {
 		panic("nil type information")
 	}
 
-	b := new(colbuilder)
+	b := new(ColumnBuilder)
 	b.column = col
 	b.typ = typ
 	return b
 }
 
-func BuildColumnOf[T Value](col Column) *colbuilder {
+func BuildColumnOf[T Value](col Column) *ColumnBuilder {
 	return BuildColumn(col, mirrors.TypeOf[T]())
 }
 
-type colbuilder struct {
+type ColumnBuilder struct {
 	typ    reflect.Type
 	column Column
 }
 
-func (c colbuilder) build(id ColumnId) ColumnData {
+func (c ColumnBuilder) Type() reflect.Type {
+	return c.typ
+}
+
+func (c ColumnBuilder) build(id ColumnId) ColumnData {
 	return ColumnData{
 		id:     id,
 		typ:    c.typ,

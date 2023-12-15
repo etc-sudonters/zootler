@@ -1,6 +1,8 @@
 package entity
 
-import "github.com/etc-sudonters/substrate/mirrors"
+import (
+	"reflect"
+)
 
 type ComponentId uint64
 
@@ -8,8 +10,7 @@ const INVALID_COMPONENT ComponentId = 0
 
 // arbitrary attachments to a Model
 type Component interface{}
-
-var ComponentType = mirrors.TypeOf[Component]()
+type ComponentType reflect.Type
 
 func ComponentName(c Component) string {
 	if c == nil {

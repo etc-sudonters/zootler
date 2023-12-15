@@ -16,11 +16,11 @@ type Bitset64 struct {
 }
 
 func (b Bitset64) Set(e table.RowId, c table.Value) {
-	b.entities.Set(int(e))
+	b.entities.Set(uint64(e))
 }
 
 func (b Bitset64) Unset(e table.RowId, c table.Value) {
-	b.entities.Clear(int(e))
+	b.entities.Unset(uint64(e))
 }
 
 func (b Bitset64) Matches(c table.Value) int {

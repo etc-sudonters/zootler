@@ -1,6 +1,8 @@
 package bundle
 
 import (
+	"errors"
+	"fmt"
 	"sudonters/zootler/internal/iters"
 	"sudonters/zootler/internal/table"
 
@@ -8,42 +10,39 @@ import (
 	"github.com/etc-sudonters/substrate/skelly/bitset"
 )
 
-type RowTuple struct {
-	Id table.RowId
-	ValueTuple
-}
-
-type ValueTuple struct {
-	Cols   ColumnIds
-	Values Values
-}
+var ErrExpectSingleRow = errors.New("expected exactly 1 row")
 
 // the pointer is invalid until the first MoveNext
 // the pointer changes after each MoveNext
 // implementations are free to define behavior when the iterator is exhausted
-type Interface reiterate.Iterator[*RowTuple]
+type Interface interface {
+	reiterate.Iterator[*table.RowTuple]
+	Len() int
+}
 
 type Fill struct {
 	bitset.Bitset64
 }
-type ColumnIds []table.ColumnId
-type Columns []table.ColumnData
-type Values []table.Value
 
-type Bundler func(fill Fill, columns Columns) Interface
+type Bundler func(fill Fill, columns table.Columns) Interface
 
-func DefaultBundle(fill Fill, columns Columns) Interface {
-	return &rowOrderedBundle{
+func RowOrdered(fill Fill, columns table.Columns) Interface {
+	return &rowOrdered{
+		fill: fill,
 		iter: iters.Bitset64(fill.Bitset64),
 		r:    nil,
 		cols: columns,
 	}
 }
 
-func SingleRowBundle(fill Fill, columns Columns) Interface {
-	var tup RowTuple
-	tup.Cols = make(ColumnIds, len(columns))
-	tup.Values = make(Values, len(columns))
+func SingleRow(fill Fill, columns table.Columns) (Interface, error) {
+	if fill.Len() != 1 {
+		return nil, fmt.Errorf("%w: had %d", ErrExpectSingleRow, fill.Len())
+	}
+
+	var tup table.RowTuple
+	tup.Cols = make(table.ColumnIds, len(columns))
+	tup.Values = make(table.Values, len(columns))
 	tup.Id = table.RowId(fill.Elems()[0])
 
 	for i, c := range columns {
@@ -51,25 +50,26 @@ func SingleRowBundle(fill Fill, columns Columns) Interface {
 		tup.Values[i] = c.Column().Get(tup.Id)
 	}
 
-	return &singleRowBundle{r: tup}
+	return &single{r: tup}, nil
 }
 
-type rowOrderedBundle struct {
+type rowOrdered struct {
+	fill Fill
 	iter reiterate.Iterator[int]
-	r    *RowTuple
-	cols Columns
+	r    *table.RowTuple
+	cols table.Columns
 }
 
-func (r rowOrderedBundle) MoveNext() bool {
+func (r rowOrdered) MoveNext() bool {
 	return r.iter.MoveNext()
 }
 
-func (r *rowOrderedBundle) Current() *RowTuple {
+func (r *rowOrdered) Current() *table.RowTuple {
 	if r.r == nil {
-		r.r = new(RowTuple)
+		r.r = new(table.RowTuple)
 		r.r.Id = table.RowId(r.iter.Current())
-		r.r.Values = make(Values, len(r.cols))
-		r.r.Cols = make(ColumnIds, len(r.cols))
+		r.r.Values = make(table.Values, len(r.cols))
+		r.r.Cols = make(table.ColumnIds, len(r.cols))
 
 		for i, col := range r.cols {
 			r.r.Cols[i] = col.Id()
@@ -84,12 +84,16 @@ func (r *rowOrderedBundle) Current() *RowTuple {
 	return vt
 }
 
-type singleRowBundle struct {
-	r     RowTuple
+func (r rowOrdered) Len() int {
+	return r.fill.Len()
+}
+
+type single struct {
+	r     table.RowTuple
 	moved bool
 }
 
-func (s *singleRowBundle) MoveNext() bool {
+func (s *single) MoveNext() bool {
 	if s.moved {
 		return false
 	}
@@ -98,9 +102,13 @@ func (s *singleRowBundle) MoveNext() bool {
 	return s.moved
 }
 
-func (s singleRowBundle) Current() *RowTuple {
+func (s single) Current() *table.RowTuple {
 	if s.moved {
 		return &s.r
 	}
 	return nil
+}
+
+func (s single) Len() int {
+	return 1
 }

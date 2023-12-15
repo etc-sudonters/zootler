@@ -1,26 +1,20 @@
 package main
 
 import (
-	"fmt"
-	"os"
-	"path/filepath"
-	"strings"
-	"sudonters/zootler/internal/entity"
-	"sudonters/zootler/internal/entity/bitpool"
-	"sudonters/zootler/internal/entity/table"
-	"sudonters/zootler/pkg/logic"
-	"sudonters/zootler/pkg/logic/interpreter"
-	"sudonters/zootler/pkg/rules/ast"
-	"sudonters/zootler/pkg/rules/parser"
-	"sudonters/zootler/pkg/world"
-	"sudonters/zootler/pkg/world/components"
+	"sudonters/zootler/internal/query"
 
-	"github.com/etc-sudonters/substrate/mirrors"
-	"github.com/etc-sudonters/substrate/skelly/hashset"
 	"muzzammil.xyz/jsonc"
 )
 
+func actualMain() {
+	storage := query.NewEngine()
+
+}
+
 func main() {
+	actualMain()
+	return
+
 	tbl := table.New(30000)
 	pool := bitpool.FromTable(tbl, 400)
 	b := world.NewBuilder(pool, tbl)

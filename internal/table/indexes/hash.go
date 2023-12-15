@@ -29,7 +29,7 @@ func (h HashIndex[T]) Get(c table.Value) bitset.Bitset64 {
 	var b bitset.Bitset64
 
 	for e := range h.entities[h.f(c)] {
-		b.Set(int(e))
+		b.Set(uint64(e))
 	}
 
 	return b

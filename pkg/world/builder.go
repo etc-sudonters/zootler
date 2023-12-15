@@ -1,5 +1,6 @@
 package world
 
+/*
 import (
 	"errors"
 	"fmt"
@@ -165,3 +166,4 @@ func namesForEdge(origin, destination entity.View) (components.Name, FromName, T
 
 	return components.Name(fmt.Sprintf("%s -> %s", from, to)), FromName(from), ToName(to)
 }
+*/

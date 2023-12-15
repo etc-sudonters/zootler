@@ -3,11 +3,11 @@ package entity
 // responsible for the total administration of a population of models
 type Pool interface {
 	Queryable
-	Manager
+	Factory
 }
 
 // responsible for creation of models
-type Manager interface {
+type Factory interface {
 	Create() (View, error)
 }
 
