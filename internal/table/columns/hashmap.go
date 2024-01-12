@@ -2,22 +2,26 @@ package columns
 
 import "sudonters/zootler/internal/table"
 
-func NewHashMap() HashMap {
-	return HashMap{make(map[table.RowId]table.Value)}
+func NewMap() Map {
+	return Map{make(map[table.RowId]table.Value)}
 }
 
-type HashMap struct {
+type Map struct {
 	entities map[table.RowId]table.Value
 }
 
-func (s HashMap) Get(e table.RowId) table.Value {
+func (s Map) Get(e table.RowId) table.Value {
 	return s.entities[e]
 }
 
-func (s HashMap) Set(e table.RowId, c table.Value) {
+func (s Map) Set(e table.RowId, c table.Value) {
 	s.entities[e] = c
 }
 
-func (s HashMap) Unset(e table.RowId) {
+func (s Map) Unset(e table.RowId) {
 	delete(s.entities, e)
+}
+
+func BuildHashColumn[T any]() *table.ColumnBuilder {
+	return table.BuildColumnOf[T](NewMap())
 }

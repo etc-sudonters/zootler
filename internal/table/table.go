@@ -7,6 +7,8 @@ import (
 type ColumnIds []ColumnId
 type Columns []ColumnData
 type Values []Value
+type Row = bitset.Bitset64
+type Rows []*Row
 
 type RowTuple struct {
 	Id RowId
@@ -21,13 +23,13 @@ type ValueTuple struct {
 func New() *Table {
 	return &Table{
 		Cols: make([]ColumnData, 0),
-		Rows: make([]*bitset.Bitset64, 0),
+		Rows: make(Rows, 0),
 	}
 }
 
 type Table struct {
 	Cols []ColumnData
-	Rows []*bitset.Bitset64
+	Rows Rows
 }
 
 func (tbl *Table) CreateColumn(b *ColumnBuilder) (ColumnData, error) {

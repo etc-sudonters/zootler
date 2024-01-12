@@ -54,7 +54,7 @@ func main() {
 	stdio := dontio.Std{
 		In:  os.Stdin,
 		Out: os.Stdout,
-		Err: os.Stdout,
+		Err: os.Stderr,
 	}
 	defer func() {
 		os.Exit(int(exit))
@@ -84,10 +84,10 @@ func main() {
 
 	storage := query.NewEngine()
 
-	storage.CreateColumn(table.BuildColumnOf[components.Name](columns.NewSliceColumn()))
-	storage.CreateColumn(table.BuildColumnOf[components.Song](columns.NewHashMap()))
-	storage.CreateColumn(table.BuildColumnOf[components.Location](columns.NewBit[components.Location]()))
-	storage.CreateColumn(table.BuildColumnOf[components.Token](columns.NewBit[components.Token]()))
+	storage.CreateColumn(table.BuildColumnOf[components.Name](columns.NewSlice()))
+	storage.CreateColumn(table.BuildColumnOf[components.Song](columns.NewMap()))
+	storage.CreateColumn(table.BuildColumnOf[components.Location](columns.NewBit(components.Location{})))
+	storage.CreateColumn(table.BuildColumnOf[components.Token](columns.NewBit(components.Token{})))
 
 	loadLocations("inputs/data/locations.json", storage)
 	loadItems("inputs/data/items.json", storage)
@@ -118,7 +118,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Fprintf(stdio.Out, "Count of Song locations: %d\n", notSongLocs.Len())
+	fmt.Fprintf(stdio.Out, "Count of not Song locations: %d\n", notSongLocs.Len())
 
 	q = storage.CreateQuery()
 	q.Exists(mirrors.TypeOf[components.Token]())
@@ -146,7 +146,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Fprintf(stdio.Out, "Count of Song tokens: %d\n", notSongToks.Len())
+	fmt.Fprintf(stdio.Out, "Count of not Song tokens: %d\n", notSongToks.Len())
 }
 
 func loadLocations(path string, storage query.Engine) {

@@ -2,11 +2,9 @@ package parser
 
 import (
 	"fmt"
+	"github.com/etc-sudonters/substrate/peruse"
 	"strconv"
 	"strings"
-	"sudonters/zootler/pkg/rules/ast"
-
-	"github.com/etc-sudonters/substrate/peruse"
 )
 
 const (
@@ -20,18 +18,18 @@ const (
 	PARENS
 )
 
-func Parse(raw string) (ast.Expression, error) {
+func Parse(raw string) (Expression, error) {
 	l := NewRulesLexer(raw)
 	p := NewRulesParser(l)
 	return p.Parse()
 }
 
-func NewRulesParser(l *peruse.StringLexer) *peruse.Parser[ast.Expression] {
+func NewRulesParser(l *peruse.StringLexer) *peruse.Parser[Expression] {
 	return peruse.NewParser(NewRulesGrammar(), l)
 }
 
-func NewRulesGrammar() peruse.Grammar[ast.Expression] {
-	g := peruse.NewGrammar[ast.Expression]()
+func NewRulesGrammar() peruse.Grammar[Expression] {
+	g := peruse.NewGrammar[Expression]()
 
 	g.Parse(TokenTrue, parseBool)
 	g.Parse(TokenFalse, parseBool)
@@ -50,7 +48,7 @@ func NewRulesGrammar() peruse.Grammar[ast.Expression] {
 	return g
 }
 
-func parseParenExpr(p *peruse.Parser[ast.Expression]) (ast.Expression, error) {
+func parseParenExpr(p *peruse.Parser[Expression]) (Expression, error) {
 	p.Consume()
 	e, err := p.ParseAt(LOWEST)
 	if err != nil {
@@ -75,8 +73,8 @@ func parseParenExpr(p *peruse.Parser[ast.Expression]) (ast.Expression, error) {
 	return e, nil
 }
 
-func parseTuple(p *peruse.Parser[ast.Expression], left ast.Expression) (ast.Expression, error) {
-	elems := []ast.Expression{left}
+func parseTuple(p *peruse.Parser[Expression], left Expression) (Expression, error) {
+	elems := []Expression{left}
 
 	for p.Expect(TokenComma) {
 		p.Consume()
@@ -88,21 +86,21 @@ func parseTuple(p *peruse.Parser[ast.Expression], left ast.Expression) (ast.Expr
 		elems = append(elems, elem)
 	}
 
-	return &ast.Tuple{Elems: elems}, nil
+	return &Tuple{Elems: elems}, nil
 }
 
-func parseIdentifierExpr(p *peruse.Parser[ast.Expression]) (ast.Expression, error) {
-	return &ast.Identifier{p.Cur.Literal}, nil
+func parseIdentifierExpr(p *peruse.Parser[Expression]) (Expression, error) {
+	return &Identifier{p.Cur.Literal}, nil
 }
 
-func parseBoolOpExpr(p *peruse.Parser[ast.Expression], left ast.Expression, parentPrecedence peruse.Precedence) (ast.Expression, error) {
+func parseBoolOpExpr(p *peruse.Parser[Expression], left Expression, parentPrecedence peruse.Precedence) (Expression, error) {
 	thisTok := p.Cur
 	p.Consume()
 	right, err := p.ParseAt(parentPrecedence)
 	if err != nil {
 		return nil, err
 	}
-	b := ast.BoolOp{
+	b := BoolOp{
 		Left:  left,
 		Op:    BoolOpFromTok(thisTok),
 		Right: right,
@@ -111,7 +109,7 @@ func parseBoolOpExpr(p *peruse.Parser[ast.Expression], left ast.Expression, pare
 	return &b, nil
 }
 
-func parseBinOp(p *peruse.Parser[ast.Expression], left ast.Expression, bp peruse.Precedence) (ast.Expression, error) {
+func parseBinOp(p *peruse.Parser[Expression], left Expression, bp peruse.Precedence) (Expression, error) {
 	thisTok := p.Cur
 	p.Consume()
 	right, err := p.ParseAt(bp)
@@ -119,7 +117,7 @@ func parseBinOp(p *peruse.Parser[ast.Expression], left ast.Expression, bp peruse
 		return nil, err
 	}
 
-	b := ast.BinOp{
+	b := BinOp{
 		Left:  left,
 		Op:    BinOpFromTok(thisTok),
 		Right: right,
@@ -128,12 +126,12 @@ func parseBinOp(p *peruse.Parser[ast.Expression], left ast.Expression, bp peruse
 	return &b, nil
 }
 
-func parseCall(p *peruse.Parser[ast.Expression], left ast.Expression, bp peruse.Precedence) (ast.Expression, error) {
+func parseCall(p *peruse.Parser[Expression], left Expression, bp peruse.Precedence) (Expression, error) {
 	if p.Expect(TokenCloseParen) { // fn()
-		return &ast.Call{Callee: left}, nil
+		return &Call{Callee: left}, nil
 	}
 
-	var args []ast.Expression
+	var args []Expression
 	for {
 		p.Consume()
 		arg, err := p.ParseAt(LOWEST)
@@ -150,11 +148,11 @@ func parseCall(p *peruse.Parser[ast.Expression], left ast.Expression, bp peruse.
 		return nil, peruse.UnexpectedAt("FNCALL", err)
 	}
 
-	c := ast.Call{Callee: left, Args: args}
+	c := Call{Callee: left, Args: args}
 	return &c, nil
 }
 
-func parseSubscript(p *peruse.Parser[ast.Expression], left ast.Expression, bp peruse.Precedence) (ast.Expression, error) {
+func parseSubscript(p *peruse.Parser[Expression], left Expression, bp peruse.Precedence) (Expression, error) {
 	p.Consume()
 	index, err := p.ParseAt(LOWEST)
 	if err != nil {
@@ -165,28 +163,28 @@ func parseSubscript(p *peruse.Parser[ast.Expression], left ast.Expression, bp pe
 		return nil, peruse.UnexpectedAt("SUBSCRIPT", err)
 	}
 
-	s := ast.Subscript{Target: left, Index: index}
+	s := Subscript{Target: left, Index: index}
 	return &s, nil
 }
 
-func parseString(p *peruse.Parser[ast.Expression]) (ast.Expression, error) {
-	s := &ast.Literal{Value: p.Cur.Literal, Kind: ast.LiteralStr}
+func parseString(p *peruse.Parser[Expression]) (Expression, error) {
+	s := &Literal{Value: p.Cur.Literal, Kind: LiteralStr}
 	return s, nil
 }
 
-func parseNumber(p *peruse.Parser[ast.Expression]) (ast.Expression, error) {
+func parseNumber(p *peruse.Parser[Expression]) (Expression, error) {
 	n, err := strconv.ParseFloat(p.Cur.Literal, 64)
 	if err != nil {
 		return nil, fmt.Errorf("cannot parse %q as number", p.Cur)
 	}
-	return &ast.Literal{Value: n, Kind: ast.LiteralNum}, nil
+	return &Literal{Value: n, Kind: LiteralNum}, nil
 }
 
-func parseBool(p *peruse.Parser[ast.Expression]) (ast.Expression, error) {
-	return &ast.Literal{Value: p.Cur.Literal == trueWord, Kind: ast.LiteralBool}, nil
+func parseBool(p *peruse.Parser[Expression]) (Expression, error) {
+	return &Literal{Value: p.Cur.Literal == trueWord, Kind: LiteralBool}, nil
 }
 
-func parsePrefixNot(p *peruse.Parser[ast.Expression]) (ast.Expression, error) {
+func parsePrefixNot(p *peruse.Parser[Expression]) (Expression, error) {
 	thisTok := p.Cur
 	p.Consume()
 	target, err := p.ParseAt(NOT)
@@ -195,8 +193,8 @@ func parsePrefixNot(p *peruse.Parser[ast.Expression]) (ast.Expression, error) {
 	}
 	switch thisTok.Literal {
 	case notWord:
-		u := ast.UnaryOp{
-			Op:     ast.UnaryNot,
+		u := UnaryOp{
+			Op:     UnaryNot,
 			Target: target,
 		}
 		return &u, nil
@@ -205,36 +203,36 @@ func parsePrefixNot(p *peruse.Parser[ast.Expression]) (ast.Expression, error) {
 	}
 }
 
-func UnaryOpFromTok(t peruse.Token) ast.UnaryOpKind {
+func UnaryOpFromTok(t peruse.Token) UnaryOpKind {
 	switch t.Literal {
-	case string(ast.UnaryNot):
-		return ast.UnaryNot
+	case string(UnaryNot):
+		return UnaryNot
 	default:
 		panic(fmt.Errorf("invalid unaryop %q", t))
 	}
 }
 
-func BoolOpFromTok(t peruse.Token) ast.BoolOpKind {
+func BoolOpFromTok(t peruse.Token) BoolOpKind {
 	switch s := strings.ToLower(t.Literal); s {
-	case string(ast.BoolOpAnd):
-		return ast.BoolOpAnd
-	case string(ast.BoolOpOr):
-		return ast.BoolOpOr
+	case string(BoolOpAnd):
+		return BoolOpAnd
+	case string(BoolOpOr):
+		return BoolOpOr
 	default:
 		panic(fmt.Errorf("invalid boolop %q", t))
 	}
 }
 
-func BinOpFromTok(t peruse.Token) ast.BinOpKind {
+func BinOpFromTok(t peruse.Token) BinOpKind {
 	switch t.Literal {
-	case string(ast.BinOpLt):
-		return ast.BinOpLt
-	case string(ast.BinOpEq):
-		return ast.BinOpEq
-	case string(ast.BinOpNotEq):
-		return ast.BinOpNotEq
-	case string(ast.BinOpContains):
-		return ast.BinOpContains
+	case string(BinOpLt):
+		return BinOpLt
+	case string(BinOpEq):
+		return BinOpEq
+	case string(BinOpNotEq):
+		return BinOpNotEq
+	case string(BinOpContains):
+		return BinOpContains
 	default:
 		panic(fmt.Errorf("invalid binop %q", t))
 	}

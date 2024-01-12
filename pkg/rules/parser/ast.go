@@ -1,4 +1,4 @@
-package ast
+package parser
 
 type BinOpKind string
 type BoolOpKind string

@@ -3,8 +3,7 @@ package parser
 import (
 	"testing"
 
-	"sudonters/zootler/internal/peruse"
-
+	"github.com/etc-sudonters/substrate/peruse"
 	"github.com/etc-sudonters/substrate/reiterate"
 )
 

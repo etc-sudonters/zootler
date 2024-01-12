@@ -20,7 +20,32 @@ func TestParseRealRule(t *testing.T) {
 		t.Fatal("trailing unparsed content")
 	}
 
-	t.Fatal("task failed successfully")
+	expected := &BoolOp{
+		Left: &Call{
+			Callee: &Identifier{Value: "can_play"},
+			Args: []Expression{
+				&Identifier{Value: "Song_of_Time"},
+			},
+		},
+		Op: "or",
+		Right: &BoolOp{
+			Left: &Identifier{"logic_shadow_mq_invisible_blades"},
+			Op:   "and",
+			Right: &BinOp{
+				Left: &Identifier{Value: "damage_multiplier"},
+				Op:   "!=",
+				Right: &Literal{
+					Kind:  LiteralStr,
+					Value: "ohko",
+				},
+			},
+		},
+	}
+
+	err = Visit(ValidatingVisitor{rule}, expected)
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestParseConstRule(t *testing.T) {
@@ -44,8 +69,8 @@ func TestParseConstRule(t *testing.T) {
 			}
 
 			switch r := rule.(type) {
-			case *Boolean:
-				if r.Value != i.expected {
+			case *Literal:
+				if r.Value != i.expected || r.Kind != LiteralBool {
 					t.Logf("expected to parse %s to ConstRule{ %t }", i.raw, i.expected)
 					t.Logf("instead parsed to %v", r)
 					t.FailNow()
