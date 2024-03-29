@@ -17,11 +17,11 @@ func (f *filter) init(k int) {
 }
 
 func (f filter) include(t entity.ComponentId) {
-	f.i.Set(int(t))
+	f.i.Set(uint64(t))
 }
 
 func (f filter) exclude(t entity.ComponentId) {
-	f.e.Set(int(t))
+	f.e.Set(uint64(t))
 }
 
 func (f filter) test(b bitview) bool {

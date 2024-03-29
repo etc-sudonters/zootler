@@ -1,10 +1,12 @@
 package components
 
+import "sudonters/zootler/internal/entity"
+
 // jq -Mr 'reduce .[] as $x ([]; . + $x.categories // []) | .[]' data/locations.json
 type (
 	Placeable struct{} // ???: should this carry _what_ is placeable here
 
-	DefaultItem          string
+	DefaultItem          entity.Model
 	RecoveryHeart        struct{}
 	ActorOverride        struct{}
 	Beehive              struct{}
