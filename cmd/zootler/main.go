@@ -24,15 +24,13 @@ func (arg missingRequired) Error() string {
 }
 
 type cliOptions struct {
-	logicDir   string `short:"-l" description:"Path to logic files" required:"t"`
-	dataDir    string `short:"-d" description:"Path to data files" required:"t"`
-	visualizer bool   `short:"-v" description:"Open visualizer" required:"f"`
+	logicDir string `short:"-l" description:"Path to logic files" required:"t"`
+	dataDir  string `short:"-d" description:"Path to data files" required:"t"`
 }
 
 func (opts *cliOptions) init() {
 	flag.StringVar(&opts.logicDir, "l", "", "Directory where logic files are located")
 	flag.StringVar(&opts.dataDir, "d", "", "Directory where data files are stored")
-	flag.BoolVar(&opts.visualizer, "v", false, "Open visualizer")
 	flag.Parse()
 }
 
@@ -156,8 +154,10 @@ func loadLocations(path string, storage query.Engine) {
 	}
 
 	var locs []struct {
-		Name string `json:"name"`
-		Type string `json:"type"`
+		Name       string   `json:"name"`
+		Type       string   `json:"type"`
+		Default    string   `json:"vanilla"`
+		Categories []string `json:"categories"`
 	}
 
 	if err := jsonc.Unmarshal(raw, &locs); err != nil {
@@ -185,8 +185,11 @@ func loadItems(path string, storage query.Engine) {
 	}
 
 	var items []struct {
-		Name string `json:"name"`
-		Type string `json:"type"`
+		Name        string                 `json:"name"`
+		Type        string                 `json:"type"`
+		Advancement bool                   `json:"advancement"`
+		Priority    bool                   `json:"priority"`
+		Special     map[string]interface{} `json:"special"`
 	}
 
 	var tok components.Token
