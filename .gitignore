@@ -47,3 +47,4 @@ tags
 zootlr
 !cmd/zootlr
 .worktrees
+inputs/
