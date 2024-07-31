@@ -3,11 +3,14 @@ package components
 import "sudonters/zootler/internal/entity"
 
 type (
-	Name      string
-	Collected struct{}
-	Trick     struct{}
-	Spawn     struct{}
-	Inhabited entity.Model
-	Inhabits  entity.Model
-	Locked    struct{}
+	Collectable struct{}
+	Collected   struct{}
+	DefaultItem entity.Model
+	Inhabited   entity.Model
+	Inhabits    entity.Model
+	Locked      struct{}
+	Name        string
+	Placeable   struct{} // ???: should this carry _what_ is placeable here
+	Spawn       struct{}
+	Trick       struct{}
 )
