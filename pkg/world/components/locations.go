@@ -1,46 +1,51 @@
 package components
 
-// jq -Mr 'reduce .[] as $x ([]; . + $x.categories // []) | .[]' data/locations.json
+// jq -Mr 'reduce .[] as $x ([]; . + $x.categories // []) | .[]' inputs/data/locations.json
 type (
-	Beehives               struct{}
+	Beehive                struct{}
+	Boss                   struct{}
+	BossHeart              struct{}
 	BottomoftheWell        struct{}
 	BottomoftheWellMQ      struct{}
-	Chests                 struct{}
+	Chest                  struct{}
 	Cows                   struct{}
-	Crates                 struct{}
+	Crate                  struct{}
+	Cutscene               struct{}
 	DeathMountain          struct{}
 	DeathMountainCrater    struct{}
 	DeathMountainTrail     struct{}
-	DekuScrubs             struct{}
 	DekuScrubUpgrades      struct{}
+	DekuScrubs             struct{}
 	DekuTree               struct{}
 	DekuTreeMQ             struct{}
 	DesertColossus         struct{}
 	DodongosCavern         struct{}
 	DodongosCavernMQ       struct{}
-	DungeonRewards         struct{}
 	FireTemple             struct{}
 	FireTempleMQ           struct{}
-	FlyingPots             struct{}
+	FlyingPot              struct{}
 	Forest                 struct{}
 	ForestArea             struct{}
 	ForestTemple           struct{}
 	ForestTempleMQ         struct{}
-	Freestandings          struct{}
+	Freestanding           struct{}
 	GanonsCastle           struct{}
 	GanonsCastleMQ         struct{}
 	GanonsTower            struct{}
 	Gerudo                 struct{}
-	GerudosFortress        struct{}
 	GerudoTrainingGround   struct{}
 	GerudoTrainingGroundMQ struct{}
 	GerudoValley           struct{}
+	GerudosFortress        struct{}
 	GoldSkulltulas         struct{}
 	GoronCity              struct{}
 	Graveyard              struct{}
 	GreatFairies           struct{}
+	GrottoScrub            struct{}
 	Grottos                struct{}
 	HauntedWasteland       struct{}
+	Hint                   struct{}
+	HintStone              struct{}
 	HyruleCastle           struct{}
 	HyruleField            struct{}
 	IceCavern              struct{}
@@ -54,21 +59,22 @@ type (
 	LonLonRanch            struct{}
 	LostWoods              struct{}
 	Market                 struct{}
+	MaskShop               struct{}
 	MasterQuest            struct{}
 	Minigames              struct{}
+	NPC                    struct{}
 	NeedSpiritualStones    struct{}
-	NPCs                   struct{}
 	OutsideGanonsCastle    struct{}
-	Pots                   struct{}
-	RupeeTowers            struct{}
+	Pot                    struct{}
+	RupeeTower             struct{}
 	SacredForestMeadow     struct{}
+	Scrub                  struct{}
 	ShadowTemple           struct{}
 	ShadowTempleMQ         struct{}
-	Shops                  struct{}
-	SilverRupees           struct{}
+	Shop                   struct{}
+	SilverRupee            struct{}
 	SkulltulaHouse         struct{}
-	SmallCrates            struct{}
-	Songs                  struct{}
+	SmallCrate             struct{}
 	SpiritTemple           struct{}
 	SpiritTempleMQ         struct{}
 	TempleofTime           struct{}

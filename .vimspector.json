@@ -10,7 +10,7 @@
           "-d",
           "${workspaceRoot}/inputs/data/",
           "-l",
-          "${workspaceRoot}/inputs/logic"
+          "${workspaceRoot}/inputs/logic/glitchless"
         ],
         "mode": "debug",
         "dlvToolPath": "$GOPATH/bin/dlv"
@@ -23,31 +23,6 @@
         "program": "${fileDirname}",
         "args": [],
         "mode": "test",
-        "dlvToolPath": "$GOPATH/bin/dlv"
-      }
-    },
-    "parser": {
-      "adapter": "vscode-go",
-      "configuration": {
-        "request": "launch",
-        "program": "${workspaceRoot}/cmd/parser/",
-        "args": [
-          "-l",
-          "${workspaceRoot}/inputs/logic",
-          "-f",
-          "kind=Check;region=LLR.*;name=.*Chickens"
-        ],
-        "mode": "debug",
-        "dlvToolPath": "$GOPATH/bin/dlv"
-      }
-    },
-    "interpreter": {
-      "adapter": "vscode-go",
-      "configuration": {
-        "request": "launch",
-        "program": "${workspaceRoot}/cmd/repl/",
-        "args": [],
-        "mode": "debug",
         "dlvToolPath": "$GOPATH/bin/dlv"
       }
     }

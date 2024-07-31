@@ -187,6 +187,10 @@ func (e *engine) SetValues(r table.RowId, vs table.Values) error {
 	errs := make([]error, 0)
 
 	for idx, v := range vs {
+		if v == nil {
+			panic("cannot insert nil value")
+		}
+
 		id, err := e.intoColId(v)
 		if err != nil {
 			errs = append(errs, err)

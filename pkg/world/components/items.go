@@ -25,6 +25,11 @@ type (
 	Trade              struct{}
 	Location           struct{}
 	Token              struct{}
+
+	TCGSmallKey struct{}
+
+	Advancement struct{}
+	Priority    struct{}
 )
 
 func (c BossKey) String() string            { return "Boss Key" }

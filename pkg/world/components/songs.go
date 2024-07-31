@@ -1,19 +1,20 @@
 package components
 
 type (
-	OcarinaButton rune
+	OcarinaButton struct{}
+	OcarinaNote   rune
 
 	Song struct {
-		Notes []OcarinaButton
+		Notes []OcarinaNote
 	}
 )
 
 const (
-	OcarinaA OcarinaButton = 'A'
-	OcarinaL               = '<'
-	OcarinaR               = '>'
-	OcarinaU               = '^'
-	OcarinaD               = 'v'
+	OcarinaA OcarinaNote = 'A'
+	OcarinaL             = '<'
+	OcarinaR             = '>'
+	OcarinaU             = '^'
+	OcarinaD             = 'v'
 )
 
 func (c Song) String() string { return "Song" }
