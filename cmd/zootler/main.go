@@ -24,8 +24,8 @@ func (arg missingRequired) Error() string {
 }
 
 type cliOptions struct {
-	logicDir string `short:"-l" description:"Path to logic files" required:"t"`
-	dataDir  string `short:"-d" description:"Path to data files" required:"t"`
+	logicDir string
+	dataDir  string
 }
 
 func (opts *cliOptions) init() {
