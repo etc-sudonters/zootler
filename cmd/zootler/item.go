@@ -26,14 +26,12 @@ func (item FileItem) TableValues() (table.Values, error) {
 		values = append(values, kind)
 	}
 
-	/*
-		if item.Advancement {
-			values = append(values, components.Advancement{})
-		}
-		if item.Priority {
-			values = append(values, components.Priority{})
-		}
-	*/
+	if item.Advancement {
+		values = append(values, components.Advancement{})
+	}
+	if item.Priority {
+		values = append(values, components.Priority{})
+	}
 
 	if special, err := item.special(); err != nil {
 		return nil, err
