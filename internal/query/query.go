@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"sudonters/zootler/internal/bundle"
 	"sudonters/zootler/internal/table"
+	"sudonters/zootler/internal/table/columns"
 
 	"github.com/etc-sudonters/substrate/skelly/bitset"
 )
@@ -24,7 +25,12 @@ func errExists(t reflect.Type) error {
 	return fmt.Errorf("%w: %s", ErrColumnExists, t.Name())
 }
 
+func errNotExists(t reflect.Type) error {
+	return fmt.Errorf("%w: %s", ErrColumnNotExist, t.Name())
+}
+
 type columnIndex map[reflect.Type]table.ColumnId
+type Entry struct{}
 
 type Filter interface {
 	Exists(typ reflect.Type)
@@ -95,11 +101,25 @@ type Engine interface {
 	UnsetValues(r table.RowId, cs table.ColumnIds) error
 }
 
-func NewEngine() *engine {
-	return &engine{
+func ExtractTable(e Engine) (*table.Table, error) {
+	if eng, ok := e.(*engine); ok {
+		return eng.tbl, nil
+	}
+
+	return nil, errors.ErrUnsupported
+}
+
+func NewEngine() (*engine, error) {
+	eng := &engine{
 		columnIndex: columnIndex{nil: 0},
 		tbl:         table.New(),
 	}
+
+	if _, err := eng.CreateColumn(table.BuildColumnOf[Entry](columns.NewBit(Entry{}))); err != nil {
+		return nil, err
+	}
+
+	return eng, nil
 }
 
 type engine struct {
@@ -118,7 +138,7 @@ func (e engine) CreateQuery() Query {
 
 func (e *engine) CreateColumn(c *table.ColumnBuilder) (table.ColumnId, error) {
 	if _, ok := e.columnIndex[c.Type()]; ok {
-		return 0, ErrColumnExists
+		return 0, errExists(c.Type())
 	}
 
 	col, err := e.tbl.CreateColumn(c)
@@ -227,7 +247,7 @@ func (e *engine) intoColId(v table.Value) (table.ColumnId, error) {
 	typ := reflect.TypeOf(v)
 	id, ok := e.columnIndex[typ]
 	if !ok {
-		return 0, errExists(typ)
+		return 0, errNotExists(typ)
 	}
 
 	return id, nil

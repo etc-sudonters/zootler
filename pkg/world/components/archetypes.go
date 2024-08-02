@@ -28,7 +28,7 @@ func (t TokenArchetype) Apply(entity entity.View) error {
 		return err
 	}
 
-	if err := entity.Add(Token{}); err != nil {
+	if err := entity.Add(CollectableGameToken{}); err != nil {
 		return err
 	}
 

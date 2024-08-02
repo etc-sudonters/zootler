@@ -10,6 +10,10 @@ import (
 	"github.com/etc-sudonters/substrate/skelly/bitset"
 )
 
+func buckets(i int) int {
+	return i / 64
+}
+
 type bitpool struct {
 	componentBucketCount int
 	entities             []bitview
@@ -26,7 +30,7 @@ type Settings struct {
 
 func New(s Settings) *bitpool {
 	var b bitpool
-	b.componentBucketCount = bitset.Buckets(s.MaxComponentId)
+	b.componentBucketCount = buckets(s.MaxComponentId)
 	b.entities = make([]bitview, 1, 128)
 	b.table = table.New(s.MaxEntityId)
 	return &b
@@ -34,7 +38,7 @@ func New(s Settings) *bitpool {
 
 func FromTable(tbl *table.Table, maxComponentId int) *bitpool {
 	var b bitpool
-	b.componentBucketCount = bitset.Buckets(maxComponentId)
+	b.componentBucketCount = buckets(maxComponentId)
 	b.table = tbl
 	b.entities = make([]bitview, 128)
 	return &b

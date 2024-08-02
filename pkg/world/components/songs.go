@@ -4,7 +4,7 @@ type (
 	OcarinaButton struct{}
 	OcarinaNote   rune
 
-	Song struct {
+	OcarinaSong struct {
 		Notes []OcarinaNote
 	}
 )
@@ -17,4 +17,4 @@ const (
 	OcarinaD             = 'v'
 )
 
-func (c Song) String() string { return "Song" }
+func (c OcarinaSong) String() string { return "Song" }

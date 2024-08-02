@@ -27,7 +27,7 @@ func (b bitview) Get(w interface{}) error {
 
 func (b bitview) addMany(cs []entity.Component) error {
 	for _, c := range cs {
-		if err := b.Add(c); err != nil {
+		if err := b.p.addCompToEnt(b, c); err != nil {
 			return err
 		}
 	}

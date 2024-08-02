@@ -16,7 +16,7 @@ func NotCollected(b entity.FilterBuilder) entity.FilterBuilder {
 }
 
 func Song(b entity.FilterBuilder) entity.FilterBuilder {
-	return b.With(mirrors.TypeOf[components.Song]())
+	return b.With(mirrors.TypeOf[components.OcarinaSong]())
 }
 
 func Placeable(b entity.FilterBuilder) entity.FilterBuilder {
@@ -24,7 +24,7 @@ func Placeable(b entity.FilterBuilder) entity.FilterBuilder {
 }
 
 func Item(b entity.FilterBuilder) entity.FilterBuilder {
-	return b.With(mirrors.TypeOf[components.Token]())
+	return b.With(mirrors.TypeOf[components.CollectableGameToken]())
 }
 
 func Location(b entity.FilterBuilder) entity.FilterBuilder {

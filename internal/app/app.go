@@ -53,7 +53,12 @@ func LoadLogicFiles(ll LogicLoader) ZootlrConfig {
 
 func NewApp(ctx context.Context, ops ...ZootlrConfig) (*Zootlr, error) {
 	var z Zootlr
-	z.storage = query.NewEngine()
+	var engineError error
+	z.storage, engineError = query.NewEngine()
+	if engineError != nil {
+		return nil, engineError
+	}
+
 	z.ctx, z.cancel = context.WithCancelCause(ctx)
 	for i := range ops {
 		if err := ops[i](&z); err != nil {

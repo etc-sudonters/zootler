@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"sudonters/zootler/internal/query"
 	"sudonters/zootler/internal/table"
 	"sudonters/zootler/pkg/world/components"
 )
@@ -14,104 +15,121 @@ type FileItem struct {
 	Special     map[string]interface{} `json:"special"`
 }
 
-func (item FileItem) TableValues() (table.Values, error) {
-	values := []table.Value{
-		components.Name(item.Name),
-		components.Token{},
+func (item FileItem) GetName() components.Name {
+	return components.Name(item.Name)
+}
+
+func (item FileItem) AddComponents(rid table.RowId, storage query.Engine) error {
+	if err := storage.SetValues(rid, table.Values{components.CollectableGameToken{}}); err != nil {
+		return err
 	}
 
-	if kind, err := item.kind(); err != nil {
-		return nil, err
-	} else {
-		values = append(values, kind)
+	if kindErr := item.kind(rid, storage); kindErr != nil {
+		return kindErr
 	}
 
 	if item.Advancement {
-		values = append(values, components.Advancement{})
+		if err := storage.SetValues(rid, table.Values{components.Advancement{}}); err != nil {
+			return err
+		}
 	}
 	if item.Priority {
-		values = append(values, components.Priority{})
+		if err := storage.SetValues(rid, table.Values{components.Priority{}}); err != nil {
+			return err
+		}
 	}
 
-	if special, err := item.special(); err != nil {
-		return nil, err
-	} else {
-		values = append(values, special...)
+	if specialErr := item.special(rid, storage); specialErr != nil {
+		return specialErr
 	}
 
-	return table.Values(values), nil
+	return nil
 }
 
-func (item FileItem) kind() (table.Value, error) {
-	switch normalize(item.Type) {
-	case "bosskey":
-		return components.BossKey{}, nil
-	case "compass":
-		return components.Compass{}, nil
-	case "drop":
-		return components.Drop{}, nil
-	case "dungeonreward":
-		return components.DungeonReward{}, nil
-	case "event":
-		return components.Event{}, nil
-	case "ganonbosskey":
-		return components.GanonBossKey{}, nil
-	case "hideoutsmallkey":
-		return components.HideoutSmallKey{}, nil
-	case "item":
-		return components.Item{}, nil
-	case "map":
-		return components.Map{}, nil
-	case "refill":
-		return components.Refill{}, nil
-	case "shop":
-		return components.Shop{}, nil
-	case "silverrupee":
-		return components.SilverRupee{}, nil
-	case "smallkey":
-		return components.SmallKey{}, nil
-	case "song":
-		return components.Song{}, nil
-	case "tcgsmallkey":
-		return components.TCGSmallKey{}, nil
-	case "token":
-		return components.GoldSkulltulaToken{}, nil
+func (item FileItem) kind(rid table.RowId, storage query.Engine) error {
+	switch item.Type {
+	case "BossKey":
+		return storage.SetValues(rid, table.Values{components.BossKey{}})
+	case "Compass":
+		return storage.SetValues(rid, table.Values{components.Compass{}})
+	case "Drop":
+		return storage.SetValues(rid, table.Values{components.Drop{}})
+	case "DungeonReward":
+		return storage.SetValues(rid, table.Values{components.DungeonReward{}})
+	case "Event":
+		return storage.SetValues(rid, table.Values{components.Event{}})
+	case "GanonBossKey":
+		return storage.SetValues(rid, table.Values{components.GanonBossKey{}})
+	case "HideoutSmallKey":
+		return storage.SetValues(rid, table.Values{components.HideoutSmallKey{}})
+	case "Item":
+		return storage.SetValues(rid, table.Values{components.Item{}})
+	case "Map":
+		return storage.SetValues(rid, table.Values{components.Map{}})
+	case "Refill":
+		return storage.SetValues(rid, table.Values{components.Refill{}})
+	case "Shop":
+		return storage.SetValues(rid, table.Values{components.Shop{}})
+	case "SilverRupee":
+		return storage.SetValues(rid, table.Values{components.SilverRupee{}})
+	case "SmallKey":
+		return storage.SetValues(rid, table.Values{components.SmallKey{}})
+	case "Song":
+		return storage.SetValues(rid, table.Values{components.Song{}})
+	case "TCGSmallKey":
+		return storage.SetValues(rid, table.Values{components.TCGSmallKey{}})
+	case "Token":
+		return storage.SetValues(rid, table.Values{components.GoldSkulltulaToken{}})
+	default:
+		return fmt.Errorf("unknown item type '%s'", item.Type)
 	}
-	return nil, fmt.Errorf("unknown item type '%s'", item.Type)
+
 }
 
-func (item FileItem) special() (table.Values, error) {
-	var values table.Values
-
+func (item FileItem) special(rid table.RowId, storage query.Engine) error {
 	if price, ok := item.Special["price"]; ok {
 		if price, ok := price.(float64); ok {
-			values = append(values, components.Price(price))
+			if err := storage.SetValues(rid, table.Values{components.Price(price)}); err != nil {
+				return err
+			}
 		}
 	}
 
 	if _, ok := item.Special["bottle"]; ok {
-		values = append(values, components.Bottle{})
+		if err := storage.SetValues(rid, table.Values{components.Bottle{}}); err != nil {
+			return err
+		}
 	}
 
 	if _, ok := item.Special["ocarina_button"]; ok {
-		values = append(values, components.OcarinaButton{})
+		if err := storage.SetValues(rid, table.Values{components.OcarinaButton{}}); err != nil {
+			return err
+		}
 	}
 
 	if _, ok := item.Special["junk"]; ok {
-		values = append(values, components.Junk{})
+		if err := storage.SetValues(rid, table.Values{components.Junk{}}); err != nil {
+			return err
+		}
 	}
 
 	if _, ok := item.Special["medallion"]; ok {
-		values = append(values, components.Medallion{})
+		if err := storage.SetValues(rid, table.Values{components.Medallion{}}); err != nil {
+			return err
+		}
 	}
 
 	if _, ok := item.Special["stone"]; ok {
-		values = append(values, components.SpiritualStone{})
+		if err := storage.SetValues(rid, table.Values{components.SpiritualStone{}}); err != nil {
+			return err
+		}
 	}
 
 	if _, ok := item.Special["trade"]; ok {
-		values = append(values, components.Trade{})
+		if err := storage.SetValues(rid, table.Values{components.Trade{}}); err != nil {
+			return err
+		}
 	}
 
-	return values, nil
+	return nil
 }

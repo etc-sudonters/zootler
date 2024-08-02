@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"sudonters/zootler/internal/query"
 	"sudonters/zootler/internal/table"
 	"sudonters/zootler/pkg/world/components"
 )
@@ -21,323 +22,479 @@ type FileLocation struct {
 	Categories []string `json:"categories"`
 }
 
-func (item FileLocation) TableValues() (table.Values, error) {
-	values := table.Values{components.Name(item.Name), components.Location{}}
-
-	if kind, err := item.kind(); err != nil {
-		return nil, err
-	} else {
-		values = append(values, kind)
-	}
-
-	if categories, err := item.categories(); err != nil {
-		return nil, err
-	} else {
-		values = append(values, categories...)
-	}
-
-	return values, nil
+func (item FileLocation) GetName() components.Name {
+	return components.Name(item.Name)
 }
 
-func (item FileLocation) kind() (table.Value, error) {
+func (item FileLocation) AddComponents(rid table.RowId, storage query.Engine) error {
+	if err := storage.SetValues(rid, table.Values{components.Location{}}); err != nil {
+		return err
+	}
+
+	if err := item.kind(rid, storage); err != nil {
+		return err
+	}
+
+	if err := item.categories(rid, storage); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (item FileLocation) kind(rid table.RowId, storage query.Engine) error {
 	switch normalize(item.Type) {
 	case "beehive":
-		return components.Beehive{}, nil
+		return storage.SetValues(rid, table.Values{components.Beehive{}})
 	case "boss":
-		return components.Boss{}, nil
+		return storage.SetValues(rid, table.Values{components.Boss{}})
 	case "bossheart":
-		return components.BossHeart{}, nil
+		return storage.SetValues(rid, table.Values{components.BossHeart{}})
 	case "chest":
-		return components.Chest{}, nil
+		return storage.SetValues(rid, table.Values{components.Chest{}})
 	case "collectable":
-		return components.Collectable{}, nil
+		return storage.SetValues(rid, table.Values{components.Collectable{}})
 	case "crate":
-		return components.Crate{}, nil
+		return storage.SetValues(rid, table.Values{components.Crate{}})
 	case "cutscene":
-		return components.Cutscene{}, nil
+		return storage.SetValues(rid, table.Values{components.Cutscene{}})
 	case "drop":
-		return components.Drop{}, nil
+		return storage.SetValues(rid, table.Values{components.Drop{}})
 	case "event":
-		return components.Event{}, nil
+		return storage.SetValues(rid, table.Values{components.Event{}})
 	case "flyingpot":
-		return components.FlyingPot{}, nil
+		return storage.SetValues(rid, table.Values{components.FlyingPot{}})
 	case "freestanding":
-		return components.Freestanding{}, nil
+		return storage.SetValues(rid, table.Values{components.Freestanding{}})
 	case "grottoscrub":
-		return components.GrottoScrub{}, nil
+		return storage.SetValues(rid, table.Values{components.GrottoScrub{}})
 	case "gstoken":
-		return components.GoldSkulltulaToken{}, nil
+		return storage.SetValues(rid, table.Values{components.GoldSkulltulaToken{}})
 	case "hint":
-		return components.Hint{}, nil
+		return storage.SetValues(rid, table.Values{components.Hint{}})
 	case "hintstone":
-		return components.HintStone{}, nil
+		return storage.SetValues(rid, table.Values{components.HintStone{}})
 	case "maskshop":
-		return components.MaskShop{}, nil
+		return storage.SetValues(rid, table.Values{components.MaskShop{}})
 	case "npc":
-		return components.NPC{}, nil
+		return storage.SetValues(rid, table.Values{components.NPC{}})
 	case "pot":
-		return components.Pot{}, nil
+		return storage.SetValues(rid, table.Values{components.Pot{}})
 	case "rupeetower":
-		return components.RupeeTower{}, nil
+		return storage.SetValues(rid, table.Values{components.RupeeTower{}})
 	case "scrub":
-		return components.Scrub{}, nil
+		return storage.SetValues(rid, table.Values{components.Scrub{}})
 	case "shop":
-		return components.Shop{}, nil
+		return storage.SetValues(rid, table.Values{components.Shop{}})
 	case "silverrupee":
-		return components.SilverRupee{}, nil
+		return storage.SetValues(rid, table.Values{components.SilverRupee{}})
 	case "smallcrate":
-		return components.SmallCrate{}, nil
+		return storage.SetValues(rid, table.Values{components.SmallCrate{}})
 	case "song":
-		return components.Song{}, nil
+		return storage.SetValues(rid, table.Values{components.Song{}})
 	case "wonderitem":
-		return components.Wonderitem{}, nil
+		return storage.SetValues(rid, table.Values{components.Wonderitem{}})
 	}
 
-	return nil, fmt.Errorf("unknown location type '%s'", item.Type)
+	return fmt.Errorf("unknown location type '%s'", item.Type)
 }
 
-func (item FileLocation) categories() (values table.Values, err error) {
+func (item FileLocation) categories(rid table.RowId, storage query.Engine) error {
 	for _, category := range item.Categories {
 		switch normalize(category) {
 		case "beehives":
-			values = append(values, components.Beehive{})
+			if err := storage.SetValues(rid, table.Values{components.Beehive{}}); err != nil {
+				return err
+			}
 			break
 		case "bottomofthewell":
-			values = append(values, components.BottomoftheWell{})
+			if err := storage.SetValues(rid, table.Values{components.BottomoftheWell{}}); err != nil {
+				return err
+			}
 			break
 		case "bottomofthewellmq":
-			values = append(values, components.BottomoftheWellMQ{})
+			if err := storage.SetValues(rid, table.Values{components.BottomoftheWellMQ{}}); err != nil {
+				return err
+			}
 			break
 		case "chests":
-			values = append(values, components.Chest{})
+			if err := storage.SetValues(rid, table.Values{components.Chest{}}); err != nil {
+				return err
+			}
 			break
 		case "cows":
-			values = append(values, components.Cows{})
+			if err := storage.SetValues(rid, table.Values{components.Cows{}}); err != nil {
+				return err
+			}
 			break
 		case "crates":
-			values = append(values, components.Crate{})
+			if err := storage.SetValues(rid, table.Values{components.Crate{}}); err != nil {
+				return err
+			}
 			break
 		case "deathmountain":
-			values = append(values, components.DeathMountain{})
+			if err := storage.SetValues(rid, table.Values{components.DeathMountain{}}); err != nil {
+				return err
+			}
 			break
 		case "deathmountaincrater":
-			values = append(values, components.DeathMountainCrater{})
+			if err := storage.SetValues(rid, table.Values{components.DeathMountainCrater{}}); err != nil {
+				return err
+			}
 			break
 		case "deathmountaintrail":
-			values = append(values, components.DeathMountainTrail{})
+			if err := storage.SetValues(rid, table.Values{components.DeathMountainTrail{}}); err != nil {
+				return err
+			}
 			break
 		case "dekuscrubs":
-			values = append(values, components.DekuScrubs{})
+			if err := storage.SetValues(rid, table.Values{components.DekuScrubs{}}); err != nil {
+				return err
+			}
 			break
 		case "dekuscrubupgrades":
-			values = append(values, components.DekuScrubUpgrades{})
+			if err := storage.SetValues(rid, table.Values{components.DekuScrubUpgrades{}}); err != nil {
+				return err
+			}
 			break
 		case "dekutree":
-			values = append(values, components.DekuTree{})
+			if err := storage.SetValues(rid, table.Values{components.DekuTree{}}); err != nil {
+				return err
+			}
 			break
 		case "dekutreemq":
-			values = append(values, components.DekuTreeMQ{})
+			if err := storage.SetValues(rid, table.Values{components.DekuTreeMQ{}}); err != nil {
+				return err
+			}
 			break
 		case "desertcolossus":
-			values = append(values, components.DesertColossus{})
+			if err := storage.SetValues(rid, table.Values{components.DesertColossus{}}); err != nil {
+				return err
+			}
 			break
 		case "dodongoscavern":
-			values = append(values, components.DodongosCavern{})
+			if err := storage.SetValues(rid, table.Values{components.DodongosCavern{}}); err != nil {
+				return err
+			}
 			break
 		case "dodongoscavernmq":
-			values = append(values, components.DodongosCavernMQ{})
+			if err := storage.SetValues(rid, table.Values{components.DodongosCavernMQ{}}); err != nil {
+				return err
+			}
 			break
 		case "dungeonrewards":
-			values = append(values, components.DungeonReward{})
+			if err := storage.SetValues(rid, table.Values{components.DungeonReward{}}); err != nil {
+				return err
+			}
 			break
 		case "firetemple":
-			values = append(values, components.FireTemple{})
+			if err := storage.SetValues(rid, table.Values{components.FireTemple{}}); err != nil {
+				return err
+			}
 			break
 		case "firetemplemq":
-			values = append(values, components.FireTempleMQ{})
+			if err := storage.SetValues(rid, table.Values{components.FireTempleMQ{}}); err != nil {
+				return err
+			}
 			break
 		case "flyingpots":
-			values = append(values, components.FlyingPot{})
+			if err := storage.SetValues(rid, table.Values{components.FlyingPot{}}); err != nil {
+				return err
+			}
 			break
 		case "forest":
-			values = append(values, components.Forest{})
+			if err := storage.SetValues(rid, table.Values{components.Forest{}}); err != nil {
+				return err
+			}
 			break
 		case "forestarea":
-			values = append(values, components.ForestArea{})
+			if err := storage.SetValues(rid, table.Values{components.ForestArea{}}); err != nil {
+				return err
+			}
 			break
 		case "foresttemple":
-			values = append(values, components.ForestTemple{})
+			if err := storage.SetValues(rid, table.Values{components.ForestTemple{}}); err != nil {
+				return err
+			}
 			break
 		case "foresttemplemq":
-			values = append(values, components.ForestTempleMQ{})
+			if err := storage.SetValues(rid, table.Values{components.ForestTempleMQ{}}); err != nil {
+				return err
+			}
 			break
 		case "freestandings":
-			values = append(values, components.Freestanding{})
+			if err := storage.SetValues(rid, table.Values{components.Freestanding{}}); err != nil {
+				return err
+			}
 			break
 		case "ganonscastle":
-			values = append(values, components.GanonsCastle{})
+			if err := storage.SetValues(rid, table.Values{components.GanonsCastle{}}); err != nil {
+				return err
+			}
 			break
 		case "ganonscastlemq":
-			values = append(values, components.GanonsCastleMQ{})
+			if err := storage.SetValues(rid, table.Values{components.GanonsCastleMQ{}}); err != nil {
+				return err
+			}
 			break
 		case "ganonstower":
-			values = append(values, components.GanonsTower{})
+			if err := storage.SetValues(rid, table.Values{components.GanonsTower{}}); err != nil {
+				return err
+			}
 			break
 		case "gerudo":
-			values = append(values, components.Gerudo{})
+			if err := storage.SetValues(rid, table.Values{components.Gerudo{}}); err != nil {
+				return err
+			}
 			break
 		case "gerudosfortress":
-			values = append(values, components.GerudosFortress{})
+			if err := storage.SetValues(rid, table.Values{components.GerudosFortress{}}); err != nil {
+				return err
+			}
 			break
 		case "gerudotrainingground":
-			values = append(values, components.GerudoTrainingGround{})
+			if err := storage.SetValues(rid, table.Values{components.GerudoTrainingGround{}}); err != nil {
+				return err
+			}
 			break
 		case "gerudotraininggroundmq":
-			values = append(values, components.GerudoTrainingGroundMQ{})
+			if err := storage.SetValues(rid, table.Values{components.GerudoTrainingGroundMQ{}}); err != nil {
+				return err
+			}
 			break
 		case "gerudovalley":
-			values = append(values, components.GerudoValley{})
+			if err := storage.SetValues(rid, table.Values{components.GerudoValley{}}); err != nil {
+				return err
+			}
 			break
 		case "goldskulltulas":
-			values = append(values, components.GoldSkulltulas{})
+			if err := storage.SetValues(rid, table.Values{components.GoldSkulltulas{}}); err != nil {
+				return err
+			}
 			break
 		case "goroncity":
-			values = append(values, components.GoronCity{})
+			if err := storage.SetValues(rid, table.Values{components.GoronCity{}}); err != nil {
+				return err
+			}
 			break
 		case "graveyard":
-			values = append(values, components.Graveyard{})
+			if err := storage.SetValues(rid, table.Values{components.Graveyard{}}); err != nil {
+				return err
+			}
 			break
 		case "greatfairies":
-			values = append(values, components.GreatFairies{})
+			if err := storage.SetValues(rid, table.Values{components.GreatFairies{}}); err != nil {
+				return err
+			}
 			break
 		case "grottos":
-			values = append(values, components.Grottos{})
+			if err := storage.SetValues(rid, table.Values{components.Grottos{}}); err != nil {
+				return err
+			}
 			break
 		case "hauntedwasteland":
-			values = append(values, components.HauntedWasteland{})
+			if err := storage.SetValues(rid, table.Values{components.HauntedWasteland{}}); err != nil {
+				return err
+			}
 			break
 		case "hyrulecastle":
-			values = append(values, components.HyruleCastle{})
+			if err := storage.SetValues(rid, table.Values{components.HyruleCastle{}}); err != nil {
+				return err
+			}
 			break
 		case "hyrulefield":
-			values = append(values, components.HyruleField{})
+			if err := storage.SetValues(rid, table.Values{components.HyruleField{}}); err != nil {
+				return err
+			}
 			break
 		case "icecavern":
-			values = append(values, components.IceCavern{})
+			if err := storage.SetValues(rid, table.Values{components.IceCavern{}}); err != nil {
+				return err
+			}
 			break
 		case "icecavernmq":
-			values = append(values, components.IceCavernMQ{})
+			if err := storage.SetValues(rid, table.Values{components.IceCavernMQ{}}); err != nil {
+				return err
+			}
 			break
 		case "jabujabusbelly":
-			values = append(values, components.JabuJabusBelly{})
+			if err := storage.SetValues(rid, table.Values{components.JabuJabusBelly{}}); err != nil {
+				return err
+			}
 			break
 		case "jabujabusbellymq":
-			values = append(values, components.JabuJabusBellyMQ{})
+			if err := storage.SetValues(rid, table.Values{components.JabuJabusBellyMQ{}}); err != nil {
+				return err
+			}
 			break
 		case "kakariko":
-			values = append(values, components.Kakariko{})
+			if err := storage.SetValues(rid, table.Values{components.Kakariko{}}); err != nil {
+				return err
+			}
 			break
 		case "kakarikovillage":
-			values = append(values, components.KakarikoVillage{})
+			if err := storage.SetValues(rid, table.Values{components.KakarikoVillage{}}); err != nil {
+				return err
+			}
 			break
 		case "kokiriforest":
-			values = append(values, components.KokiriForest{})
+			if err := storage.SetValues(rid, table.Values{components.KokiriForest{}}); err != nil {
+				return err
+			}
 			break
 		case "lakehylia":
-			values = append(values, components.LakeHylia{})
+			if err := storage.SetValues(rid, table.Values{components.LakeHylia{}}); err != nil {
+				return err
+			}
 			break
 		case "lonlonranch":
-			values = append(values, components.LonLonRanch{})
+			if err := storage.SetValues(rid, table.Values{components.LonLonRanch{}}); err != nil {
+				return err
+			}
 			break
 		case "lostwoods":
-			values = append(values, components.LostWoods{})
+			if err := storage.SetValues(rid, table.Values{components.LostWoods{}}); err != nil {
+				return err
+			}
 			break
 		case "market":
-			values = append(values, components.Market{})
+			if err := storage.SetValues(rid, table.Values{components.Market{}}); err != nil {
+				return err
+			}
 			break
 		case "masterquest":
-			values = append(values, components.MasterQuest{})
+			if err := storage.SetValues(rid, table.Values{components.MasterQuest{}}); err != nil {
+				return err
+			}
 			break
 		case "minigames":
-			values = append(values, components.Minigames{})
+			if err := storage.SetValues(rid, table.Values{components.Minigames{}}); err != nil {
+				return err
+			}
 			break
 		case "needspiritualstones":
-			values = append(values, components.NeedSpiritualStones{})
+			if err := storage.SetValues(rid, table.Values{components.NeedSpiritualStones{}}); err != nil {
+				return err
+			}
 			break
 		case "npcs":
-			values = append(values, components.NPC{})
+			if err := storage.SetValues(rid, table.Values{components.NPC{}}); err != nil {
+				return err
+			}
 			break
 		case "outsideganonscastle":
-			values = append(values, components.OutsideGanonsCastle{})
+			if err := storage.SetValues(rid, table.Values{components.OutsideGanonsCastle{}}); err != nil {
+				return err
+			}
 			break
 		case "pots":
-			values = append(values, components.Pot{})
+			if err := storage.SetValues(rid, table.Values{components.Pot{}}); err != nil {
+				return err
+			}
 			break
 		case "rupeetowers":
-			values = append(values, components.RupeeTower{})
+			if err := storage.SetValues(rid, table.Values{components.RupeeTower{}}); err != nil {
+				return err
+			}
 			break
 		case "sacredforestmeadow":
-			values = append(values, components.SacredForestMeadow{})
+			if err := storage.SetValues(rid, table.Values{components.SacredForestMeadow{}}); err != nil {
+				return err
+			}
 			break
 		case "shadowtemple":
-			values = append(values, components.ShadowTemple{})
+			if err := storage.SetValues(rid, table.Values{components.ShadowTemple{}}); err != nil {
+				return err
+			}
 			break
 		case "shadowtemplemq":
-			values = append(values, components.ShadowTempleMQ{})
+			if err := storage.SetValues(rid, table.Values{components.ShadowTempleMQ{}}); err != nil {
+				return err
+			}
 			break
 		case "shops":
-			values = append(values, components.Shop{})
+			if err := storage.SetValues(rid, table.Values{components.Shop{}}); err != nil {
+				return err
+			}
 			break
 		case "silverrupees":
-			values = append(values, components.SilverRupee{})
+			if err := storage.SetValues(rid, table.Values{components.SilverRupee{}}); err != nil {
+				return err
+			}
 			break
 		case "skulltulahouse":
-			values = append(values, components.SkulltulaHouse{})
+			if err := storage.SetValues(rid, table.Values{components.SkulltulaHouse{}}); err != nil {
+				return err
+			}
 			break
 		case "smallcrates":
-			values = append(values, components.SmallCrate{})
+			if err := storage.SetValues(rid, table.Values{components.SmallCrate{}}); err != nil {
+				return err
+			}
 			break
 		case "songs":
-			values = append(values, components.Song{})
+			if err := storage.SetValues(rid, table.Values{components.OcarinaSong{}}); err != nil {
+				return err
+			}
 			break
 		case "spirittemple":
-			values = append(values, components.SpiritTemple{})
+			if err := storage.SetValues(rid, table.Values{components.SpiritTemple{}}); err != nil {
+				return err
+			}
 			break
 		case "spirittemplemq":
-			values = append(values, components.SpiritTempleMQ{})
+			if err := storage.SetValues(rid, table.Values{components.SpiritTempleMQ{}}); err != nil {
+				return err
+			}
 			break
 		case "templeoftime":
-			values = append(values, components.TempleofTime{})
+			if err := storage.SetValues(rid, table.Values{components.TempleofTime{}}); err != nil {
+				return err
+			}
 			break
 		case "thieveshideout":
-			values = append(values, components.ThievesHideout{})
+			if err := storage.SetValues(rid, table.Values{components.ThievesHideout{}}); err != nil {
+				return err
+			}
 			break
 		case "vanilladungeons":
-			values = append(values, components.VanillaDungeons{})
+			if err := storage.SetValues(rid, table.Values{components.VanillaDungeons{}}); err != nil {
+				return err
+			}
 			break
 		case "watertemple":
-			values = append(values, components.WaterTemple{})
+			if err := storage.SetValues(rid, table.Values{components.WaterTemple{}}); err != nil {
+				return err
+			}
 			break
 		case "watertemplemq":
-			values = append(values, components.WaterTempleMQ{})
+			if err := storage.SetValues(rid, table.Values{components.WaterTempleMQ{}}); err != nil {
+				return err
+			}
 			break
 		case "wonderitem":
-			values = append(values, components.Wonderitem{})
+			if err := storage.SetValues(rid, table.Values{components.Wonderitem{}}); err != nil {
+				return err
+			}
 			break
 		case "zorasdomain":
-			values = append(values, components.ZorasDomain{})
+			if err := storage.SetValues(rid, table.Values{components.ZorasDomain{}}); err != nil {
+				return err
+			}
 			break
 		case "zorasfountain":
-			values = append(values, components.ZorasFountain{})
+			if err := storage.SetValues(rid, table.Values{components.ZorasFountain{}}); err != nil {
+				return err
+			}
 			break
 		case "zorasriver":
-			values = append(values, components.ZorasRiver{})
+			if err := storage.SetValues(rid, table.Values{components.ZorasRiver{}}); err != nil {
+				return err
+			}
 			break
 		default:
-			err = fmt.Errorf("unknown category '%s'", category)
-			return
+			return fmt.Errorf("unknown category '%s'", category)
 		}
 	}
-
-	return
+	return nil
 }

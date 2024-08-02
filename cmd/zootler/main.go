@@ -7,6 +7,7 @@ import (
 	"os"
 	"runtime/debug"
 	"sudonters/zootler/internal/app"
+	"sudonters/zootler/pkg/world/components"
 
 	"github.com/etc-sudonters/substrate/dontio"
 	"github.com/etc-sudonters/substrate/stageleft"
@@ -41,6 +42,12 @@ func (c cliOptions) validate() error {
 	return nil
 }
 
+type std struct{ *dontio.Std }
+
+func (s std) WriteLineOut(msg string, v ...any) {
+	fmt.Fprintf(s.Out, msg+"\n", v...)
+}
+
 func main() {
 	var opts cliOptions
 	var appExitCode stageleft.ExitCode = stageleft.ExitSuccess
@@ -67,6 +74,7 @@ func main() {
 	exitWithErr := func(code stageleft.ExitCode, err error) {
 		appExitCode = code
 		fmt.Fprintf(stdio.Err, "%s\n", err.Error())
+		panic("aaaH!")
 	}
 
 	ctx := context.Background()
@@ -80,7 +88,127 @@ func main() {
 	}
 
 	app, err := app.NewApp(ctx,
-		app.ConfigureStorage(CreateStorage{}),
+		app.ConfigureStorage(CreateScheme{DDL: []DDL{
+			BitColumnOf[components.Advancement],
+			BitColumnOf[components.Beehive],
+			BitColumnOf[components.BossHeart],
+			BitColumnOf[components.BossKey],
+			BitColumnOf[components.Boss],
+			BitColumnOf[components.Bottle],
+			BitColumnOf[components.BottomoftheWellMQ],
+			BitColumnOf[components.BottomoftheWell],
+			BitColumnOf[components.Chest],
+			BitColumnOf[components.CollectableGameToken],
+			BitColumnOf[components.Collectable],
+			BitColumnOf[components.Collected],
+			BitColumnOf[components.Compass],
+			BitColumnOf[components.Cows],
+			BitColumnOf[components.Crate],
+			BitColumnOf[components.Cutscene],
+			BitColumnOf[components.DeathMountainCrater],
+			BitColumnOf[components.DeathMountainTrail],
+			BitColumnOf[components.DeathMountain],
+			BitColumnOf[components.DekuScrubUpgrades],
+			BitColumnOf[components.DekuScrubs],
+			BitColumnOf[components.DekuTreeMQ],
+			BitColumnOf[components.DekuTree],
+			BitColumnOf[components.DesertColossus],
+			BitColumnOf[components.DodongosCavernMQ],
+			BitColumnOf[components.DodongosCavern],
+			BitColumnOf[components.Drop],
+			BitColumnOf[components.DungeonReward],
+			BitColumnOf[components.Event],
+			BitColumnOf[components.FireTempleMQ],
+			BitColumnOf[components.FireTemple],
+			BitColumnOf[components.FlyingPot],
+			BitColumnOf[components.ForestArea],
+			BitColumnOf[components.ForestTempleMQ],
+			BitColumnOf[components.ForestTemple],
+			BitColumnOf[components.Forest],
+			BitColumnOf[components.Freestanding],
+			BitColumnOf[components.GanonBossKey],
+			BitColumnOf[components.GanonsCastleMQ],
+			BitColumnOf[components.GanonsCastle],
+			BitColumnOf[components.GanonsTower],
+			BitColumnOf[components.GerudoTrainingGroundMQ],
+			BitColumnOf[components.GerudoTrainingGround],
+			BitColumnOf[components.GerudoValley],
+			BitColumnOf[components.Gerudo],
+			BitColumnOf[components.GerudosFortress],
+			BitColumnOf[components.GoldSkulltulaToken],
+			BitColumnOf[components.GoldSkulltulas],
+			BitColumnOf[components.GoronCity],
+			BitColumnOf[components.Graveyard],
+			BitColumnOf[components.GreatFairies],
+			BitColumnOf[components.GrottoScrub],
+			BitColumnOf[components.Grottos],
+			BitColumnOf[components.HauntedWasteland],
+			BitColumnOf[components.HideoutSmallKey],
+			BitColumnOf[components.HintStone],
+			BitColumnOf[components.Hint],
+			BitColumnOf[components.HyruleCastle],
+			BitColumnOf[components.HyruleField],
+			BitColumnOf[components.IceCavernMQ],
+			BitColumnOf[components.IceCavern],
+			BitColumnOf[components.Item],
+			BitColumnOf[components.JabuJabusBellyMQ],
+			BitColumnOf[components.JabuJabusBelly],
+			BitColumnOf[components.Junk],
+			BitColumnOf[components.KakarikoVillage],
+			BitColumnOf[components.Kakariko],
+			BitColumnOf[components.KokiriForest],
+			BitColumnOf[components.LakeHylia],
+			BitColumnOf[components.Location],
+			BitColumnOf[components.LonLonRanch],
+			BitColumnOf[components.LostWoods],
+			BitColumnOf[components.Map],
+			BitColumnOf[components.Market],
+			BitColumnOf[components.MaskShop],
+			BitColumnOf[components.MasterQuest],
+			BitColumnOf[components.Medallion],
+			BitColumnOf[components.Minigames],
+			BitColumnOf[components.NPC],
+			BitColumnOf[components.NeedSpiritualStones],
+			BitColumnOf[components.OutsideGanonsCastle],
+			BitColumnOf[components.Pot],
+			BitColumnOf[components.Priority],
+			BitColumnOf[components.Refill],
+			BitColumnOf[components.RupeeTower],
+			BitColumnOf[components.SacredForestMeadow],
+			BitColumnOf[components.Scrub],
+			BitColumnOf[components.ShadowTempleMQ],
+			BitColumnOf[components.ShadowTemple],
+			BitColumnOf[components.Shop],
+			BitColumnOf[components.SilverRupee],
+			BitColumnOf[components.SkulltulaHouse],
+			BitColumnOf[components.SmallCrate],
+			BitColumnOf[components.SmallKey],
+			BitColumnOf[components.SpiritTempleMQ],
+			BitColumnOf[components.SpiritTemple],
+			BitColumnOf[components.SpiritualStone],
+			BitColumnOf[components.TCGSmallKey],
+			BitColumnOf[components.TempleofTime],
+			BitColumnOf[components.ThievesHideout],
+			BitColumnOf[components.Trade],
+			BitColumnOf[components.VanillaDungeons],
+			BitColumnOf[components.WaterTempleMQ],
+			BitColumnOf[components.WaterTemple],
+			BitColumnOf[components.Wonderitem],
+			BitColumnOf[components.ZorasDomain],
+			BitColumnOf[components.ZorasFountain],
+			BitColumnOf[components.ZorasRiver],
+			MapColumn[components.Count],
+			MapColumn[components.Price],
+			MapColumn[components.ShopObject],
+			MapColumn[components.OcarinaButton],
+			MapColumn[components.OcarinaNote],
+			MapColumn[components.OcarinaSong],
+			MapColumn[components.Song],
+			SliceColumn[components.DefaultItem],
+			SliceColumn[components.Inhabited],
+			SliceColumn[components.Inhabits],
+			SliceColumn[components.Name],
+		}}),
 		app.ConfigureStorage(DataFileLoader[FileItem]("inputs/data/items.json")),
 		app.ConfigureStorage(DataFileLoader[FileLocation]("inputs/data/locations.json")),
 	)
