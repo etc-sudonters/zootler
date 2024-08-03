@@ -35,11 +35,11 @@ func (m *Bit) Unset(e table.RowId) {
 	m.members.Unset(uint64(e))
 }
 
-func BuildMarkerColumn[T any]() *table.ColumnBuilder {
+func BitColumnOf[T any]() *table.ColumnBuilder {
 	var t T
-	return table.BuildColumnOf[T](NewBit(t))
+	return BitColumnUsing(t)
 }
 
-func BuildSingletonColumn[T any](t T) *table.ColumnBuilder {
+func BitColumnUsing[T any](t T) *table.ColumnBuilder {
 	return table.BuildColumnOf[T](NewBit(t))
 }
