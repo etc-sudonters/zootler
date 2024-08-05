@@ -3,7 +3,6 @@ package columns
 import (
 	"fmt"
 	"reflect"
-	"sudonters/zootler/internal/iters"
 	"sudonters/zootler/internal/table"
 
 	"github.com/etc-sudonters/substrate/skelly/bitset"
@@ -92,7 +91,7 @@ func (row Slice) ScanFor(v table.Value) bitset.Bitset64 {
 }
 
 func (row Slice) scanMembers(v table.Value) (b bitset.Bitset64) {
-	biter := iters.Bitset64(*row.members)
+	biter := bitset.Iter(*row.members)
 	for biter.MoveNext() {
 		id := biter.Current()
 		value := row.components[id]

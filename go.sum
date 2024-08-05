@@ -18,6 +18,8 @@ github.com/etc-sudonters/substrate v0.0.0-20231206010758-5a62143e0834 h1:ll/01M1
 github.com/etc-sudonters/substrate v0.0.0-20231206010758-5a62143e0834/go.mod h1:fIQBB70tduyrZsUd4sab35FiYjSLB+cvHu0TVEYlfk4=
 github.com/etc-sudonters/substrate v0.0.0-20231210042150-9900226d61ed h1:05ReqKOmWBo7cV8Cq02Ahd5Ss7Hj8KxQsbyWvGL6e7g=
 github.com/etc-sudonters/substrate v0.0.0-20231210042150-9900226d61ed/go.mod h1:fIQBB70tduyrZsUd4sab35FiYjSLB+cvHu0TVEYlfk4=
+github.com/etc-sudonters/substrate v0.0.0-20240805031745-d9b95510878e h1:/DDYC1QJ5TWtsVF14DeEvWiZEyyAUScN8A5KRpfGqqg=
+github.com/etc-sudonters/substrate v0.0.0-20240805031745-d9b95510878e/go.mod h1:fIQBB70tduyrZsUd4sab35FiYjSLB+cvHu0TVEYlfk4=
 github.com/kylelemons/godebug v1.1.0 h1:RPNrshWIDI6G2gRW9EHilWtl7Z6Sb1BR0xunSBf0SNc=
 github.com/kylelemons/godebug v1.1.0/go.mod h1:9/0rRGxNHcop5bhtWyNeEfOS8JIWk580+fNqagV/RAw=
 github.com/lucasb-eyer/go-colorful v1.2.0 h1:1nnpGOrhyZZuNyfu1QjKiUICQ74+3FNCN69Aj6K7nkY=

@@ -3,7 +3,6 @@ package bundle
 import (
 	"errors"
 	"fmt"
-	"sudonters/zootler/internal/iters"
 	"sudonters/zootler/internal/table"
 
 	"github.com/etc-sudonters/substrate/reiterate"
@@ -33,7 +32,7 @@ type Bundler func(fill Fill, columns table.Columns) Interface
 func RowOrdered(fill Fill, columns table.Columns) Interface {
 	return &rowOrdered{
 		fill: fill,
-		iter: iters.Bitset64(fill.Bitset64),
+		iter: bitset.Iter(fill.Bitset64),
 		r:    nil,
 		cols: columns,
 	}
