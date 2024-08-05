@@ -5,8 +5,12 @@ import (
 	"strings"
 )
 
+type str interface {
+	~string
+}
+
 var alphaOnly = regexp.MustCompile("[^a-z]+")
 
-func normalize(s string) string {
+func normalize[S str](s S) string {
 	return alphaOnly.ReplaceAllString(strings.ToLower(s), "")
 }

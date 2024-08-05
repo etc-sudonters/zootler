@@ -27,6 +27,19 @@ func Filled(b bitset.Bitset64) Fill {
 	return Fill{b}
 }
 
+func ToMap[TKey comparable, TValue any](i Interface, f func(*table.RowTuple) (TKey, TValue, error)) (map[TKey]TValue, error) {
+	m := make(map[TKey]TValue, i.Len())
+	for i.MoveNext() {
+		key, value, err := f(i.Current())
+		if err != nil {
+			return nil, err
+		}
+
+		m[key] = value
+	}
+	return m, nil
+}
+
 type Bundler func(fill Fill, columns table.Columns) Interface
 
 func RowOrdered(fill Fill, columns table.Columns) Interface {
