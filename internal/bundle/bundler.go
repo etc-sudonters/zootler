@@ -24,6 +24,10 @@ type Fill struct {
 	bitset.Bitset64
 }
 
+func Filled(b bitset.Bitset64) Fill {
+	return Fill{b}
+}
+
 type Bundler func(fill Fill, columns table.Columns) Interface
 
 func RowOrdered(fill Fill, columns table.Columns) Interface {

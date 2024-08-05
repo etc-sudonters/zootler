@@ -1,9 +1,11 @@
 package table
 
 import (
+	"fmt"
 	"reflect"
 
 	"github.com/etc-sudonters/substrate/mirrors"
+	"github.com/etc-sudonters/substrate/skelly/bitset"
 )
 
 type RowId uint64
@@ -17,6 +19,7 @@ type Column interface {
 	Get(e RowId) Value
 	Set(e RowId, c Value)
 	Unset(e RowId)
+	ScanFor(Value) bitset.Bitset64
 }
 
 type ColumnMetadata interface {
@@ -64,6 +67,16 @@ func BuildColumnOf[T Value](col Column) *ColumnBuilder {
 type ColumnBuilder struct {
 	typ    reflect.Type
 	column Column
+	index  Index
+}
+
+func (c *ColumnBuilder) Index(i Index) *ColumnBuilder {
+	if c.index != nil {
+		// let me know when to support multiple indexes
+		panic(fmt.Errorf("column already indexed: %s", c.typ.Name()))
+	}
+	c.index = i
+	return c
 }
 
 func (c ColumnBuilder) Type() reflect.Type {

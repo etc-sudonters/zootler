@@ -22,19 +22,32 @@ type ValueTuple struct {
 
 func New() *Table {
 	return &Table{
-		Cols: make([]ColumnData, 0),
-		Rows: make(Rows, 0),
+		Cols:    make([]ColumnData, 0),
+		Rows:    make(Rows, 0),
+		indexes: make(map[ColumnId]Index, 0),
 	}
 }
 
 type Table struct {
-	Cols []ColumnData
-	Rows Rows
+	Cols    []ColumnData
+	Rows    Rows
+	indexes map[ColumnId]Index
+}
+
+func (tbl *Table) Lookup(c ColumnId, v Value) bitset.Bitset64 {
+	if idx, ok := tbl.indexes[c]; ok {
+		return idx.Rows(v)
+	}
+	return tbl.Cols[c].column.ScanFor(v)
 }
 
 func (tbl *Table) CreateColumn(b *ColumnBuilder) (ColumnData, error) {
-	col := b.build(ColumnId(len(tbl.Cols)))
+	id := ColumnId(len(tbl.Cols))
+	col := b.build(id)
 	tbl.Cols = append(tbl.Cols, col)
+	if b.index != nil {
+		tbl.indexes[id] = b.index
+	}
 	return col, nil
 }
 
@@ -49,6 +62,9 @@ func (tbl *Table) SetValue(r RowId, c ColumnId, v Value) error {
 	col.column.Set(r, v)
 	row := tbl.Rows[r]
 	row.Set(uint64(c))
+	if idx, ok := tbl.indexes[c]; ok {
+		idx.Set(r, v)
+	}
 	return nil
 }
 
@@ -57,5 +73,8 @@ func (tbl *Table) UnsetValue(r RowId, c ColumnId) error {
 	col.column.Unset(r)
 	row := tbl.Rows[r]
 	row.Unset(uint64(c))
+	if idx, ok := tbl.indexes[c]; ok {
+		idx.Unset(r)
+	}
 	return nil
 }

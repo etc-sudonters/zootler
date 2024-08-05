@@ -2,18 +2,10 @@ package main
 
 import (
 	"fmt"
-	"regexp"
-	"strings"
 	"sudonters/zootler/internal/query"
 	"sudonters/zootler/internal/table"
 	"sudonters/zootler/pkg/world/components"
 )
-
-var alphaOnly = regexp.MustCompile("[^a-z]+")
-
-func normalize(s string) string {
-	return alphaOnly.ReplaceAllString(strings.ToLower(s), "")
-}
 
 type FileLocation struct {
 	Name       string   `json:"name"`

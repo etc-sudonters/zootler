@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path"
 	"runtime/debug"
 	"sudonters/zootler/internal/app"
 
@@ -19,13 +20,15 @@ func (arg missingRequired) Error() string {
 }
 
 type cliOptions struct {
-	logicDir string
-	dataDir  string
+	logicDir  string
+	dataDir   string
+	includeMq bool
 }
 
 func (opts *cliOptions) init() {
 	flag.StringVar(&opts.logicDir, "l", "", "Directory where logic files are located")
 	flag.StringVar(&opts.dataDir, "d", "", "Directory where data files are stored")
+	flag.BoolVar(&opts.includeMq, "M", false, "Whether or not to include MQ data")
 	flag.Parse()
 }
 
@@ -87,8 +90,19 @@ func main() {
 
 	app, err := app.NewApp(ctx,
 		app.ConfigureStorage(CreateScheme{DDL: MakeDDL()}),
-		app.ConfigureStorage(DataFileLoader[FileItem]("inputs/data/items.json")),
-		app.ConfigureStorage(DataFileLoader[FileLocation]("inputs/data/locations.json")),
+		app.ConfigureStorage(DataFileLoader[FileItem]{
+			IncludeMQ: opts.includeMq,
+			Path:      path.Join(opts.dataDir, "items.json"),
+		}),
+		app.ConfigureStorage(DataFileLoader[FileLocation]{
+			IncludeMQ: opts.includeMq,
+			Path:      path.Join(opts.dataDir, "locations.json"),
+		}),
+		app.LoadWorldFiles(WorldGraphLoader{
+			Helpers:   path.Join(path.Dir(opts.logicDir), "helpers.json"),
+			IncludeMQ: opts.includeMq,
+			Path:      opts.logicDir,
+		}),
 	)
 
 	if err != nil {

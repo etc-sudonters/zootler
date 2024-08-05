@@ -67,5 +67,31 @@ func example(ctx context.Context, storage query.Engine) error {
 		panic(err)
 	}
 	fmt.Fprintf(stdio.Out, "Count of not Song tokens: %d\n", notSongToks.Len())
+
+	lookupName := "Spirit Medallion"
+	l := storage.CreateLookup()
+	l.Load(mirrors.TypeOf[components.Medallion]())
+	l.Load(mirrors.TypeOf[components.DungeonReward]())
+	l.Load(mirrors.TypeOf[components.Advancement]())
+	l.Load(mirrors.TypeOf[components.Pot]())
+
+	l.Lookup(components.Name(lookupName))
+	med, err := storage.Lookup(l)
+	if err != nil {
+		panic(err)
+	}
+	foundMed := med.Len() == 1
+	fmt.Fprintf(stdio.Out, "Found %s? %t\n", lookupName, foundMed)
+
+	if foundMed {
+		med.MoveNext()
+		medallion := med.Current()
+
+		for i := range medallion.Cols {
+			fmt.Fprintf(stdio.Out, "Loaded column '%d' for '%s': %v\n", medallion.Cols[i], lookupName, medallion.Values[i])
+		}
+	}
+
 	return nil
+
 }

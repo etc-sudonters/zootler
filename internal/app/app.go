@@ -45,7 +45,7 @@ func ConfigureStorage(sc StorageConfigure) ZootlrConfig {
 	}
 }
 
-func LoadLogicFiles(ll LogicLoader) ZootlrConfig {
+func LoadWorldFiles(ll LogicLoader) ZootlrConfig {
 	return func(z *Zootlr) error {
 		return ll.Load()
 	}

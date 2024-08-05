@@ -3,6 +3,7 @@ package query
 import (
 	"errors"
 	"fmt"
+	"math"
 	"reflect"
 	"sudonters/zootler/internal/bundle"
 	"sudonters/zootler/internal/table"
@@ -32,35 +33,48 @@ func errNotExists(t reflect.Type) error {
 type columnIndex map[reflect.Type]table.ColumnId
 type Entry struct{}
 
-type Filter interface {
+type Query interface {
 	Exists(typ reflect.Type)
 	NotExists(typ reflect.Type)
-}
-
-type Query interface {
-	Filter
 	Load(typ reflect.Type)
 }
 
-type builder struct {
-	errs      []error
-	types     columnIndex
-	load      *bitset.Bitset64
-	exists    *bitset.Bitset64
-	notExists *bitset.Bitset64
+type Lookup interface {
+	Lookup(v table.Value)
+	Load(typ reflect.Type)
 }
 
-func (b *builder) set(typ reflect.Type, s *bitset.Bitset64) {
+type queryCore struct {
+	errs  []error
+	types columnIndex
+	load  *bitset.Bitset64
+}
+
+func (b *queryCore) Load(typ reflect.Type) {
+	b.set(typ, b.load)
+}
+
+func (b *queryCore) set(typ reflect.Type, s *bitset.Bitset64) {
 	if id, ok := b.types[typ]; ok {
 		s.Set(uint64(id))
 	} else {
 		b.errs = append(b.errs, fmt.Errorf("%s: %w", typ.Name(), ErrColumnNotExist))
 	}
-
 }
 
-func (b *builder) Load(typ reflect.Type) {
-	b.set(typ, b.load)
+type lookup struct {
+	queryCore
+	lookups []table.Value
+}
+
+func (l *lookup) Lookup(v table.Value) {
+	l.lookups = append(l.lookups, v)
+}
+
+type builder struct {
+	queryCore
+	exists    *bitset.Bitset64
+	notExists *bitset.Bitset64
 }
 
 func (b *builder) Exists(typ reflect.Type) {
@@ -93,10 +107,12 @@ func (p predicate) admit(row *bitset.Bitset64) bool {
 
 type Engine interface {
 	CreateQuery() Query
+	CreateLookup() Lookup
 	CreateColumn(c *table.ColumnBuilder) (table.ColumnId, error)
 	CreateColumnIfNotExists(c *table.ColumnBuilder) (table.ColumnId, error)
 	InsertRow(vs ...table.Value) (table.RowId, error)
 	Retrieve(b Query) (bundle.Interface, error)
+	Lookup(l Lookup) (bundle.Interface, error)
 	SetValues(r table.RowId, vs table.Values) error
 	UnsetValues(r table.RowId, cs table.ColumnIds) error
 }
@@ -115,7 +131,7 @@ func NewEngine() (*engine, error) {
 		tbl:         table.New(),
 	}
 
-	if _, err := eng.CreateColumn(table.BuildColumnOf[Entry](columns.NewBit(Entry{}))); err != nil {
+	if _, err := eng.CreateColumn(columns.BitColumnOf[Entry]()); err != nil {
 		return nil, err
 	}
 
@@ -129,10 +145,24 @@ type engine struct {
 
 func (e engine) CreateQuery() Query {
 	return &builder{
-		types:     e.columnIndex,
-		load:      &bitset.Bitset64{},
+		queryCore: queryCore{
+			types: e.columnIndex,
+			errs:  nil,
+			load:  &bitset.Bitset64{},
+		},
 		exists:    &bitset.Bitset64{},
 		notExists: &bitset.Bitset64{},
+	}
+}
+
+func (e engine) CreateLookup() Lookup {
+	return &lookup{
+		queryCore: queryCore{
+			types: e.columnIndex,
+			errs:  nil,
+			load:  &bitset.Bitset64{},
+		},
+		lookups: nil,
 	}
 }
 
@@ -180,14 +210,56 @@ func (e engine) Retrieve(b Query) (bundle.Interface, error) {
 	predicate := build(q)
 	fill := bundle.Fill{}
 
-	for idx, filled := range e.tbl.Rows {
-		if predicate.admit(filled) {
-			fill.Set(uint64(idx))
+	for row, possessed := range e.tbl.Rows {
+		if predicate.admit(possessed) {
+			fill.Set(uint64(row))
 		}
 	}
 
 	var columns table.Columns
 	for _, col := range q.load.Elems() {
+		columns = append(columns, e.tbl.Cols[col])
+	}
+
+	if fill.Len() != 1 {
+		return bundle.RowOrdered(fill, columns), nil
+	} else {
+		return bundle.SingleRow(fill, columns)
+	}
+}
+
+func saturatedSet(numBuckets uint64) bitset.Bitset64 {
+	buckets := make([]uint64, numBuckets)
+	for i := range buckets {
+		buckets[i] = math.MaxUint64
+	}
+	return bitset.FromRaw(buckets...)
+}
+
+func (e engine) Lookup(l Lookup) (bundle.Interface, error) {
+	L, ok := l.(*lookup)
+	if !ok {
+		return nil, fmt.Errorf("%T: %w", l, ErrInvalidQuery)
+	}
+
+	if L.errs != nil {
+		return nil, errors.Join(L.errs...)
+	}
+
+	entities := saturatedSet(uint64(len(e.tbl.Rows) / 64))
+
+	for _, lookup := range L.lookups {
+		colId, colIdErr := e.intoColId(lookup)
+		if colIdErr != nil {
+			return nil, colIdErr
+		}
+		rows := e.tbl.Lookup(colId, lookup)
+		entities = entities.Intersect(rows)
+	}
+
+	fill := bundle.Filled(entities)
+	var columns table.Columns
+	for _, col := range L.load.Elems() {
 		columns = append(columns, e.tbl.Cols[col])
 	}
 

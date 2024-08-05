@@ -2,9 +2,11 @@ package main
 
 import (
 	"os"
+	"strings"
 	"sudonters/zootler/internal/query"
 	"sudonters/zootler/internal/table"
 	"sudonters/zootler/internal/table/columns"
+	"sudonters/zootler/internal/table/indexes"
 	"sudonters/zootler/pkg/world/components"
 
 	"muzzammil.xyz/jsonc"
@@ -15,10 +17,13 @@ type IntoComponents interface {
 	AddComponents(table.RowId, query.Engine) error
 }
 
-type DataFileLoader[T IntoComponents] string
+type DataFileLoader[T IntoComponents] struct {
+	Path      string
+	IncludeMQ bool
+}
 
 func (l DataFileLoader[T]) Configure(storage query.Engine) error {
-	raw, readErr := os.ReadFile(string(l))
+	raw, readErr := os.ReadFile(l.Path)
 	if readErr != nil {
 		return readErr
 	}
@@ -30,7 +35,13 @@ func (l DataFileLoader[T]) Configure(storage query.Engine) error {
 	}
 
 	for _, item := range items {
-		row, insertErr := storage.InsertRow(item.GetName())
+		name := item.GetName()
+
+		if !l.IncludeMQ && strings.Contains(strings.ToLower(string(name)), "mq") {
+			continue
+		}
+
+		row, insertErr := storage.InsertRow(name)
 		if insertErr != nil {
 			return insertErr
 		}
@@ -48,6 +59,12 @@ type CreateScheme struct {
 }
 type DDL func() *table.ColumnBuilder
 
+func indexed(ddl DDL, i table.Index) DDL {
+	return func() *table.ColumnBuilder {
+		return ddl().Index(i)
+	}
+}
+
 func (cs CreateScheme) Configure(storage query.Engine) error {
 	for _, ddl := range cs.DDL {
 		if _, err := storage.CreateColumn(ddl()); err != nil {
@@ -60,6 +77,11 @@ func (cs CreateScheme) Configure(storage query.Engine) error {
 
 func MakeDDL() []DDL {
 	return []DDL{
+		indexed(
+			columns.SliceColumn[components.Name],
+			indexes.HashIndexFrom(func(s components.Name) (string, bool) {
+				return normalize(string(s)), true
+			})),
 		columns.BitColumnOf[components.Advancement],
 		columns.BitColumnOf[components.Beehive],
 		columns.BitColumnOf[components.BossHeart],
@@ -178,6 +200,5 @@ func MakeDDL() []DDL {
 		columns.SliceColumn[components.DefaultItem],
 		columns.SliceColumn[components.Inhabited],
 		columns.SliceColumn[components.Inhabits],
-		columns.SliceColumn[components.Name],
 	}
 }

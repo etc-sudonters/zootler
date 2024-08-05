@@ -35,6 +35,10 @@ func (m *Bit) Unset(e table.RowId) {
 	m.members.Unset(uint64(e))
 }
 
+func (m *Bit) ScanFor(c table.Value) bitset.Bitset64 {
+	return bitset.Copy(*m.members)
+}
+
 func BitColumnOf[T any]() *table.ColumnBuilder {
 	var t T
 	return BitColumnUsing(t)
