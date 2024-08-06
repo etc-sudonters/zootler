@@ -1,15 +1,14 @@
 package main
 
 import (
-	"os"
 	"strings"
 	"sudonters/zootler/internal/query"
+	"sudonters/zootler/internal/slipup"
 	"sudonters/zootler/internal/table"
 	"sudonters/zootler/internal/table/columns"
 	"sudonters/zootler/internal/table/indexes"
+	"sudonters/zootler/pkg/logic"
 	"sudonters/zootler/pkg/world/components"
-
-	"muzzammil.xyz/jsonc"
 )
 
 type IntoComponents interface {
@@ -23,20 +22,13 @@ type DataFileLoader[T IntoComponents] struct {
 }
 
 func (l DataFileLoader[T]) Configure(storage query.Engine) error {
-	raw, readErr := os.ReadFile(l.Path)
-	if readErr != nil {
-		return readErr
+	ts, err := ReadJsonFile[[]T](l.Path)
+	if err != nil {
+		return slipup.Trace(err, l.Path)
 	}
 
-	var items []T
-
-	if err := jsonc.Unmarshal(raw, &items); err != nil {
-		return err
-	}
-
-	for _, item := range items {
-		name := item.GetName()
-
+	for _, t := range ts {
+		name := t.GetName()
 		if !l.IncludeMQ && strings.Contains(strings.ToLower(string(name)), "mq") {
 			continue
 		}
@@ -46,7 +38,7 @@ func (l DataFileLoader[T]) Configure(storage query.Engine) error {
 			return insertErr
 		}
 
-		if valuesErr := item.AddComponents(row, storage); valuesErr != nil {
+		if valuesErr := t.AddComponents(row, storage); valuesErr != nil {
 			return valuesErr
 		}
 	}
@@ -75,13 +67,38 @@ func (cs CreateScheme) Configure(storage query.Engine) error {
 	return nil
 }
 
+func NormalizedNameIndex[T ~string](c T) (string, bool) {
+	return normalize(string(c)), true
+}
+
 func MakeDDL() []DDL {
 	return []DDL{
 		indexed(
 			columns.SliceColumn[components.Name],
-			indexes.HashIndexFrom(func(s components.Name) (string, bool) {
-				return normalize(string(s)), true
-			})),
+			indexes.CreateUniqueHashIndex(NormalizedNameIndex[components.Name])),
+		indexed(
+			columns.HashMapColumn[components.Dungeon],
+			indexes.CreateHashIndex(NormalizedNameIndex[components.Dungeon]),
+		),
+		indexed(
+			columns.HashMapColumn[components.HintRegion],
+			indexes.CreateHashIndex(func(s components.HintRegion) (string, bool) {
+				return normalize(s.Name), true
+			}),
+		),
+
+		columns.HashMapColumn[components.Count],
+		columns.HashMapColumn[components.Price],
+		columns.HashMapColumn[components.ShopObject],
+		columns.HashMapColumn[components.OcarinaButton],
+		columns.HashMapColumn[components.OcarinaNote],
+		columns.HashMapColumn[components.OcarinaSong],
+		columns.HashMapColumn[components.Song],
+		columns.HashMapColumn[logic.RawRule],
+		columns.HashMapColumn[components.Edge],
+
+		// bit columns only track singletons
+		columns.BitColumnOf[components.Helper],
 		columns.BitColumnOf[components.Advancement],
 		columns.BitColumnOf[components.Beehive],
 		columns.BitColumnOf[components.BossHeart],
@@ -190,15 +207,5 @@ func MakeDDL() []DDL {
 		columns.BitColumnOf[components.ZorasDomain],
 		columns.BitColumnOf[components.ZorasFountain],
 		columns.BitColumnOf[components.ZorasRiver],
-		columns.HashMapColumn[components.Count],
-		columns.HashMapColumn[components.Price],
-		columns.HashMapColumn[components.ShopObject],
-		columns.HashMapColumn[components.OcarinaButton],
-		columns.HashMapColumn[components.OcarinaNote],
-		columns.HashMapColumn[components.OcarinaSong],
-		columns.HashMapColumn[components.Song],
-		columns.SliceColumn[components.DefaultItem],
-		columns.SliceColumn[components.Inhabited],
-		columns.SliceColumn[components.Inhabits],
 	}
 }

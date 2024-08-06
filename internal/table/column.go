@@ -2,11 +2,15 @@ package table
 
 import (
 	"fmt"
+	"math"
 	"reflect"
 
 	"github.com/etc-sudonters/substrate/mirrors"
 	"github.com/etc-sudonters/substrate/skelly/bitset"
 )
+
+var INVALID_ROWID RowId = math.MaxUint64
+var INVALID_COLUMNID ColumnId = math.MaxUint64
 
 type RowId uint64
 type ColumnId uint64

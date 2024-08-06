@@ -19,6 +19,7 @@ type (
 	DekuTree               struct{}
 	DekuTreeMQ             struct{}
 	DesertColossus         struct{}
+	Dungeon                string
 	DodongosCavern         struct{}
 	DodongosCavernMQ       struct{}
 	FireTemple             struct{}

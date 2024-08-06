@@ -3,67 +3,74 @@ package indexes
 import (
 	"sudonters/zootler/internal/table"
 
-	"github.com/etc-sudonters/substrate/mirrors"
 	"github.com/etc-sudonters/substrate/skelly/bitset"
 )
 
-type IndexHasher[T comparable] func(table.Value) (T, bool)
+type hashbitmap[T comparable] map[T]bitset.Bitset64
 
-func HashIndexFrom[TValue any, TIndex comparable](f func(TValue) (TIndex, bool)) *HashMapIndex[TIndex] {
-	return NewHashMapIndex(
-		func(v table.Value) (TIndex, bool) {
-			if concrete, casted := v.(TValue); casted {
-				return f(concrete)
-			}
-			return mirrors.Empty[TIndex](), false
-		})
+func (h hashbitmap[T]) isset(key T, which uint64) bool {
+	members := h.membersetfor(key)
+	return members.IsSet(which)
 }
 
-func NewHashMapIndex[T comparable](i IndexHasher[T]) *HashMapIndex[T] {
-	return &HashMapIndex[T]{
-		members: make(map[T]table.RowId, 8),
-		hasher:  i,
-	}
+func (h hashbitmap[T]) set(key T, which uint64) {
+	members := h.membersetfor(key)
+	members.Set(which)
+	h[key] = members
 }
 
-type HashMapIndex[TIndex comparable] struct {
-	members map[TIndex]table.RowId
-	hasher  IndexHasher[TIndex]
-}
-
-func (h *HashMapIndex[TIndex]) Set(e table.RowId, c table.Value) {
-	idx, ok := h.hasher(c)
-	if !ok {
-		return
-	}
-
-	h.members[idx] = e
-}
-
-func (h *HashMapIndex[TIndex]) Unset(e table.RowId) {
-	var key TIndex
-	var found bool
-	for k, row := range h.members {
-		if row == e {
-			key = k
-			found = true
+func (h hashbitmap[T]) unset(which uint64) {
+	for key, members := range h {
+		if members.IsSet(which) {
+			(&members).Unset(which)
+			h[key] = members
 			break
 		}
 	}
+}
 
-	if found {
-		delete(h.members, key)
+func (h hashbitmap[T]) membersetfor(key T) bitset.Bitset64 {
+	members, ok := h[key]
+	if !ok {
+		members = bitset.Bitset64{}
+	}
+
+	return members
+}
+
+type HashIndex[T comparable] struct {
+	members hashbitmap[T]
+	hasher  TableHashingFunc[T]
+}
+
+func CreateHashIndex[TComponent any, TIndex comparable](f HashingFunc[TComponent, TIndex]) *HashIndex[TIndex] {
+	return NewHashIndex(TableHasherFrom(f))
+}
+
+func NewHashIndex[T comparable](f TableHashingFunc[T]) *HashIndex[T] {
+	return &HashIndex[T]{
+		members: make(hashbitmap[T], 8),
+		hasher:  f,
 	}
 }
 
-func (h *HashMapIndex[TIndex]) Rows(c table.Value) (b bitset.Bitset64) {
-	idx, hashed := h.hasher(c)
-	if hashed {
-		entity, exists := h.members[idx]
-		if exists {
-			b.Set(uint64(entity))
-		}
+func (h *HashIndex[T]) Set(r table.RowId, v table.Value) {
+	idx, ok := h.hasher(v)
+	if !ok {
+		return
 	}
+	h.members.set(idx, uint64(r))
+}
 
-	return
+func (h *HashIndex[T]) Unset(r table.RowId) {
+	h.members.unset(uint64(r))
+}
+
+// this bitset is intersected / & / AND'd
+func (h *HashIndex[T]) Rows(v table.Value) bitset.Bitset64 {
+	idx, ok := h.hasher(v)
+	if !ok {
+		return bitset.Bitset64{}
+	}
+	return bitset.Copy(h.members.membersetfor(idx))
 }

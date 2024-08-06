@@ -1,62 +1,130 @@
 package main
 
 import (
-	"fmt"
+	"os"
+	"path"
+	"strings"
 	"sudonters/zootler/internal/bundle"
-	"sudonters/zootler/internal/entity"
 	"sudonters/zootler/internal/query"
+	"sudonters/zootler/internal/slipup"
 	"sudonters/zootler/internal/table"
 	"sudonters/zootler/pkg/world/components"
 
 	"github.com/etc-sudonters/substrate/mirrors"
-	"github.com/etc-sudonters/substrate/skelly/graph"
 )
 
-type WorldGraphFileLocation struct {
-	AltHint      string            `json:"alt_hint"` // more specific location -- restricted to gannon's chambers?
-	BossRoom     bool              `json:"is_boss_room"`
-	DoesTimePass bool              `json"time_passes"`
-	Dungeon      string            `json:"dungeon"`
-	Hint         string            `json:"hint"` // hint zone
-	Region       string            `json:"region_name"`
-	Savewarp     string            `json:"savewarp"` // effectively another exit
-	Scene        string            `json:"scene"`    // similar to hint?
-	Events       map[string]string `json:"events"`
-	Exits        map[string]string `json:"exits"`
-	Locations    map[string]string `json:"locations"`
-}
-
-type WorldGraphLoader struct {
-	Helpers, Path string
+type WorldFileLoader struct {
+	Path, Helpers string
 	IncludeMQ     bool
 }
 
-func (w WorldGraphLoader) Load() error {
+func (w WorldFileLoader) Configure(e query.Engine) error {
+	if err := w.helpers(e); err != nil {
+		return slipup.Trace(err, "loading helpers")
+	}
+
+	entries, dirErr := os.ReadDir(w.Path)
+	if dirErr != nil {
+		return slipup.Trace(dirErr, w.Path)
+	}
+
+	for _, entry := range entries {
+		if !IsFile(entry) {
+			continue
+		}
+
+		path := path.Join(w.Path, entry.Name())
+		if err := w.logicFile(path, e); err != nil {
+			return slipup.Trace(err, path)
+		}
+	}
+
 	return nil
 }
 
-type EdgeRule struct {
-	Origin   graph.Origination
-	Dest     graph.Destination
-	Bytecode []uint8
+func (w WorldFileLoader) helpers(e query.Engine) error {
+	helpers := make(map[string]string, 256)
+
+	for name, code := range helpers {
+		e.InsertRow(components.Name(name), RawLogic{code}, Helper{})
+	}
+	return nil
 }
 
-func EdgeRuleIndexer(e EdgeRule) (string, bool) {
-	return fmt.Sprintf("%d-%d", e.Origin, e.Dest), true
+func (w WorldFileLoader) logicFile(path string, e query.Engine) error {
+	isMq := strings.Contains(path, "mq")
+
+	if isMq && !w.IncludeMQ {
+		return nil
+	}
+
+	rawLocs, readErr := ReadJsonFile[[]WorldFileLocation](path)
+	if readErr != nil {
+		return slipup.Trace(readErr, path)
+	}
+
+	locations, locErr := CreateLocationIds(e)
+	if locErr != nil {
+		return slipup.Trace(locErr, "creating location id table")
+	}
+
+	for _, raw := range rawLocs {
+		here, mintErr := locations.Mint(raw.Name)
+		if mintErr != nil {
+			return slipup.TraceMsg(mintErr, "minting %s", raw.Name)
+		}
+
+		values := table.Values{
+			HintRegion{
+				Name: raw.HintRegion,
+				Alt:  raw.HintRegionAlt,
+			},
+		}
+
+		if raw.BossRoom {
+			values = append(values, BossRoom{})
+		}
+
+		if raw.Dungeon != "" {
+			values = append(values, components.Dungeon(raw.Dungeon))
+		}
+
+		if isMq {
+			values = append(values, components.MasterQuest{})
+		}
+
+		e.SetValues(here, table.Values{})
+	}
+
+	return nil
+}
+
+type WorldFileLocation struct {
+	BossRoom      bool              `json:"is_boss_room"`
+	DoesTimePass  bool              `json:"time_passes"`
+	Dungeon       string            `json:"dungeon"`
+	HintRegion    string            `json:"hint"`     // hint zone
+	HintRegionAlt string            `json:"alt_hint"` // more specific location -- restricted to gannon's chambers?
+	Name          string            `json:"region_name"`
+	Savewarp      string            `json:"savewarp"` // effectively another exit
+	Scene         string            `json:"scene"`    // similar to hint?
+	Events        map[string]string `json:"events"`
+	Exits         map[string]string `json:"exits"`
+	Locations     map[string]string `json:"locations"`
 }
 
 func CreateLocationIds(e query.Engine) (*LocationIds, error) {
 	query := e.CreateQuery()
-	query.Exists(mirrors.TypeOf[components.Location]())
 	query.Load(mirrors.TypeOf[components.Name]())
+	query.Exists(mirrors.TypeOf[components.Location]())
 	rows, qErr := e.Retrieve(query)
 	if qErr != nil {
 		return nil, qErr
 	}
 
-	locations, loadErr := bundle.ToMap(rows, func(r *table.RowTuple) (string, entity.Model, error) {
+	locations, loadErr := bundle.ToMap(rows, func(r *table.RowTuple) (string, table.RowId, error) {
 		model, name := r.Id, r.Values[1].(components.Name)
-		return normalize(name), entity.Model(model), nil
+		return normalize(name), model, nil
 	})
 
 	if loadErr != nil {
@@ -71,19 +139,19 @@ func CreateLocationIds(e query.Engine) (*LocationIds, error) {
 
 type LocationIds struct {
 	e         query.Engine
-	locations map[string]entity.Model
+	locations map[string]table.RowId
 }
 
-func (l LocationIds) Mint(name string) (entity.Model, error) {
+func (l LocationIds) Mint(name string) (table.RowId, error) {
 	normalized := normalize(name)
 	if id, ok := l.locations[normalized]; ok {
 		return id, nil
 	}
 
-	row, insertErr := l.e.InsertRow(components.Name(name))
+	row, insertErr := l.e.InsertRow(components.Name(name), components.Location{})
 	if insertErr != nil {
-		return entity.INVALID_ENTITY, insertErr
+		return table.INVALID_ROWID, insertErr
 	}
 
-	return entity.Model(row), nil
+	return row, nil
 }

@@ -1,16 +1,31 @@
 package main
 
 import (
+	"io/fs"
+	"os"
 	"regexp"
 	"strings"
-)
 
-type str interface {
-	~string
-}
+	"muzzammil.xyz/jsonc"
+)
 
 var alphaOnly = regexp.MustCompile("[^a-z]+")
 
-func normalize[S str](s S) string {
-	return alphaOnly.ReplaceAllString(strings.ToLower(s), "")
+func normalize[S ~string](s S) string {
+	return alphaOnly.ReplaceAllString(strings.ToLower(string(s)), "")
+}
+
+func IsFile(e fs.DirEntry) bool {
+	return e.Type()&fs.ModeType == 0
+}
+
+func ReadJsonFile[T any](path string) (T, error) {
+	var t T
+	raw, readErr := os.ReadFile(path)
+	if readErr != nil {
+		return t, readErr
+	}
+
+	err := jsonc.Unmarshal(raw, &t)
+	return t, err
 }

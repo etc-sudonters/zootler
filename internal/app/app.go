@@ -39,15 +39,9 @@ func (z *Zootlr) Error(err error) {
 
 type ZootlrConfig func(*Zootlr) error
 
-func ConfigureStorage(sc StorageConfigure) ZootlrConfig {
+func Storage(sc ConfigureStorage) ZootlrConfig {
 	return func(z *Zootlr) error {
 		return sc.Configure(z.Engine())
-	}
-}
-
-func LoadWorldFiles(ll LogicLoader) ZootlrConfig {
-	return func(z *Zootlr) error {
-		return ll.Load()
 	}
 }
 
@@ -68,7 +62,7 @@ func NewApp(ctx context.Context, ops ...ZootlrConfig) (*Zootlr, error) {
 	return &z, nil
 }
 
-type StorageConfigure interface {
+type ConfigureStorage interface {
 	Configure(query.Engine) error
 }
 

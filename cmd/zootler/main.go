@@ -89,19 +89,19 @@ func main() {
 	}
 
 	app, err := app.NewApp(ctx,
-		app.ConfigureStorage(CreateScheme{DDL: MakeDDL()}),
-		app.ConfigureStorage(DataFileLoader[FileItem]{
+		app.Storage(CreateScheme{DDL: MakeDDL()}),
+		app.Storage(DataFileLoader[FileItem]{
 			IncludeMQ: opts.includeMq,
 			Path:      path.Join(opts.dataDir, "items.json"),
 		}),
-		app.ConfigureStorage(DataFileLoader[FileLocation]{
+		app.Storage(DataFileLoader[FileLocation]{
 			IncludeMQ: opts.includeMq,
 			Path:      path.Join(opts.dataDir, "locations.json"),
 		}),
-		app.LoadWorldFiles(WorldGraphLoader{
-			Helpers:   path.Join(path.Dir(opts.logicDir), "helpers.json"),
+		app.Storage(WorldFileLoader{
 			IncludeMQ: opts.includeMq,
 			Path:      opts.logicDir,
+			Helpers:   path.Join(path.Dir(opts.logicDir), "helpers.json"),
 		}),
 	)
 
