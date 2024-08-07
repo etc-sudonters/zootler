@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"os"
 	"path"
 	"strings"
@@ -8,8 +9,10 @@ import (
 	"sudonters/zootler/internal/query"
 	"sudonters/zootler/internal/slipup"
 	"sudonters/zootler/internal/table"
+	"sudonters/zootler/pkg/logic"
 	"sudonters/zootler/pkg/world/components"
 
+	"github.com/etc-sudonters/substrate/dontio"
 	"github.com/etc-sudonters/substrate/mirrors"
 )
 
@@ -18,22 +21,29 @@ type WorldFileLoader struct {
 	IncludeMQ     bool
 }
 
-func (w WorldFileLoader) Configure(e query.Engine) error {
+func (w WorldFileLoader) Configure(ctx context.Context, e query.Engine) error {
+	stdio, stdErr := dontio.StdFromContext(ctx)
+	if stdErr != nil {
+		return stdErr
+	}
+	std := std{stdio}
 	if err := w.helpers(e); err != nil {
 		return slipup.Trace(err, "loading helpers")
 	}
 
-	entries, dirErr := os.ReadDir(w.Path)
+	std.WriteLineOut("reading dir '%s'", w.Path)
+	dirEntries, dirErr := os.ReadDir(w.Path)
 	if dirErr != nil {
 		return slipup.Trace(dirErr, w.Path)
 	}
 
-	for _, entry := range entries {
-		if !IsFile(entry) {
+	for _, dentry := range dirEntries {
+		if !IsFile(dentry) {
 			continue
 		}
 
-		path := path.Join(w.Path, entry.Name())
+		path := path.Join(w.Path, dentry.Name())
+		std.WriteLineOut("reading file '%s'", path)
 		if err := w.logicFile(path, e); err != nil {
 			return slipup.Trace(err, path)
 		}
@@ -46,7 +56,7 @@ func (w WorldFileLoader) helpers(e query.Engine) error {
 	helpers := make(map[string]string, 256)
 
 	for name, code := range helpers {
-		e.InsertRow(components.Name(name), RawLogic{code}, Helper{})
+		e.InsertRow(components.Name(name), logic.RawRule(code), components.Helper{})
 	}
 	return nil
 }
@@ -75,14 +85,14 @@ func (w WorldFileLoader) logicFile(path string, e query.Engine) error {
 		}
 
 		values := table.Values{
-			HintRegion{
+			components.HintRegion{
 				Name: raw.HintRegion,
 				Alt:  raw.HintRegionAlt,
 			},
 		}
 
 		if raw.BossRoom {
-			values = append(values, BossRoom{})
+			values = append(values, components.BossRoom{})
 		}
 
 		if raw.Dungeon != "" {
@@ -93,7 +103,9 @@ func (w WorldFileLoader) logicFile(path string, e query.Engine) error {
 			values = append(values, components.MasterQuest{})
 		}
 
-		e.SetValues(here, table.Values{})
+		if err := e.SetValues(here, values); err != nil {
+			return slipup.TraceMsg(err, "while populating %s", raw.Name)
+		}
 	}
 
 	return nil
@@ -123,7 +135,7 @@ func CreateLocationIds(e query.Engine) (*LocationIds, error) {
 	}
 
 	locations, loadErr := bundle.ToMap(rows, func(r *table.RowTuple) (string, table.RowId, error) {
-		model, name := r.Id, r.Values[1].(components.Name)
+		model, name := r.Id, r.Values[0].(components.Name)
 		return normalize(name), model, nil
 	})
 

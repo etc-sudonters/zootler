@@ -1,13 +1,13 @@
 package main
 
 import (
+	"context"
 	"strings"
 	"sudonters/zootler/internal/query"
 	"sudonters/zootler/internal/slipup"
 	"sudonters/zootler/internal/table"
 	"sudonters/zootler/internal/table/columns"
 	"sudonters/zootler/internal/table/indexes"
-	"sudonters/zootler/pkg/logic"
 	"sudonters/zootler/pkg/world/components"
 )
 
@@ -21,7 +21,7 @@ type DataFileLoader[T IntoComponents] struct {
 	IncludeMQ bool
 }
 
-func (l DataFileLoader[T]) Configure(storage query.Engine) error {
+func (l DataFileLoader[T]) Configure(_ context.Context, storage query.Engine) error {
 	ts, err := ReadJsonFile[[]T](l.Path)
 	if err != nil {
 		return slipup.Trace(err, l.Path)
@@ -57,7 +57,7 @@ func indexed(ddl DDL, i table.Index) DDL {
 	}
 }
 
-func (cs CreateScheme) Configure(storage query.Engine) error {
+func (cs CreateScheme) Configure(_ context.Context, storage query.Engine) error {
 	for _, ddl := range cs.DDL {
 		if _, err := storage.CreateColumn(ddl()); err != nil {
 			return err
@@ -94,7 +94,7 @@ func MakeDDL() []DDL {
 		columns.HashMapColumn[components.OcarinaNote],
 		columns.HashMapColumn[components.OcarinaSong],
 		columns.HashMapColumn[components.Song],
-		columns.HashMapColumn[logic.RawRule],
+		columns.HashMapColumn[components.RawLogic],
 		columns.HashMapColumn[components.Edge],
 
 		// bit columns only track singletons
@@ -104,6 +104,7 @@ func MakeDDL() []DDL {
 		columns.BitColumnOf[components.BossHeart],
 		columns.BitColumnOf[components.BossKey],
 		columns.BitColumnOf[components.Boss],
+		columns.BitColumnOf[components.BossRoom],
 		columns.BitColumnOf[components.Bottle],
 		columns.BitColumnOf[components.BottomoftheWellMQ],
 		columns.BitColumnOf[components.BottomoftheWell],

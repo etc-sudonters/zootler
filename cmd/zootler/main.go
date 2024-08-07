@@ -50,6 +50,10 @@ func (s std) WriteLineOut(msg string, v ...any) {
 	fmt.Fprintf(s.Out, msg+"\n", v...)
 }
 
+func (s std) WriteLineErr(msg string, v ...any) {
+	fmt.Fprintf(s.Err, msg+"\n", v...)
+}
+
 func main() {
 	var opts cliOptions
 	var appExitCode stageleft.ExitCode = stageleft.ExitSuccess
@@ -58,15 +62,16 @@ func main() {
 		Out: os.Stdout,
 		Err: os.Stderr,
 	}
+	std := std{&stdio}
 	defer func() {
 		os.Exit(int(appExitCode))
 	}()
 	defer func() {
 		if r := recover(); r != nil {
 			if err, ok := r.(error); ok {
-				fmt.Fprintf(stdio.Err, "%s\n", err)
+				std.WriteLineErr("%s", err)
 			}
-			_, _ = stdio.Err.Write(debug.Stack())
+			_, _ = std.Err.Write(debug.Stack())
 			if appExitCode != stageleft.ExitSuccess {
 				appExitCode = stageleft.AsExitCode(r, stageleft.ExitCode(126))
 			}

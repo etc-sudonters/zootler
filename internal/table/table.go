@@ -1,23 +1,59 @@
 package table
 
 import (
+	"errors"
+	"fmt"
+	"reflect"
+
+	"github.com/etc-sudonters/substrate/mirrors"
 	"github.com/etc-sudonters/substrate/skelly/bitset"
 )
 
+type ColumnMeta struct {
+	Id ColumnId
+	T  reflect.Type
+}
+type ColumnMetas []ColumnMeta
 type ColumnIds []ColumnId
 type Columns []ColumnData
 type Values []Value
 type Row = bitset.Bitset64
 type Rows []*Row
-
+type ColumnMap map[reflect.Type]Value
 type RowTuple struct {
 	Id RowId
 	ValueTuple
 }
 
+var ColumnNotPresent = errors.New("column not present")
+var CouldNotCastColumn = errors.New("could not cast column")
+
+func Extract[T any](cm ColumnMap) (*T, error) {
+	typ := mirrors.TypeOf[T]()
+	item, exists := cm[typ]
+	if !exists {
+		return nil, fmt.Errorf("%w: '%s'", ColumnNotPresent, typ.Name())
+	}
+	t, casted := item.(T)
+	if !casted {
+		return nil, fmt.Errorf("%w: '%s'", CouldNotCastColumn, typ.Name())
+	}
+	return &t, nil
+}
+
 type ValueTuple struct {
-	Cols   ColumnIds
+	Cols   ColumnMetas
 	Values Values
+}
+
+func (v *ValueTuple) ColumnMap() ColumnMap {
+	m := make(ColumnMap, len(v.Values))
+
+	for i := range v.Cols {
+		m[v.Cols[i].T] = v.Values[i]
+	}
+
+	return m
 }
 
 func New() *Table {

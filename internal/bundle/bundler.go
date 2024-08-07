@@ -57,12 +57,13 @@ func SingleRow(fill Fill, columns table.Columns) (Interface, error) {
 	}
 
 	var tup table.RowTuple
-	tup.Cols = make(table.ColumnIds, len(columns))
+	tup.Cols = make(table.ColumnMetas, len(columns))
 	tup.Values = make(table.Values, len(columns))
 	tup.Id = table.RowId(fill.Elems()[0])
 
 	for i, c := range columns {
-		tup.Cols[i] = c.Id()
+		tup.Cols[i].Id = c.Id()
+		tup.Cols[i].T = c.Type()
 		tup.Values[i] = c.Column().Get(tup.Id)
 	}
 
@@ -85,10 +86,11 @@ func (r *rowOrdered) Current() *table.RowTuple {
 		r.r = new(table.RowTuple)
 		r.r.Id = table.RowId(r.iter.Current())
 		r.r.Values = make(table.Values, len(r.cols))
-		r.r.Cols = make(table.ColumnIds, len(r.cols))
+		r.r.Cols = make(table.ColumnMetas, len(r.cols))
 
 		for i, col := range r.cols {
-			r.r.Cols[i] = col.Id()
+			r.r.Cols[i].Id = col.Id()
+			r.r.Cols[i].T = col.Type()
 		}
 	}
 

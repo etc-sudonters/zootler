@@ -41,7 +41,7 @@ type ZootlrConfig func(*Zootlr) error
 
 func Storage(sc ConfigureStorage) ZootlrConfig {
 	return func(z *Zootlr) error {
-		return sc.Configure(z.Engine())
+		return sc.Configure(z.Ctx(), z.Engine())
 	}
 }
 
@@ -63,7 +63,7 @@ func NewApp(ctx context.Context, ops ...ZootlrConfig) (*Zootlr, error) {
 }
 
 type ConfigureStorage interface {
-	Configure(query.Engine) error
+	Configure(context.Context, query.Engine) error
 }
 
 type LogicLoader interface {
