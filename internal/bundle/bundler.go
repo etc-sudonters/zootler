@@ -3,6 +3,7 @@ package bundle
 import (
 	"errors"
 	"fmt"
+	"math/bits"
 	"sudonters/zootler/internal/table"
 
 	"github.com/etc-sudonters/substrate/reiterate"
@@ -45,7 +46,7 @@ type Bundler func(fill Fill, columns table.Columns) Interface
 func RowOrdered(fill Fill, columns table.Columns) Interface {
 	return &rowOrdered{
 		fill: fill,
-		iter: bitset.Iter(fill.Bitset64),
+		iter: Iter(fill.Bitset64),
 		r:    nil,
 		cols: columns,
 	}
@@ -72,7 +73,7 @@ func SingleRow(fill Fill, columns table.Columns) (Interface, error) {
 
 type rowOrdered struct {
 	fill Fill
-	iter reiterate.Iterator[int]
+	iter reiterate.Iterator[uint64]
 	r    *table.RowTuple
 	cols table.Columns
 }
@@ -84,7 +85,6 @@ func (r rowOrdered) MoveNext() bool {
 func (r *rowOrdered) Current() *table.RowTuple {
 	if r.r == nil {
 		r.r = new(table.RowTuple)
-		r.r.Id = table.RowId(r.iter.Current())
 		r.r.Values = make(table.Values, len(r.cols))
 		r.r.Cols = make(table.ColumnMetas, len(r.cols))
 
@@ -94,9 +94,11 @@ func (r *rowOrdered) Current() *table.RowTuple {
 		}
 	}
 
+	thisId := table.RowId(r.iter.Current())
 	vt := r.r
+	vt.Id = thisId
 	for i, col := range r.cols {
-		vt.Values[i] = col.Column().Get(vt.Id)
+		vt.Values[i] = col.Column().Get(thisId)
 	}
 
 	return vt
@@ -129,4 +131,40 @@ func (s single) Current() *table.RowTuple {
 
 func (s single) Len() int {
 	return 1
+}
+
+func Iter(b bitset.Bitset64) reiterate.Iterator[uint64] {
+	return &iter{bitset.ToRawParts(b), 0, -1}
+}
+
+type iter struct {
+	parts   []uint64
+	current uint64
+	partIdx int
+}
+
+func (b *iter) MoveNext() bool {
+	if b.partIdx >= len(b.parts) {
+		return false
+	}
+
+	for b.current == 0 {
+		b.partIdx++
+		if b.partIdx >= len(b.parts) {
+			return false
+		}
+
+		candidate := b.parts[b.partIdx]
+		if candidate != 0 {
+			b.current = candidate
+			return true
+		}
+	}
+
+	b.current ^= (1 << bits.TrailingZeros64(b.current))
+	return true
+}
+
+func (b *iter) Current() uint64 {
+	return uint64(b.partIdx)*64 + uint64(bits.TrailingZeros64(b.current))
 }

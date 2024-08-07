@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path"
 	"strings"
@@ -135,7 +136,11 @@ func CreateLocationIds(e query.Engine) (*LocationIds, error) {
 	}
 
 	locations, loadErr := bundle.ToMap(rows, func(r *table.RowTuple) (string, table.RowId, error) {
-		model, name := r.Id, r.Values[0].(components.Name)
+		model := r.Id
+		name, ok := r.Values[0].(components.Name)
+		if !ok {
+			return "", table.INVALID_ROWID, fmt.Errorf("could not cast row %+v to 'components.Name'", r)
+		}
 		return normalize(name), model, nil
 	})
 

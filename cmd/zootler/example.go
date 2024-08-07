@@ -90,18 +90,20 @@ func example(ctx context.Context, storage query.Engine) error {
 
 	func() {
 		q := storage.CreateQuery()
-		q.NotExists(T[components.Location]())
-		q.Exists(T[components.Song]())
 		q.Load(T[components.Name]())
-		songNames, err := storage.Retrieve(q)
+		q.Load(T[components.Song]())
+		q.Load(T[components.Location]())
+		things, err := storage.Retrieve(q)
 		if err != nil {
 			panic(err)
 		}
 
-		for songNames.MoveNext() {
-			row := songNames.Current()
+		std.WriteLineOut("size: %d", things.Len())
+		things.MoveNext()
+		{
+			row := things.Current()
 			name := row.Values[0].(components.Name)
-			std.WriteLineOut("now playing '%s' (%d)", name, row.Id)
+			std.WriteLineOut("'%s' (%d)", name, row.Id)
 		}
 	}()
 
