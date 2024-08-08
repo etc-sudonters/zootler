@@ -32,10 +32,15 @@ func (w WorldFileLoader) Configure(ctx context.Context, e query.Engine) error {
 		return slipup.Trace(err, "loading helpers")
 	}
 
-	std.WriteLineOut("reading dir '%s'", w.Path)
+	std.WriteLineOut("reading dir  '%s'", w.Path)
 	dirEntries, dirErr := os.ReadDir(w.Path)
 	if dirErr != nil {
 		return slipup.Trace(dirErr, w.Path)
+	}
+
+	locTbl, locErr := CreateLocationIds(ctx, e)
+	if locErr != nil {
+		return slipup.Trace(locErr, "creating location id table")
 	}
 
 	for _, dentry := range dirEntries {
@@ -45,7 +50,7 @@ func (w WorldFileLoader) Configure(ctx context.Context, e query.Engine) error {
 
 		path := path.Join(w.Path, dentry.Name())
 		std.WriteLineOut("reading file '%s'", path)
-		if err := w.logicFile(path, e); err != nil {
+		if err := w.logicFile(ctx, path, locTbl, e); err != nil {
 			return slipup.Trace(err, path)
 		}
 	}
@@ -62,7 +67,9 @@ func (w WorldFileLoader) helpers(e query.Engine) error {
 	return nil
 }
 
-func (w WorldFileLoader) logicFile(path string, e query.Engine) error {
+func (w WorldFileLoader) logicFile(
+	ctx context.Context, path string, locations *LocationIds, e query.Engine,
+) error {
 	isMq := strings.Contains(path, "mq")
 
 	if isMq && !w.IncludeMQ {
@@ -72,11 +79,6 @@ func (w WorldFileLoader) logicFile(path string, e query.Engine) error {
 	rawLocs, readErr := ReadJsonFile[[]WorldFileLocation](path)
 	if readErr != nil {
 		return slipup.Trace(readErr, path)
-	}
-
-	locations, locErr := CreateLocationIds(e)
-	if locErr != nil {
-		return slipup.Trace(locErr, "creating location id table")
 	}
 
 	for _, raw := range rawLocs {
@@ -126,7 +128,12 @@ type WorldFileLocation struct {
 	Locations     map[string]string `json:"locations"`
 }
 
-func CreateLocationIds(e query.Engine) (*LocationIds, error) {
+func CreateLocationIds(ctx context.Context, e query.Engine) (*LocationIds, error) {
+	stdio, stdErr := dontio.StdFromContext(ctx)
+	std := std{stdio}
+	if stdErr != nil {
+		return nil, stdErr
+	}
 	query := e.CreateQuery()
 	query.Load(mirrors.TypeOf[components.Name]())
 	query.Exists(mirrors.TypeOf[components.Location]())
@@ -135,11 +142,12 @@ func CreateLocationIds(e query.Engine) (*LocationIds, error) {
 		return nil, qErr
 	}
 
+	std.WriteLineOut("retrieved '%d' named locations", rows.Len())
 	locations, loadErr := bundle.ToMap(rows, func(r *table.RowTuple) (string, table.RowId, error) {
 		model := r.Id
 		name, ok := r.Values[0].(components.Name)
 		if !ok {
-			return "", table.INVALID_ROWID, fmt.Errorf("could not cast row %+v to 'components.Name'", r)
+			return "", r.Id, fmt.Errorf("could not cast row %+v to 'components.Name'", r)
 		}
 		return normalize(name), model, nil
 	})

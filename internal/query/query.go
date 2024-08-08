@@ -71,23 +71,28 @@ func (l *lookup) Lookup(v table.Value) {
 	l.lookups = append(l.lookups, v)
 }
 
-type builder struct {
+type query struct {
 	queryCore
 	exists    *bitset.Bitset64
 	notExists *bitset.Bitset64
 }
 
-func (b *builder) Exists(typ reflect.Type) {
+func (b *query) Load(typ reflect.Type) {
+	b.set(typ, b.exists)
+	b.set(typ, b.load)
+}
+
+func (b *query) Exists(typ reflect.Type) {
 	b.set(typ, b.exists)
 }
 
-func (b *builder) NotExists(typ reflect.Type) {
+func (b *query) NotExists(typ reflect.Type) {
 	b.set(typ, b.notExists)
 }
 
-func build(b *builder) predicate {
+func makePredicate(b *query) predicate {
 	return predicate{
-		exists:    b.exists.Union(*b.load),
+		exists:    bitset.Copy(*b.exists),
 		notExists: bitset.Copy(*b.notExists),
 	}
 }
@@ -144,7 +149,7 @@ type engine struct {
 }
 
 func (e engine) CreateQuery() Query {
-	return &builder{
+	return &query{
 		queryCore: queryCore{
 			types: e.columnIndex,
 			errs:  nil,
@@ -198,7 +203,7 @@ func (e *engine) InsertRow(vs ...table.Value) (table.RowId, error) {
 }
 
 func (e engine) Retrieve(b Query) (bundle.Interface, error) {
-	q, ok := b.(*builder)
+	q, ok := b.(*query)
 	if !ok {
 		return nil, fmt.Errorf("%T: %w", b, ErrInvalidQuery)
 	}
@@ -207,8 +212,8 @@ func (e engine) Retrieve(b Query) (bundle.Interface, error) {
 		return nil, errors.Join(q.errs...)
 	}
 
-	predicate := build(q)
-	fill := bundle.Fill{}
+	predicate := makePredicate(q)
+	fill := bitset.Bitset64{}
 
 	for row, possessed := range e.tbl.Rows {
 		if predicate.admit(possessed) {
@@ -221,11 +226,7 @@ func (e engine) Retrieve(b Query) (bundle.Interface, error) {
 		columns = append(columns, e.tbl.Cols[col])
 	}
 
-	if fill.Len() != 1 {
-		return bundle.RowOrdered(fill, columns), nil
-	} else {
-		return bundle.SingleRow(fill, columns)
-	}
+	return bundle.Bundle(fill, columns)
 }
 
 func saturatedSet(numBuckets uint64) bitset.Bitset64 {
@@ -257,17 +258,13 @@ func (e engine) Lookup(l Lookup) (bundle.Interface, error) {
 		entities = entities.Intersect(rows)
 	}
 
-	fill := bundle.Filled(entities)
+	fill := bitset.Copy(entities)
 	var columns table.Columns
 	for _, col := range L.load.Elems() {
 		columns = append(columns, e.tbl.Cols[col])
 	}
 
-	if fill.Len() != 1 {
-		return bundle.RowOrdered(fill, columns), nil
-	} else {
-		return bundle.SingleRow(fill, columns)
-	}
+	return bundle.Bundle(fill, columns)
 }
 
 func (e *engine) SetValues(r table.RowId, vs table.Values) error {

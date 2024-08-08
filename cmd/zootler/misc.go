@@ -3,9 +3,11 @@ package main
 import (
 	"io/fs"
 	"os"
+	"reflect"
 	"regexp"
 	"strings"
 
+	"github.com/etc-sudonters/substrate/mirrors"
 	"muzzammil.xyz/jsonc"
 )
 
@@ -28,4 +30,8 @@ func ReadJsonFile[T any](path string) (T, error) {
 
 	err := jsonc.Unmarshal(raw, &t)
 	return t, err
+}
+
+func T[E any]() reflect.Type {
+	return mirrors.TypeOf[E]()
 }

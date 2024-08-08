@@ -4,18 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"reflect"
 	"sudonters/zootler/internal/query"
 	"sudonters/zootler/internal/table"
 	"sudonters/zootler/pkg/world/components"
 
 	"github.com/etc-sudonters/substrate/dontio"
-	"github.com/etc-sudonters/substrate/mirrors"
 )
-
-func T[E any]() reflect.Type {
-	return mirrors.TypeOf[E]()
-}
 
 func example(ctx context.Context, storage query.Engine) error {
 	stdio, stdErr := dontio.StdFromContext(ctx)
@@ -92,15 +86,14 @@ func example(ctx context.Context, storage query.Engine) error {
 		q := storage.CreateQuery()
 		q.Load(T[components.Name]())
 		q.Load(T[components.Song]())
-		q.Load(T[components.Location]())
+		q.Load(T[components.CollectableGameToken]())
 		things, err := storage.Retrieve(q)
 		if err != nil {
 			panic(err)
 		}
 
 		std.WriteLineOut("size: %d", things.Len())
-		things.MoveNext()
-		{
+		for things.MoveNext() {
 			row := things.Current()
 			name := row.Values[0].(components.Name)
 			std.WriteLineOut("'%s' (%d)", name, row.Id)
