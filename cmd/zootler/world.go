@@ -15,6 +15,7 @@ import (
 
 	"github.com/etc-sudonters/substrate/dontio"
 	"github.com/etc-sudonters/substrate/mirrors"
+	"github.com/etc-sudonters/substrate/skelly/graph"
 )
 
 type WorldFileLoader struct {
@@ -33,22 +34,22 @@ func (w WorldFileLoader) Configure(ctx context.Context, e query.Engine) error {
 	}
 
 	std.WriteLineOut("reading dir  '%s'", w.Path)
-	dirEntries, dirErr := os.ReadDir(w.Path)
+	directory, dirErr := os.ReadDir(w.Path)
 	if dirErr != nil {
 		return slipup.Trace(dirErr, w.Path)
 	}
 
-	locTbl, locErr := CreateLocationIds(ctx, e)
+	locTbl, locErr := CreateLocationMap(ctx, e)
 	if locErr != nil {
 		return slipup.Trace(locErr, "creating location id table")
 	}
 
-	for _, dentry := range dirEntries {
-		if !IsFile(dentry) {
+	for _, entry := range directory {
+		if !IsFile(entry) {
 			continue
 		}
 
-		path := path.Join(w.Path, dentry.Name())
+		path := path.Join(w.Path, entry.Name())
 		std.WriteLineOut("reading file '%s'", path)
 		if err := w.logicFile(ctx, path, locTbl, e); err != nil {
 			return slipup.Trace(err, path)
@@ -68,8 +69,13 @@ func (w WorldFileLoader) helpers(e query.Engine) error {
 }
 
 func (w WorldFileLoader) logicFile(
-	ctx context.Context, path string, locations *LocationIds, e query.Engine,
+	ctx context.Context, path string, locations *LocationMap, e query.Engine,
 ) error {
+	stdio, stdErr := dontio.StdFromContext(ctx)
+	std := std{stdio}
+	if stdErr != nil {
+		return stdErr
+	}
 	isMq := strings.Contains(path, "mq")
 
 	if isMq && !w.IncludeMQ {
@@ -82,9 +88,9 @@ func (w WorldFileLoader) logicFile(
 	}
 
 	for _, raw := range rawLocs {
-		here, mintErr := locations.Mint(raw.Name)
-		if mintErr != nil {
-			return slipup.TraceMsg(mintErr, "minting %s", raw.Name)
+		here, buildErr := locations.Build(components.Name(raw.Name))
+		if buildErr != nil {
+			return slipup.TraceMsg(buildErr, "building %s", raw.Name)
 		}
 
 		values := table.Values{
@@ -106,8 +112,16 @@ func (w WorldFileLoader) logicFile(
 			values = append(values, components.MasterQuest{})
 		}
 
-		if err := e.SetValues(here, values); err != nil {
+		if err := here.add(values); err != nil {
 			return slipup.TraceMsg(err, "while populating %s", raw.Name)
+		}
+
+		for destination, rule := range raw.Exits {
+			std.WriteLineOut("linking '%s -> %s'", here.name, destination)
+			linkErr := here.linkTo(components.Name(destination), components.RawLogic{Rule: rule})
+			if linkErr != nil {
+				return linkErr
+			}
 		}
 	}
 
@@ -128,7 +142,34 @@ type WorldFileLocation struct {
 	Locations     map[string]string `json:"locations"`
 }
 
-func CreateLocationIds(ctx context.Context, e query.Engine) (*LocationIds, error) {
+type locationBuilder struct {
+	parent *LocationMap
+	id     table.RowId
+	name   components.Name
+}
+
+func (l locationBuilder) add(v table.Values) error {
+	return l.parent.e.SetValues(l.id, v)
+}
+
+func (l locationBuilder) linkTo(name components.Name, rule components.RawLogic) error {
+	destination, linkErr := l.parent.Build(name)
+	if linkErr != nil {
+		return slipup.TraceMsg(linkErr, "while linking '%s -> %s'", l.name, name)
+	}
+
+	edgeName := fmt.Sprintf("%s -> %s", l.name, name)
+	_, edgeCreateErr := l.parent.e.InsertRow(edgeName, rule, components.Edge{
+		Origin: graph.Origination(l.id),
+		Dest:   graph.Destination(destination.id),
+	})
+	if edgeCreateErr != nil {
+		return slipup.TraceMsg(edgeCreateErr, "while creating edge %s", edgeName)
+	}
+	return nil
+}
+
+func CreateLocationMap(ctx context.Context, e query.Engine) (*LocationMap, error) {
 	stdio, stdErr := dontio.StdFromContext(ctx)
 	std := std{stdio}
 	if stdErr != nil {
@@ -156,27 +197,31 @@ func CreateLocationIds(ctx context.Context, e query.Engine) (*LocationIds, error
 		return nil, loadErr
 	}
 
-	return &LocationIds{
+	return &LocationMap{
 		e:         e,
 		locations: locations,
 	}, nil
 }
 
-type LocationIds struct {
+type LocationMap struct {
 	e         query.Engine
 	locations map[string]table.RowId
 }
 
-func (l LocationIds) Mint(name string) (table.RowId, error) {
+func (l *LocationMap) Build(name components.Name) (*locationBuilder, error) {
+	var b locationBuilder
+	b.name = name
+	b.parent = l
 	normalized := normalize(name)
 	if id, ok := l.locations[normalized]; ok {
-		return id, nil
+		b.id = id
+		return &b, nil
 	}
 
-	row, insertErr := l.e.InsertRow(components.Name(name), components.Location{})
+	row, insertErr := l.e.InsertRow(name, components.Location{})
 	if insertErr != nil {
-		return table.INVALID_ROWID, insertErr
+		return nil, insertErr
 	}
-
-	return row, nil
+	b.id = row
+	return &b, nil
 }
