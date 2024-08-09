@@ -51,7 +51,7 @@ func (w WorldFileLoader) Configure(ctx context.Context, e query.Engine) error {
 
 		path := path.Join(w.Path, entry.Name())
 		std.WriteLineOut("reading file '%s'", path)
-		if err := w.logicFile(ctx, path, locTbl, e); err != nil {
+		if err := w.logicFile(ctx, path, locTbl); err != nil {
 			return slipup.Trace(err, path)
 		}
 	}
@@ -69,13 +69,8 @@ func (w WorldFileLoader) helpers(e query.Engine) error {
 }
 
 func (w WorldFileLoader) logicFile(
-	ctx context.Context, path string, locations *LocationMap, e query.Engine,
+	_ context.Context, path string, locations *LocationMap,
 ) error {
-	stdio, stdErr := dontio.StdFromContext(ctx)
-	std := std{stdio}
-	if stdErr != nil {
-		return stdErr
-	}
 	isMq := strings.Contains(path, "mq")
 
 	if isMq && !w.IncludeMQ {
@@ -117,7 +112,6 @@ func (w WorldFileLoader) logicFile(
 		}
 
 		for destination, rule := range raw.Exits {
-			std.WriteLineOut("linking '%s -> %s'", here.name, destination)
 			linkErr := here.linkTo(components.Name(destination), components.RawLogic{Rule: rule})
 			if linkErr != nil {
 				return linkErr
