@@ -3,21 +3,12 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"sudonters/zootler/internal/query"
 	"sudonters/zootler/internal/table"
 	"sudonters/zootler/pkg/world/components"
-
-	"github.com/etc-sudonters/substrate/dontio"
 )
 
 func example(ctx context.Context, storage query.Engine) error {
-	stdio, stdErr := dontio.StdFromContext(ctx)
-	std := std{stdio}
-	if stdErr != nil {
-		return stdErr
-	}
-
 	func() {
 		q := storage.CreateQuery()
 		q.Exists(T[components.Location]())
@@ -25,7 +16,7 @@ func example(ctx context.Context, storage query.Engine) error {
 		if err != nil {
 			panic(err)
 		}
-		fmt.Fprintf(stdio.Out, "Count of all locations: %d\n", allLocs.Len())
+		WriteLineOut(ctx, "Count of all locations: %d", allLocs.Len())
 	}()
 
 	func() {
@@ -36,7 +27,7 @@ func example(ctx context.Context, storage query.Engine) error {
 		if err != nil {
 			panic(err)
 		}
-		fmt.Fprintf(stdio.Out, "Count of Song locations: %d\n", songLocs.Len())
+		WriteLineOut(ctx, "Count of Song locations: %d", songLocs.Len())
 	}()
 
 	func() {
@@ -47,7 +38,7 @@ func example(ctx context.Context, storage query.Engine) error {
 		if err != nil {
 			panic(err)
 		}
-		fmt.Fprintf(stdio.Out, "Count of not Song locations: %d\n", notSongLocs.Len())
+		WriteLineOut(ctx, "Count of not Song locations: %d", notSongLocs.Len())
 	}()
 
 	func() {
@@ -57,7 +48,7 @@ func example(ctx context.Context, storage query.Engine) error {
 		if err != nil {
 			panic(err)
 		}
-		fmt.Fprintf(stdio.Out, "Count of all collectable tokens: %d\n", allToks.Len())
+		WriteLineOut(ctx, "Count of all collectable tokens: %d", allToks.Len())
 	}()
 
 	func() {
@@ -68,7 +59,7 @@ func example(ctx context.Context, storage query.Engine) error {
 		if err != nil {
 			panic(err)
 		}
-		fmt.Fprintf(stdio.Out, "Count of Song tokens: %d\n", songToks.Len())
+		WriteLineOut(ctx, "Count of Song tokens: %d", songToks.Len())
 	}()
 
 	func() {
@@ -79,7 +70,7 @@ func example(ctx context.Context, storage query.Engine) error {
 		if err != nil {
 			panic(err)
 		}
-		fmt.Fprintf(stdio.Out, "Count of not Song tokens: %d\n", notSongToks.Len())
+		WriteLineOut(ctx, "Count of not Song tokens: %d", notSongToks.Len())
 	}()
 
 	func() {
@@ -92,11 +83,11 @@ func example(ctx context.Context, storage query.Engine) error {
 			panic(err)
 		}
 
-		std.WriteLineOut("size: %d", things.Len())
+		WriteLineOut(ctx, "size: %d", things.Len())
 		for things.MoveNext() {
 			row := things.Current()
 			name := row.Values[0].(components.Name)
-			std.WriteLineOut("'%s' (%d)", name, row.Id)
+			WriteLineOut(ctx, "'%s' (%d)", name, row.Id)
 		}
 	}()
 
@@ -114,14 +105,14 @@ func example(ctx context.Context, storage query.Engine) error {
 			panic(err)
 		}
 		foundMed := med.Len() == 1
-		fmt.Fprintf(stdio.Out, "Found %s? %t\n", lookupName, foundMed)
+		WriteLineOut(ctx, "Found %s? %t", lookupName, foundMed)
 
 		if foundMed {
 			med.MoveNext()
 			medallion := med.Current()
 
 			for i := range medallion.Cols {
-				fmt.Fprintf(stdio.Out, "Loaded column '%s' for '%s': %v\n", medallion.Cols[i].T.Name(), lookupName, medallion.Values[i])
+				WriteLineOut(ctx, "Loaded column '%s' for '%s': %v", medallion.Cols[i].T.Name(), lookupName, medallion.Values[i])
 			}
 		}
 	}()
@@ -137,7 +128,7 @@ func example(ctx context.Context, storage query.Engine) error {
 			return errors.New("did not find any rows!")
 		}
 
-		std.WriteLineOut("found %d rows", entries.Len())
+		WriteLineOut(ctx, "found %d rows", entries.Len())
 		for entries.MoveNext() {
 			row := entries.Current()
 			h := new(hintable)

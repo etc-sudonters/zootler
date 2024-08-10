@@ -24,6 +24,7 @@ type Column interface {
 	Set(e RowId, c Value)
 	Unset(e RowId)
 	ScanFor(Value) bitset.Bitset64
+	Len() int
 }
 
 type ColumnMetadata interface {

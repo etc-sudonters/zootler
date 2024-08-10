@@ -9,8 +9,6 @@ import (
 	"sudonters/zootler/internal/table/columns"
 	"sudonters/zootler/internal/table/indexes"
 	"sudonters/zootler/pkg/world/components"
-
-	"github.com/etc-sudonters/substrate/dontio"
 )
 
 type IntoComponents interface {
@@ -24,12 +22,7 @@ type DataFileLoader[T IntoComponents] struct {
 }
 
 func (l DataFileLoader[T]) Configure(ctx context.Context, storage query.Engine) error {
-	stdio, stdErr := dontio.StdFromContext(ctx)
-	std := std{stdio}
-	if stdErr != nil {
-		return stdErr
-	}
-	std.WriteLineOut("reading file '%s'", l.Path)
+	WriteLineOut(ctx, "reading file '%s'", l.Path)
 	ts, err := ReadJsonFile[[]T](l.Path)
 	if err != nil {
 		return slipup.Trace(err, l.Path)
@@ -66,12 +59,7 @@ func indexed(ddl DDL, i table.Index) DDL {
 }
 
 func (cs CreateScheme) Configure(ctx context.Context, storage query.Engine) error {
-	stdio, stdErr := dontio.StdFromContext(ctx)
-	std := std{stdio}
-	if stdErr != nil {
-		return stdErr
-	}
-	std.WriteLineOut("running DDL")
+	WriteLineOut(ctx, "running DDL")
 	for _, ddl := range cs.DDL {
 		if _, err := storage.CreateColumn(ddl()); err != nil {
 			return err
@@ -110,6 +98,7 @@ func MakeDDL() []DDL {
 		columns.HashMapColumn[components.Song],
 		columns.HashMapColumn[components.RawLogic],
 		columns.HashMapColumn[components.Edge],
+		columns.HashMapColumn[components.CompiledRule],
 
 		// bit columns only track singletons
 		columns.BitColumnOf[components.Helper],

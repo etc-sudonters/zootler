@@ -25,33 +25,21 @@ type cliOptions struct {
 	includeMq bool
 }
 
-func (opts *cliOptions) init() {
+func (opts *cliOptions) init() error {
 	flag.StringVar(&opts.logicDir, "l", "", "Directory where logic files are located")
 	flag.StringVar(&opts.dataDir, "d", "", "Directory where data files are stored")
 	flag.BoolVar(&opts.includeMq, "M", false, "Whether or not to include MQ data")
 	flag.Parse()
-}
 
-func (c cliOptions) validate() error {
-	if c.logicDir == "" {
+	if opts.logicDir == "" {
 		return missingRequired("-l")
 	}
 
-	if c.dataDir == "" {
+	if opts.dataDir == "" {
 		return missingRequired("-d")
 	}
 
 	return nil
-}
-
-type std struct{ *dontio.Std }
-
-func (s std) WriteLineOut(msg string, v ...any) {
-	fmt.Fprintf(s.Out, msg+"\n", v...)
-}
-
-func (s std) WriteLineErr(msg string, v ...any) {
-	fmt.Fprintf(s.Err, msg+"\n", v...)
 }
 
 func main() {
@@ -80,43 +68,42 @@ func main() {
 
 	exitWithErr := func(code stageleft.ExitCode, err error) {
 		appExitCode = code
-		fmt.Fprintf(stdio.Err, "%s\n", err.Error())
+		std.WriteLineErr(err.Error())
 	}
 
 	ctx := context.Background()
 	ctx = dontio.AddStdToContext(ctx, &stdio)
 
-	(&opts).init()
-
-	if cliErr := opts.validate(); cliErr != nil {
-		exitWithErr(2, cliErr)
+	if argsErr := (&opts).init(); argsErr != nil {
+		exitWithErr(2, argsErr)
 		return
 	}
 
-	app, err := app.NewApp(ctx,
-		app.Storage(CreateScheme{DDL: MakeDDL()}),
-		app.Storage(DataFileLoader[FileItem]{
+	app, appCreateErr := app.New(ctx,
+		app.Configure(CreateScheme{DDL: MakeDDL()}),
+		app.Configure(DataFileLoader[FileItem]{
 			IncludeMQ: opts.includeMq,
 			Path:      path.Join(opts.dataDir, "items.json"),
 		}),
-		app.Storage(DataFileLoader[FileLocation]{
+		app.Configure(DataFileLoader[FileLocation]{
 			IncludeMQ: opts.includeMq,
 			Path:      path.Join(opts.dataDir, "locations.json"),
 		}),
-		app.Storage(WorldFileLoader{
+		app.Configure(WorldFileLoader{
 			IncludeMQ: opts.includeMq,
 			Path:      opts.logicDir,
 			Helpers:   path.Join(path.Dir(opts.logicDir), "helpers.json"),
 		}),
+		app.Configure(&LogicCompiler{}),
 	)
 
-	if err != nil {
-		exitWithErr(3, err)
+	if appCreateErr != nil {
+		exitWithErr(3, appCreateErr)
 		return
 	}
 
-	if err := example(app.Ctx(), app.Engine()); err != nil {
-		exitWithErr(4, err)
+	if appRunErr := example(app.Ctx(), app.Engine()); appRunErr != nil {
+		exitWithErr(4, appRunErr)
 		return
 	}
 }

@@ -90,6 +90,10 @@ func (row Slice) ScanFor(v table.Value) bitset.Bitset64 {
 	}
 }
 
+func (row Slice) Len() int {
+	return row.members.Len()
+}
+
 func (row Slice) scanMembers(v table.Value) (b bitset.Bitset64) {
 	biter := bitset.Iter(*row.members)
 	for biter.MoveNext() {

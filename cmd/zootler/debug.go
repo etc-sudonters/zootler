@@ -2,33 +2,40 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"reflect"
 	"sudonters/zootler/internal/query"
-
-	"github.com/etc-sudonters/substrate/dontio"
+	"sudonters/zootler/internal/slipup"
+	"sudonters/zootler/internal/table"
 )
 
-type InspectTable struct{}
+type InspectTable struct {
+	Columns []reflect.Type
+}
 
 func (i InspectTable) Configure(ctx context.Context, storage query.Engine) error {
-	stdio, dontioErr := dontio.StdFromContext(ctx)
-	if dontioErr != nil {
-		return dontioErr
-	}
-
-	std := std{stdio}
-
 	tbl, extractTblErr := query.ExtractTable(storage)
 	if extractTblErr != nil {
 		return extractTblErr
 	}
 
-	std.WriteLineOut("Number of columns:\t%d", len(tbl.Cols))
-	std.WriteLineOut("Number of rows:\t\t%d", len(tbl.Rows))
+	WriteLineOut(ctx, "Number of columns:\t%d", len(tbl.Cols))
+	WriteLineOut(ctx, "Number of rows:\t\t%d", len(tbl.Rows))
+	for _, t := range i.Columns {
+		id, ok := query.ColumnIdFor(storage, t)
+		if !ok {
+			return fmt.Errorf("could not find column for '%s'", t.Name())
+		}
+		if err := examineColumn(ctx, tbl.Cols[id]); err != nil {
+			return slipup.TraceMsg(err, "while inspecting column '%s'", t.Name())
+		}
+	}
 	return nil
 }
 
-type Func func(context.Context, query.Engine) error
-
-func (f Func) Configure(ctx context.Context, storage query.Engine) error {
-	return f(ctx, storage)
+func examineColumn(ctx context.Context, col table.ColumnData) error {
+	WriteLineOut(ctx, "Column:\t\t%s", col.Type().Name())
+	WriteLineOut(ctx, "Id:\t\t%d", col.Id())
+	WriteLineOut(ctx, "Population:\t%d", col.Column().Len())
+	return nil
 }

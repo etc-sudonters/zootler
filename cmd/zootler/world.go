@@ -7,15 +7,13 @@ import (
 	"path"
 	"strings"
 	"sudonters/zootler/internal/bundle"
+	"sudonters/zootler/internal/entity"
 	"sudonters/zootler/internal/query"
 	"sudonters/zootler/internal/slipup"
 	"sudonters/zootler/internal/table"
-	"sudonters/zootler/pkg/logic"
 	"sudonters/zootler/pkg/world/components"
 
-	"github.com/etc-sudonters/substrate/dontio"
 	"github.com/etc-sudonters/substrate/mirrors"
-	"github.com/etc-sudonters/substrate/skelly/graph"
 )
 
 type WorldFileLoader struct {
@@ -24,16 +22,7 @@ type WorldFileLoader struct {
 }
 
 func (w WorldFileLoader) Configure(ctx context.Context, e query.Engine) error {
-	stdio, stdErr := dontio.StdFromContext(ctx)
-	if stdErr != nil {
-		return stdErr
-	}
-	std := std{stdio}
-	if err := w.helpers(e); err != nil {
-		return slipup.Trace(err, "loading helpers")
-	}
-
-	std.WriteLineOut("reading dir  '%s'", w.Path)
+	WriteLineOut(ctx, "reading dir  '%s'", w.Path)
 	directory, dirErr := os.ReadDir(w.Path)
 	if dirErr != nil {
 		return slipup.Trace(dirErr, w.Path)
@@ -50,7 +39,7 @@ func (w WorldFileLoader) Configure(ctx context.Context, e query.Engine) error {
 		}
 
 		path := path.Join(w.Path, entry.Name())
-		std.WriteLineOut("reading file '%s'", path)
+		WriteLineOut(ctx, "reading file '%s'", path)
 		if err := w.logicFile(ctx, path, locTbl); err != nil {
 			return slipup.Trace(err, path)
 		}
@@ -63,7 +52,7 @@ func (w WorldFileLoader) helpers(e query.Engine) error {
 	helpers := make(map[string]string, 256)
 
 	for name, code := range helpers {
-		e.InsertRow(components.Name(name), logic.RawRule(code), components.Helper{})
+		e.InsertRow(components.Name(name), components.RawLogic{Rule: code}, components.Helper{})
 	}
 	return nil
 }
@@ -114,7 +103,7 @@ func (w WorldFileLoader) logicFile(
 		for destination, rule := range raw.Exits {
 			linkErr := here.linkTo(components.Name(destination), components.RawLogic{Rule: rule})
 			if linkErr != nil {
-				return linkErr
+				return slipup.TraceMsg(linkErr, "while linking '%s -> %s'", here.name, destination)
 			}
 		}
 	}
@@ -147,15 +136,15 @@ func (l locationBuilder) add(v table.Values) error {
 }
 
 func (l locationBuilder) linkTo(name components.Name, rule components.RawLogic) error {
+	edgeName := fmt.Sprintf("%s -> %s", l.name, name)
 	destination, linkErr := l.parent.Build(name)
 	if linkErr != nil {
-		return slipup.TraceMsg(linkErr, "while linking '%s -> %s'", l.name, name)
+		return slipup.TraceMsg(linkErr, "while linking '%s'", edgeName)
 	}
 
-	edgeName := fmt.Sprintf("%s -> %s", l.name, name)
-	_, edgeCreateErr := l.parent.e.InsertRow(edgeName, rule, components.Edge{
-		Origin: graph.Origination(l.id),
-		Dest:   graph.Destination(destination.id),
+	_, edgeCreateErr := l.parent.e.InsertRow(components.Name(edgeName), rule, components.Edge{
+		Origin: entity.Model(l.id),
+		Dest:   entity.Model(destination.id),
 	})
 	if edgeCreateErr != nil {
 		return slipup.TraceMsg(edgeCreateErr, "while creating edge %s", edgeName)
@@ -164,11 +153,6 @@ func (l locationBuilder) linkTo(name components.Name, rule components.RawLogic) 
 }
 
 func CreateLocationMap(ctx context.Context, e query.Engine) (*LocationMap, error) {
-	stdio, stdErr := dontio.StdFromContext(ctx)
-	std := std{stdio}
-	if stdErr != nil {
-		return nil, stdErr
-	}
 	query := e.CreateQuery()
 	query.Load(mirrors.TypeOf[components.Name]())
 	query.Exists(mirrors.TypeOf[components.Location]())
@@ -177,7 +161,7 @@ func CreateLocationMap(ctx context.Context, e query.Engine) (*LocationMap, error
 		return nil, qErr
 	}
 
-	std.WriteLineOut("retrieved '%d' named locations", rows.Len())
+	WriteLineOut(ctx, "retrieved '%d' named locations", rows.Len())
 	locations, loadErr := bundle.ToMap(rows, func(r *table.RowTuple) (string, table.RowId, error) {
 		model := r.Id
 		name, ok := r.Values[0].(components.Name)

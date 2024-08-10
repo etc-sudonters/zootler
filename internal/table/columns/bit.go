@@ -39,6 +39,10 @@ func (m *Bit) ScanFor(c table.Value) bitset.Bitset64 {
 	return bitset.Copy(*m.members)
 }
 
+func (m *Bit) Len() int {
+	return m.members.Len()
+}
+
 func BitColumnOf[T any]() *table.ColumnBuilder {
 	var t T
 	return BitColumnUsing(t)

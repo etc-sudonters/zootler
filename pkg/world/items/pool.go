@@ -1,7 +1,11 @@
 package items
 
-import "math"
-import "sudonters/zootler/pkg/world/settings"
+import (
+	"math"
+	"sudonters/zootler/pkg/world/settings"
+)
+
+// todo: Also extract all of this into JSON files
 
 func BuildItemPool(settings.SeedSettings) map[string]int {
 	return DefaultItemPool()

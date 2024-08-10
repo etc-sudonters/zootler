@@ -148,6 +148,16 @@ type engine struct {
 	tbl         *table.Table
 }
 
+func ColumnIdFor(e Engine, t reflect.Type) (table.ColumnId, bool) {
+	if q, ok := e.(*engine); ok {
+		if id, ok := q.columnIndex[t]; ok {
+			return id, ok
+		}
+	}
+
+	return table.INVALID_COLUMNID, false
+}
+
 func (e engine) CreateQuery() Query {
 	return &query{
 		queryCore: queryCore{
@@ -197,7 +207,9 @@ func (e *engine) CreateColumnIfNotExists(c *table.ColumnBuilder) (table.ColumnId
 func (e *engine) InsertRow(vs ...table.Value) (table.RowId, error) {
 	id := e.tbl.InsertRow()
 	if len(vs) > 0 {
-		e.SetValues(id, vs)
+		if err := e.SetValues(id, vs); err != nil {
+			return id, err
+		}
 	}
 	return id, nil
 }
