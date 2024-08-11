@@ -2,6 +2,7 @@ package components
 
 import (
 	"sudonters/zootler/internal/entity"
+	"sudonters/zootler/internal/rules/compiler"
 )
 
 type BossRoom struct{}
@@ -22,5 +23,11 @@ type RawLogic struct {
 type Helper struct{}
 
 type CompiledRule struct {
-	Code []uint8
+	Bytecode compiler.Bytecode
 }
+
+type ExitEdge struct{}
+type CheckEdge struct{}
+type EventEdge struct{}
+type TimePasses struct{}
+type SavewarpName string

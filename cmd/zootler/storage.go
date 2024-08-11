@@ -3,12 +3,12 @@ package main
 import (
 	"context"
 	"strings"
+	"sudonters/zootler/internal/components"
 	"sudonters/zootler/internal/query"
 	"sudonters/zootler/internal/slipup"
 	"sudonters/zootler/internal/table"
 	"sudonters/zootler/internal/table/columns"
 	"sudonters/zootler/internal/table/indexes"
-	"sudonters/zootler/pkg/world/components"
 )
 
 type IntoComponents interface {
@@ -16,12 +16,24 @@ type IntoComponents interface {
 	AddComponents(table.RowId, query.Engine) error
 }
 
+type AdditionalComponents[T any] interface {
+	Init(context.Context, query.Engine) error
+	Components(context.Context, table.RowId, T, query.Engine) error
+}
+
 type DataFileLoader[T IntoComponents] struct {
 	Path      string
 	IncludeMQ bool
+	Add       AdditionalComponents[T]
 }
 
-func (l DataFileLoader[T]) Configure(ctx context.Context, storage query.Engine) error {
+func (l DataFileLoader[T]) Setup(ctx context.Context, storage query.Engine) error {
+	if l.Add != nil {
+		if initErr := l.Add.Init(ctx, storage); initErr != nil {
+			return slipup.TraceMsg(initErr, "while preparing to read file: '%s'", l.Path)
+		}
+	}
+
 	WriteLineOut(ctx, "reading file '%s'", l.Path)
 	ts, err := ReadJsonFile[[]T](l.Path)
 	if err != nil {
@@ -36,11 +48,17 @@ func (l DataFileLoader[T]) Configure(ctx context.Context, storage query.Engine) 
 
 		row, insertErr := storage.InsertRow(name)
 		if insertErr != nil {
-			return insertErr
+			return slipup.TraceMsg(insertErr, "while creating row for %+v", t)
 		}
 
 		if valuesErr := t.AddComponents(row, storage); valuesErr != nil {
-			return valuesErr
+			return slipup.TraceMsg(valuesErr, "while adding core components to %+v", t)
+		}
+
+		if l.Add != nil {
+			if additonalErr := l.Add.Components(ctx, row, t, storage); additonalErr != nil {
+				return slipup.TraceMsg(additonalErr, "while adding additional components to %+v", t)
+			}
 		}
 	}
 
@@ -58,7 +76,7 @@ func indexed(ddl DDL, i table.Index) DDL {
 	}
 }
 
-func (cs CreateScheme) Configure(ctx context.Context, storage query.Engine) error {
+func (cs CreateScheme) Setup(ctx context.Context, storage query.Engine) error {
 	WriteLineOut(ctx, "running DDL")
 	for _, ddl := range cs.DDL {
 		if _, err := storage.CreateColumn(ddl()); err != nil {
@@ -89,6 +107,7 @@ func MakeDDL() []DDL {
 			}),
 		),
 
+		columns.HashMapColumn[components.CompiledRule],
 		columns.HashMapColumn[components.Count],
 		columns.HashMapColumn[components.Price],
 		columns.HashMapColumn[components.ShopObject],
@@ -98,9 +117,14 @@ func MakeDDL() []DDL {
 		columns.HashMapColumn[components.Song],
 		columns.HashMapColumn[components.RawLogic],
 		columns.HashMapColumn[components.Edge],
-		columns.HashMapColumn[components.CompiledRule],
+		columns.HashMapColumn[components.SavewarpName],
+		columns.HashMapColumn[components.DefaultItem],
 
 		// bit columns only track singletons
+		columns.BitColumnOf[components.ExitEdge],
+		columns.BitColumnOf[components.CheckEdge],
+		columns.BitColumnOf[components.EventEdge],
+		columns.BitColumnOf[components.TimePasses],
 		columns.BitColumnOf[components.Helper],
 		columns.BitColumnOf[components.Advancement],
 		columns.BitColumnOf[components.Beehive],

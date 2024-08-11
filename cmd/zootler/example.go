@@ -3,9 +3,9 @@ package main
 import (
 	"context"
 	"errors"
+	"sudonters/zootler/internal/components"
 	"sudonters/zootler/internal/query"
 	"sudonters/zootler/internal/table"
-	"sudonters/zootler/pkg/world/components"
 )
 
 func example(ctx context.Context, storage query.Engine) error {

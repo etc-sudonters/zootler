@@ -25,7 +25,7 @@ func (e Empty) Len() int                 { return 0 }
 func Many(fill bitset.Bitset64, columns table.Columns) Interface {
 	return &many{
 		len:  fill.Len(),
-		iter: bitset.Iter(fill),
+		iter: Iter(fill),
 		r:    nil,
 		cols: columns,
 	}

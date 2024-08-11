@@ -37,15 +37,15 @@ func (z *Zootlr) Error(err error) {
 	}
 }
 
-type ConfigureFunc func(*Zootlr) error
+type SetupFunc func(*Zootlr) error
 
-func Configure(sc Configurer) ConfigureFunc {
+func Setup(sc SetupApp) SetupFunc {
 	return func(z *Zootlr) error {
-		return sc.Configure(z.Ctx(), z.Engine())
+		return sc.Setup(z.Ctx(), z.Engine())
 	}
 }
 
-func New(ctx context.Context, ops ...ConfigureFunc) (*Zootlr, error) {
+func New(ctx context.Context, ops ...SetupFunc) (*Zootlr, error) {
 	var z Zootlr
 	var engineError error
 	z.storage, engineError = query.NewEngine()
@@ -62,10 +62,6 @@ func New(ctx context.Context, ops ...ConfigureFunc) (*Zootlr, error) {
 	return &z, nil
 }
 
-type Configurer interface {
-	Configure(context.Context, query.Engine) error
-}
-
-type LogicLoader interface {
-	Load() error
+type SetupApp interface {
+	Setup(context.Context, query.Engine) error
 }

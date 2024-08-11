@@ -39,20 +39,6 @@ func T[E any]() reflect.Type {
 	return mirrors.TypeOf[E]()
 }
 
-type BasicSampler struct {
-	period, Modulo uint
-	Do             func(v ...any) error
-}
-
-func (b *BasicSampler) Sample(v ...any) error {
-	b.period++
-	if b.period%b.Modulo == 0 {
-		return b.Do(v...)
-	}
-
-	return nil
-}
-
 type std struct{ *dontio.Std }
 
 func (s std) WriteLineOut(msg string, v ...any) {

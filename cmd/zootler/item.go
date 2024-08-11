@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
+	"sudonters/zootler/internal/components"
 	"sudonters/zootler/internal/query"
 	"sudonters/zootler/internal/table"
-	"sudonters/zootler/pkg/world/components"
 )
 
 type FileItem struct {

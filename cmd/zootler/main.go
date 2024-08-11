@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"reflect"
 	"runtime/debug"
 	"sudonters/zootler/internal/app"
+	"sudonters/zootler/internal/components"
 
 	"github.com/etc-sudonters/substrate/dontio"
 	"github.com/etc-sudonters/substrate/stageleft"
@@ -79,31 +81,46 @@ func main() {
 		return
 	}
 
-	app, appCreateErr := app.New(ctx,
-		app.Configure(CreateScheme{DDL: MakeDDL()}),
-		app.Configure(DataFileLoader[FileItem]{
+	_, appCreateErr := app.New(ctx,
+		app.Setup(CreateScheme{DDL: MakeDDL()}),
+		app.Setup(DataFileLoader[FileItem]{
 			IncludeMQ: opts.includeMq,
 			Path:      path.Join(opts.dataDir, "items.json"),
 		}),
-		app.Configure(DataFileLoader[FileLocation]{
+		app.Setup(DataFileLoader[FileLocation]{
 			IncludeMQ: opts.includeMq,
 			Path:      path.Join(opts.dataDir, "locations.json"),
+			Add:       new(AttachDefaultItem),
 		}),
-		app.Configure(WorldFileLoader{
+		app.Setup(WorldFileLoader{
 			IncludeMQ: opts.includeMq,
 			Path:      opts.logicDir,
 			Helpers:   path.Join(path.Dir(opts.logicDir), "helpers.json"),
 		}),
-		app.Configure(&LogicCompiler{}),
+		app.Setup(&LogicCompiler{}),
+		app.Setup(InspectQuery{
+			Exist: []reflect.Type{
+				T[components.Location](),
+			},
+		}),
+		app.Setup(InspectQuery{
+			Exist: []reflect.Type{
+				T[components.Location](),
+				T[components.DefaultItem](),
+			},
+		}),
+		app.Setup(InspectQuery{
+			Exist: []reflect.Type{
+				T[components.Location](),
+			},
+			NotExist: []reflect.Type{
+				T[components.DefaultItem](),
+			},
+		}),
 	)
 
 	if appCreateErr != nil {
 		exitWithErr(3, appCreateErr)
-		return
-	}
-
-	if appRunErr := example(app.Ctx(), app.Engine()); appRunErr != nil {
-		exitWithErr(4, appRunErr)
 		return
 	}
 }

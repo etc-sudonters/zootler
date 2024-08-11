@@ -2,7 +2,7 @@ package items
 
 import (
 	"math"
-	"sudonters/zootler/pkg/world/settings"
+	"sudonters/zootler//settings"
 )
 
 // todo: Also extract all of this into JSON files

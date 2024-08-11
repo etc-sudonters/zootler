@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"sudonters/zootler/internal/components"
 	"sudonters/zootler/internal/query"
+	"sudonters/zootler/internal/slipup"
 	"sudonters/zootler/internal/table"
-	"sudonters/zootler/pkg/world/components"
 )
 
 type FileLocation struct {
@@ -489,4 +491,46 @@ func (item FileLocation) categories(rid table.RowId, storage query.Engine) error
 		}
 	}
 	return nil
+}
+
+type AttachDefaultItem struct {
+	items map[string]table.RowId
+}
+
+func (a *AttachDefaultItem) Init(_ context.Context, storage query.Engine) error {
+	if a.items == nil {
+		a.items = make(map[string]table.RowId, 256)
+	}
+	q := storage.CreateQuery()
+	q.Load(T[components.Name]())
+	q.Exists(T[components.CollectableGameToken]())
+	names, err := storage.Retrieve(q)
+	if err != nil {
+		return slipup.Trace(err, "while building item name map")
+	}
+
+	if names.Len() == 0 {
+		return slipup.Create("no items load")
+	}
+
+	for names.MoveNext() {
+		current := names.Current()
+		name := names.Current().Values[0].(components.Name)
+		a.items[string(name)] = current.Id
+	}
+
+	return nil
+}
+
+func (a *AttachDefaultItem) Components(_ context.Context, id table.RowId, l FileLocation, e query.Engine) error {
+	if l.Default == "" {
+		return nil
+	}
+
+	itemId, exists := a.items[l.Default]
+	if !exists {
+		return slipup.Create("item '%s' was not found in the loaded items list", l.Default)
+	}
+
+	return e.SetValues(id, table.Values{components.DefaultItem(itemId)})
 }

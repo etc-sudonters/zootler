@@ -7,11 +7,11 @@ import (
 	"path"
 	"strings"
 	"sudonters/zootler/internal/bundle"
+	"sudonters/zootler/internal/components"
 	"sudonters/zootler/internal/entity"
 	"sudonters/zootler/internal/query"
 	"sudonters/zootler/internal/slipup"
 	"sudonters/zootler/internal/table"
-	"sudonters/zootler/pkg/world/components"
 
 	"github.com/etc-sudonters/substrate/mirrors"
 )
@@ -21,7 +21,7 @@ type WorldFileLoader struct {
 	IncludeMQ     bool
 }
 
-func (w WorldFileLoader) Configure(ctx context.Context, e query.Engine) error {
+func (w WorldFileLoader) Setup(ctx context.Context, e query.Engine) error {
 	WriteLineOut(ctx, "reading dir  '%s'", w.Path)
 	directory, dirErr := os.ReadDir(w.Path)
 	if dirErr != nil {
@@ -92,6 +92,14 @@ func (w WorldFileLoader) logicFile(
 			values = append(values, components.Dungeon(raw.Dungeon))
 		}
 
+		if raw.DoesTimePass {
+			values = append(values, components.TimePasses{})
+		}
+
+		if raw.Savewarp != "" {
+			values = append(values, components.SavewarpName(raw.Savewarp))
+		}
+
 		if isMq {
 			values = append(values, components.MasterQuest{})
 		}
@@ -101,11 +109,26 @@ func (w WorldFileLoader) logicFile(
 		}
 
 		for destination, rule := range raw.Exits {
-			linkErr := here.linkTo(components.Name(destination), components.RawLogic{Rule: rule})
+			linkErr := here.linkTo(components.Name(destination), components.RawLogic{Rule: rule}, components.ExitEdge{})
 			if linkErr != nil {
 				return slipup.TraceMsg(linkErr, "while linking '%s -> %s'", here.name, destination)
 			}
 		}
+
+		for check, rule := range raw.Locations {
+			linkErr := here.linkTo(components.Name(check), components.RawLogic{Rule: rule}, components.CheckEdge{})
+			if linkErr != nil {
+				return slipup.TraceMsg(linkErr, "while linking '%s -> %s'", here.name, check)
+			}
+		}
+
+		for event, rule := range raw.Events {
+			linkErr := here.linkTo(components.Name(event), components.RawLogic{Rule: rule}, components.EventEdge{})
+			if linkErr != nil {
+				return slipup.TraceMsg(linkErr, "while linking '%s -> %s'", here.name, event)
+			}
+		}
+
 	}
 
 	return nil
@@ -135,19 +158,25 @@ func (l locationBuilder) add(v table.Values) error {
 	return l.parent.e.SetValues(l.id, v)
 }
 
-func (l locationBuilder) linkTo(name components.Name, rule components.RawLogic) error {
+func (l locationBuilder) linkTo(name components.Name, rule components.RawLogic, vs ...table.Value) error {
 	edgeName := fmt.Sprintf("%s -> %s", l.name, name)
 	destination, linkErr := l.parent.Build(name)
 	if linkErr != nil {
 		return slipup.TraceMsg(linkErr, "while linking '%s'", edgeName)
 	}
 
-	_, edgeCreateErr := l.parent.e.InsertRow(components.Name(edgeName), rule, components.Edge{
+	edge, edgeCreateErr := l.parent.e.InsertRow(components.Name(edgeName), rule, components.Edge{
 		Origin: entity.Model(l.id),
 		Dest:   entity.Model(destination.id),
 	})
 	if edgeCreateErr != nil {
 		return slipup.TraceMsg(edgeCreateErr, "while creating edge %s", edgeName)
+	}
+
+	if len(vs) != 0 {
+		if additionalErr := l.parent.e.SetValues(edge, table.Values(vs)); additionalErr != nil {
+			return slipup.TraceMsg(additionalErr, "while customizing '%s'", edgeName)
+		}
 	}
 	return nil
 }
