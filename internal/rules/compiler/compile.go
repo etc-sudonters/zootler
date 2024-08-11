@@ -1,10 +1,11 @@
 package compiler
 
-import "sudonters/zootler/internal/rules/parser"
+import (
+	"sudonters/zootler/internal/rules/bytecode"
+	"sudonters/zootler/internal/rules/parser"
+)
 
-func Compile(parser.Expression) (Chunk, error) {
-	var b Chunk
+func Compile(ast parser.Expression) (bytecode.Chunk, error) {
+	var b bytecode.Chunk
 	return b, nil
 }
-
-type Compiler interface{}
