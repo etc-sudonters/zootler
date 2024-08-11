@@ -39,7 +39,6 @@ func (w WorldFileLoader) Setup(ctx context.Context, e query.Engine) error {
 		}
 
 		path := path.Join(w.Path, entry.Name())
-		WriteLineOut(ctx, "reading file '%s'", path)
 		if err := w.logicFile(ctx, path, locTbl); err != nil {
 			return slipup.Trace(err, path)
 		}
@@ -190,7 +189,6 @@ func CreateLocationMap(ctx context.Context, e query.Engine) (*LocationMap, error
 		return nil, qErr
 	}
 
-	WriteLineOut(ctx, "retrieved '%d' named locations", rows.Len())
 	locations, loadErr := bundle.ToMap(rows, func(r *table.RowTuple) (string, table.RowId, error) {
 		model := r.Id
 		name, ok := r.Values[0].(components.Name)

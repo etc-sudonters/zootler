@@ -16,11 +16,6 @@ import (
 type LogicCompiler struct{}
 
 func (l *LogicCompiler) Setup(ctx context.Context, e query.Engine) error {
-	var compiledEdges int
-	defer func() {
-		WriteLineOut(ctx, "compiled %d rules", compiledEdges)
-	}()
-
 	edge := new(ParsableEdge)
 	q := e.CreateQuery()
 	q.Load(mirrors.TypeOf[components.Name]())
@@ -34,9 +29,7 @@ func (l *LogicCompiler) Setup(ctx context.Context, e query.Engine) error {
 		return errors.New("did not find any logic rules to compile")
 	}
 
-	WriteLineOut(ctx, "found %d rules to compile", edgeRules.Len())
 	for edgeRules.MoveNext() {
-		compiledEdges++
 		current := edgeRules.Current()
 		if initErr := edge.Init(current); initErr != nil {
 			return slipup.Trace(initErr, "while initing edge rules")

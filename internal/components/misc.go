@@ -23,7 +23,7 @@ type RawLogic struct {
 type Helper struct{}
 
 type CompiledRule struct {
-	Bytecode compiler.Bytecode
+	Bytecode compiler.Chunk
 }
 
 type ExitEdge struct{}

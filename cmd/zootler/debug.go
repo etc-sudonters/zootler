@@ -10,6 +10,23 @@ import (
 	"sudonters/zootler/internal/table"
 )
 
+func examineTable(ctx context.Context, storage query.Engine) error {
+	tbl, extractTblErr := query.ExtractTable(storage)
+	if extractTblErr != nil {
+		return extractTblErr
+	}
+
+	WriteLineOut(ctx, "Number of columns:\t%d", len(tbl.Cols))
+	WriteLineOut(ctx, "Number of rows:\t\t%d", len(tbl.Rows))
+	return nil
+}
+
+type DebugSetupFunc func(ctx context.Context, storage query.Engine) error
+
+func (d DebugSetupFunc) Setup(ctx context.Context, storage query.Engine) error {
+	return d(ctx, storage)
+}
+
 type InspectTable struct {
 	Columns []reflect.Type
 }

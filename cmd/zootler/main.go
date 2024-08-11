@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"reflect"
 	"runtime/debug"
 	"sudonters/zootler/internal/app"
-	"sudonters/zootler/internal/components"
+	"sudonters/zootler/internal/query"
+	"sudonters/zootler/internal/rules/compiler"
 
 	"github.com/etc-sudonters/substrate/dontio"
 	"github.com/etc-sudonters/substrate/stageleft"
@@ -82,6 +82,7 @@ func main() {
 	}
 
 	_, appCreateErr := app.New(ctx,
+
 		app.Setup(CreateScheme{DDL: MakeDDL()}),
 		app.Setup(DataFileLoader[FileItem]{
 			IncludeMQ: opts.includeMq,
@@ -98,25 +99,14 @@ func main() {
 			Helpers:   path.Join(path.Dir(opts.logicDir), "helpers.json"),
 		}),
 		app.Setup(&LogicCompiler{}),
-		app.Setup(InspectQuery{
-			Exist: []reflect.Type{
-				T[components.Location](),
-			},
-		}),
-		app.Setup(InspectQuery{
-			Exist: []reflect.Type{
-				T[components.Location](),
-				T[components.DefaultItem](),
-			},
-		}),
-		app.Setup(InspectQuery{
-			Exist: []reflect.Type{
-				T[components.Location](),
-			},
-			NotExist: []reflect.Type{
-				T[components.DefaultItem](),
-			},
-		}),
+		app.Setup(DebugSetupFunc(func(ctx context.Context, storage query.Engine) error {
+			c := new(compiler.ChunkBuilder)
+			c.WriteOp(compiler.OP_NOP)
+			c.PushConst(1337)
+			c.WriteOp(compiler.OP_RETURN)
+			WriteLineOut(ctx, c.Disassemble("test"))
+			return nil
+		})),
 	)
 
 	if appCreateErr != nil {
