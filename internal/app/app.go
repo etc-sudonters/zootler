@@ -18,6 +18,10 @@ type Zootlr struct {
 	storage query.Engine
 }
 
+func (z *Zootlr) Run(cmd AppCmd) error {
+	return cmd(z)
+}
+
 func (z *Zootlr) Engine() query.Engine {
 	return z.storage
 }
@@ -65,3 +69,5 @@ func New(ctx context.Context, ops ...SetupFunc) (*Zootlr, error) {
 type SetupApp interface {
 	Setup(context.Context, query.Engine) error
 }
+
+type AppCmd func(*Zootlr) error

@@ -8,9 +8,6 @@ import (
 	"path"
 	"runtime/debug"
 	"sudonters/zootler/internal/app"
-	"sudonters/zootler/internal/query"
-	"sudonters/zootler/internal/rules/bytecode"
-	"sudonters/zootler/internal/rules/vm"
 
 	"github.com/etc-sudonters/substrate/dontio"
 	"github.com/etc-sudonters/substrate/stageleft"
@@ -82,7 +79,7 @@ func main() {
 		return
 	}
 
-	_, appCreateErr := app.New(ctx,
+	z, appCreateErr := app.New(ctx,
 
 		app.Setup(CreateScheme{DDL: MakeDDL()}),
 		app.Setup(DataFileLoader[FileItem]{
@@ -100,38 +97,14 @@ func main() {
 			Helpers:   path.Join(path.Dir(opts.logicDir), "helpers.json"),
 		}),
 		app.Setup(&LogicCompiler{}),
-		app.Setup(DebugSetupFunc(func(ctx context.Context, storage query.Engine) error {
-			c := new(bytecode.ChunkBuilder)
-			c.PushConst(bytecode.ValueFromFloat(1))
-			c.PushConst(bytecode.ValueFromFloat(0))
-			c.Equal()
-			c.PushConst(bytecode.ValueFromFloat(2))
-			c.PushConst(bytecode.ValueFromFloat(1))
-			c.NotEqual()
-			c.Or()
-			c.Dup()
-			_, jmpFalse := c.JumpFalse()
-			c.PushConst(bytecode.ValueFromBool(true))
-			c.Rotate()
-			_, jmpTrue := c.JumpTrue()
-			c.PushConst(bytecode.ValueFromBool(false))
-			jmpTrueTarget := c.Return()
-			c.PatchJump(jmpFalse, bytecode.PC(jmpTrue))
-			c.PatchJump(jmpTrue, jmpTrueTarget)
-
-			WriteLineOut(ctx, c.Disassemble("test"))
-			WriteLineOut(ctx, "%s\n", c.Ops)
-			runtime, runErr := vm.Evaluate(ctx, &c.Chunk)
-			WriteLineOut(ctx, "vm dump:\n%#v", runtime)
-			if runErr == nil {
-				WriteLineOut(ctx, "result:\t%#v", runtime.Result().Unwrap())
-			}
-			return runErr
-		})),
 	)
 
 	if appCreateErr != nil {
 		exitWithErr(3, appCreateErr)
 		return
+	}
+
+	if appCmdErr := z.Run(manualProgram); appCmdErr != nil {
+		exitWithErr(4, appCmdErr)
 	}
 }

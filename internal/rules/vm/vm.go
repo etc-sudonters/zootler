@@ -81,11 +81,11 @@ loop:
 			a := v.popStack()
 			v.pushStack(bytecode.ValueFromBool(a.Lt(b)))
 			v.pc++
-		case bytecode.OP_DEBUG:
+		case bytecode.OP_DEBUG_STACK:
 			dumpStack(v.stack)
 			v.pc++
 			break
-		case bytecode.OP_JMP_FALSE:
+		case bytecode.OP_JUMP_FALSE:
 			test := v.popStack().Truthy()
 			if !test {
 				offset := v.Chunk.ReadU16(bytecode.PC(v.pc + 1))
@@ -94,14 +94,9 @@ loop:
 			}
 			v.pc += 3
 			break
-		case bytecode.OP_JMP_TRUE:
-			test := v.popStack().Truthy()
-			if test {
-				offset := v.Chunk.ReadU16(bytecode.PC(v.pc + 1))
-				v.pc += int(offset)
-				break
-			}
-			v.pc += 3
+		case bytecode.OP_JUMP:
+			offset := v.Chunk.ReadU16(bytecode.PC(v.pc + 1))
+			v.pc += int(offset)
 			break
 		case bytecode.OP_DUP:
 			dup := v.popStack()
@@ -109,7 +104,7 @@ loop:
 			v.pushStack(dup)
 			v.pc++
 			break
-		case bytecode.OP_ROTATE:
+		case bytecode.OP_ROTATE2:
 			pop1 := v.popStack()
 			pop2 := v.popStack()
 			v.pushStack(pop1)

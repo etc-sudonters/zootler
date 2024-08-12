@@ -3,8 +3,11 @@ package main
 import (
 	"context"
 	"errors"
+	"sudonters/zootler/internal/app"
 	"sudonters/zootler/internal/components"
 	"sudonters/zootler/internal/query"
+	"sudonters/zootler/internal/rules/bytecode"
+	"sudonters/zootler/internal/rules/vm"
 	"sudonters/zootler/internal/table"
 )
 
@@ -157,4 +160,34 @@ func (h *hintable) init(r *table.RowTuple) error {
 	}
 	h.Name = *name
 	return nil
+}
+
+func manualProgram(z *app.Zootlr) error {
+	c := new(bytecode.ChunkBuilder)
+	c.PushConst(bytecode.ValueFromFloat(1))
+	c.PushConst(bytecode.ValueFromFloat(0))
+	c.Equal()
+	c.PushConst(bytecode.ValueFromFloat(2))
+	c.PushConst(bytecode.ValueFromFloat(1))
+	c.NotEqual()
+	c.Or()
+	c.Dup()
+	_, jmpFalse := c.JumpFalse()
+	c.PushConst(bytecode.ValueFromBool(true))
+	c.Rotate()
+	_, jmpTrue := c.UnconditionalJump()
+	c.PushConst(bytecode.ValueFromBool(false))
+	jmpTrueTarget := c.Return()
+	c.PatchJump(jmpFalse, bytecode.PC(jmpTrue))
+	c.PatchJump(jmpTrue, jmpTrueTarget)
+
+	runtime, runErr := vm.Evaluate(z.Ctx(), &c.Chunk)
+
+	WriteLineOut(z.Ctx(), c.Disassemble("test"))
+	WriteLineOut(z.Ctx(), "%s\n", c.Ops)
+	WriteLineOut(z.Ctx(), "vm dump:\n%#v", runtime)
+	if runErr == nil {
+		WriteLineOut(z.Ctx(), "result:\t%#v", runtime.Result().Unwrap())
+	}
+	return runErr
 }

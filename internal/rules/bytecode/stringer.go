@@ -28,9 +28,9 @@ func disassemble(c *Chunk, tag string) string {
 		pos = pc
 		op := c.Ops[pc]
 		switch bc := Bytecode(op); bc {
-		case OP_NOP, OP_RETURN, OP_DEBUG,
+		case OP_NOP, OP_RETURN, OP_DEBUG_STACK,
 			OP_EQ, OP_NEQ, OP_LT,
-			OP_DUP, OP_ROTATE,
+			OP_DUP, OP_ROTATE2,
 			OP_AND, OP_OR:
 			writer.WriteOp(pc, bc)
 			pc++
@@ -41,7 +41,7 @@ func disassemble(c *Chunk, tag string) string {
 			writer.WriteConst(pc, idx, v)
 			pc += 2
 			break
-		case OP_JMP_FALSE, OP_JMP_TRUE:
+		case OP_JUMP_FALSE, OP_JUMP:
 			writer.WriteJump(pc, bc, c.Ops[pc+1], c.Ops[pc+2])
 			pc += 3
 		default:
@@ -75,7 +75,9 @@ func (b *bytecodewriter) WriteJump(pos int, jmp Bytecode, lower, upper uint8) {
 	fmt.Fprintf(b.b, " 0x%04X", offset)
 	fmt.Fprintf(b.b, " 0x%04X", dest)
 	b.writeOperandLine(upper)
-	fmt.Fprintf(b.b, " 0x%04X", pos+OperandCount(jmp))
+	if jmp == OP_JUMP_FALSE {
+		fmt.Fprintf(b.b, " 0x%04X", pos+OperandCount(jmp))
+	}
 }
 
 func (b *bytecodewriter) writeInlineOperand(v uint8) {
@@ -108,17 +110,18 @@ func (op Bytecode) String() string {
 		return "OP_OR"
 	case OP_NOT:
 		return "OP_NOT"
-	case OP_JMP_FALSE:
-		return "OP_JMP_FALSE"
-	case OP_JMP_TRUE:
-		return "OP_JMP_TRUE"
 	case OP_DUP:
 		return "OP_DUP"
-	case OP_ROTATE:
-		return "OP_ROTATE"
-
-	case OP_DEBUG:
-		return "OP_DEBUG"
+	case OP_ROTATE2:
+		return "OP_ROTATE2"
+	case OP_JUMP:
+		return "OP_JUMP"
+	case OP_JUMP_FALSE:
+		return "OP_JUMP_FALSE"
+	case OP_POP:
+		return "OP_POP"
+	case OP_DEBUG_STACK:
+		return "OP_DEBUG_STACK"
 	default:
 		panic(slipup.Create("unknown bytecode op '%04X'", uint8(op)))
 	}

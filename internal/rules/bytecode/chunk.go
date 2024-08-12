@@ -66,11 +66,15 @@ func (c *ChunkBuilder) NotEqual() PC {
 }
 
 func (c *ChunkBuilder) JumpFalse() (PC, JumpOffset) {
-	return c.writeJump(OP_JMP_FALSE)
+	return c.writeJump(OP_JUMP_FALSE)
 }
 
-func (c *ChunkBuilder) JumpTrue() (PC, JumpOffset) {
-	return c.writeJump(OP_JMP_TRUE)
+func (c *ChunkBuilder) UnconditionalJump() (PC, JumpOffset) {
+	return c.writeJump(OP_JUMP)
+}
+
+func (c *ChunkBuilder) Pop() PC {
+	return c.write(OP_POP)
 }
 
 func (c *ChunkBuilder) Dup() PC {
@@ -78,7 +82,7 @@ func (c *ChunkBuilder) Dup() PC {
 }
 
 func (c *ChunkBuilder) Rotate() PC {
-	return c.write(OP_ROTATE)
+	return c.write(OP_ROTATE2)
 }
 
 func (c *ChunkBuilder) And() PC {
@@ -110,7 +114,7 @@ func (c *ChunkBuilder) Return() PC {
 }
 
 func (c *ChunkBuilder) DumpStack() PC {
-	return c.write(OP_DEBUG)
+	return c.write(OP_DEBUG_STACK)
 }
 
 func (c *ChunkBuilder) write(o Bytecode, operands ...uint8) PC {
