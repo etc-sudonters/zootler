@@ -1,4 +1,4 @@
-package bytecode
+package runtime
 
 import (
 	"fmt"
@@ -50,8 +50,11 @@ func disassemble(c *Chunk, tag string) string {
 		case OP_JUMP_FALSE, OP_JUMP, OP_JUMP_TRUE:
 			writer.WriteJump(pc, bc, c.Ops[pc+1], c.Ops[pc+2])
 			pc += 3
-		case OP_CALL:
-			writer.WriteOp2(pc, bc, c.Ops[pc+1], c.Ops[pc+2])
+		case OP_CALL0, OP_CALL1, OP_CALL2:
+			idx := c.Ops[pc+1]
+			v := c.Names[int(idx)]
+			writer.WriteCall(pc, bc, idx, v)
+			pc += 2
 			break
 		default:
 			panic(slipup.Create("unknown opcode: 0x%02X @ 0x%04X", op, pc))
@@ -86,8 +89,16 @@ func (b *bytecodewriter) WriteConst(pos int, idx uint8, v Value) {
 	b.writeLiteral(v)
 }
 
+func (b *bytecodewriter) WriteCall(pos int, op Bytecode, idx uint8, name string) {
+	b.writeIdentLoad(pos, op, idx, name)
+}
+
 func (b *bytecodewriter) WriteLoad(pos int, idx uint8, name string) {
-	b.WriteOp1(pos, OP_LOAD_IDENT, idx)
+	b.writeIdentLoad(pos, OP_LOAD_IDENT, idx, name)
+}
+
+func (b *bytecodewriter) writeIdentLoad(pos int, op Bytecode, idx uint8, name string) {
+	b.WriteOp1(pos, op, idx)
 	b.writeLiteral(name)
 }
 

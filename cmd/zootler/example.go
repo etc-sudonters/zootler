@@ -6,8 +6,7 @@ import (
 	"sudonters/zootler/internal/app"
 	"sudonters/zootler/internal/components"
 	"sudonters/zootler/internal/query"
-	"sudonters/zootler/internal/rules/bytecode"
-	"sudonters/zootler/internal/rules/vm"
+	"sudonters/zootler/internal/rules/runtime"
 	"sudonters/zootler/internal/table"
 )
 
@@ -163,19 +162,19 @@ func (h *hintable) init(r *table.RowTuple) error {
 }
 
 func manualProgram(z *app.Zootlr) error {
-	c := new(bytecode.ChunkBuilder)
-	c.LoadConst(bytecode.ValueOrPanic(1))
-	c.LoadConst(bytecode.ValueOrPanic(0))
+	c := new(runtime.ChunkBuilder)
+	c.LoadConst(runtime.StackValueOrPanic(1))
+	c.LoadConst(runtime.StackValueOrPanic(0))
 	c.Equal()
 	jmpTrue := c.JumpIfTrue()
-	c.LoadConst(bytecode.ValueOrPanic(2))
-	c.LoadConst(bytecode.ValueOrPanic(1))
+	c.LoadConst(runtime.StackValueOrPanic(2))
+	c.LoadConst(runtime.StackValueOrPanic(1))
 	c.Equal()
 	jumpFalse := c.JumpIfFalse()
-	jmp1Target, _ := c.LoadConst(bytecode.ValueOrPanic(true))
+	jmp1Target, _ := c.LoadConst(runtime.StackValueOrPanic(true))
 	convergeJump := c.UnconditionalJump()
-	jmp2Target, _ := c.LoadConst(bytecode.ValueOrPanic(false))
-	converge, _ := c.LoadConst(bytecode.ValueOrPanic(3.14))
+	jmp2Target, _ := c.LoadConst(runtime.StackValueOrPanic(false))
+	converge, _ := c.LoadConst(runtime.StackValueOrPanic(3.14))
 	c.LoadIdentifier("frank")
 	c.DumpStack()
 	c.SetReturn()
@@ -188,12 +187,15 @@ func manualProgram(z *app.Zootlr) error {
 	WriteLineOut(z.Ctx(), c.Disassemble("test"))
 	WriteLineOut(z.Ctx(), "%s\n", c.Ops)
 
-	env := vm.NewEnv()
-	env.Set("frank", bytecode.ValueOrPanic(3.14))
-	runtime, runErr := vm.Evaluate(z.Ctx(), &c.Chunk, env)
-	WriteLineOut(z.Ctx(), "vm dump:\n%#v", runtime)
+	env := runtime.NewEnv()
+	env.Set("frank", runtime.StackValueOrPanic(3.14))
+
+	vm := runtime.CreateVM(env)
+	vm.Debug(true)
+	result, runErr := vm.Run(z.Ctx(), &c.Chunk)
+	WriteLineOut(z.Ctx(), "vm dump:\n%#v", result)
 	if runErr == nil {
-		WriteLineOut(z.Ctx(), "result:\t%#v", runtime.Result().Unwrap())
+		WriteLineOut(z.Ctx(), "result:\t%#v", result.Unwrap())
 	}
 	return runErr
 }

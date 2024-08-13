@@ -1,4 +1,4 @@
-package bytecode
+package runtime
 
 import (
 	"errors"
@@ -7,7 +7,21 @@ import (
 
 var ErrUnsupportedType error = errors.New("unsupported type")
 
-func ValueFrom(t interface{}) (Value, error) {
+func HeapValueFrom(t interface{}, ptr int) (Value, error) {
+	switch t.(type) {
+	case CompiledFuncValue:
+		break
+	case NativeFuncValue:
+		break
+	case string:
+		break
+	default:
+		return NullValue(), ErrUnsupportedType
+	}
+	return NullValue(), ErrUnsupportedType
+}
+
+func StackValueFrom(t interface{}) (Value, error) {
 	switch v := t.(type) {
 	case bool:
 		return ValueFromBool(v), nil
@@ -20,8 +34,8 @@ func ValueFrom(t interface{}) (Value, error) {
 	}
 }
 
-func ValueOrPanic(t interface{}) Value {
-	v, err := ValueFrom(t)
+func StackValueOrPanic(t interface{}) Value {
+	v, err := StackValueFrom(t)
 	if err != nil {
 		panic(err)
 	}

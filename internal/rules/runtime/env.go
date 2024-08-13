@@ -1,30 +1,28 @@
-package vm
-
-import "sudonters/zootler/internal/rules/bytecode"
+package runtime
 
 type ExecutionEnvironment struct {
-	identifiers map[string]bytecode.Value
+	identifiers map[string]Value
 	parent      *ExecutionEnvironment
 }
 
 func NewEnv() *ExecutionEnvironment {
 	return &ExecutionEnvironment{
-		identifiers: make(map[string]bytecode.Value),
+		identifiers: make(map[string]Value),
 	}
 }
 
 func (e *ExecutionEnvironment) ChildScope() *ExecutionEnvironment {
 	return &ExecutionEnvironment{
-		identifiers: make(map[string]bytecode.Value),
+		identifiers: make(map[string]Value),
 		parent:      e,
 	}
 }
 
-func (e *ExecutionEnvironment) Set(name string, v bytecode.Value) {
+func (e *ExecutionEnvironment) Set(name string, v Value) {
 	e.identifiers[name] = v
 }
 
-func (e *ExecutionEnvironment) Lookup(name string) (bytecode.Value, bool) {
+func (e *ExecutionEnvironment) Lookup(name string) (Value, bool) {
 	if v, found := e.identifiers[name]; found {
 		return v, true
 	}
@@ -33,5 +31,5 @@ func (e *ExecutionEnvironment) Lookup(name string) (bytecode.Value, bool) {
 		return e.Lookup(name)
 	}
 
-	return bytecode.NullValue(), false
+	return NullValue(), false
 }

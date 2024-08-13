@@ -1,6 +1,7 @@
-package bytecode
+package runtime
 
 import (
+	"fmt"
 	"math"
 )
 
@@ -20,6 +21,18 @@ type Chunk struct {
 
 func (c Chunk) Disassemble(tag string) string {
 	return disassemble(&c, tag)
+}
+
+func (c Chunk) GetConstAt(pc PC) Value {
+	panic("ah!")
+}
+
+func (c Chunk) GetNameAt(pc PC) Value {
+	panic("ah!")
+}
+
+func (c Chunk) ReadU8(pc PC) uint8 {
+	return c.Ops[int(pc)]
 }
 
 func (c Chunk) ReadU16(pc PC) uint16 {
@@ -45,6 +58,22 @@ func (c *ChunkBuilder) LoadIdentifier(v string) (PC, NameIdx) {
 	c.Names = append(c.Names, v)
 	return c.write(OP_LOAD_IDENT, id), NameIdx(id)
 
+}
+
+func (c *ChunkBuilder) Call(name string, arity int) (PC, NameIdx) {
+	idx := uint8(len(c.Names))
+	id := NameIdx(idx)
+	c.Names = append(c.Names, name)
+	switch arity {
+	case 0:
+		return c.write(OP_CALL0, idx), id
+	case 1:
+		return c.write(OP_CALL1, idx), id
+	case 2:
+		return c.write(OP_CALL2, idx), id
+	default:
+		panic(fmt.Errorf("received function '%s' with unsupported arity '%d'", name, arity))
+	}
 }
 
 func (c *ChunkBuilder) Equal() PC {

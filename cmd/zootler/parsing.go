@@ -5,8 +5,8 @@ import (
 	"errors"
 	"sudonters/zootler/internal/components"
 	"sudonters/zootler/internal/query"
-	"sudonters/zootler/internal/rules/compiler"
 	"sudonters/zootler/internal/rules/parser"
+	"sudonters/zootler/internal/rules/runtime"
 	"sudonters/zootler/internal/slipup"
 	"sudonters/zootler/internal/table"
 
@@ -40,7 +40,7 @@ func (l *LogicCompiler) Setup(ctx context.Context, e query.Engine) error {
 			return slipup.TraceMsg(parseErr, "while parsing rule for '%s'", edge.Name)
 		}
 
-		bc, compileErr := compiler.Compile(ast)
+		bc, compileErr := runtime.Compile(ast)
 		if compileErr != nil {
 			return slipup.TraceMsg(compileErr, "while compiling rule for '%s'", edge.Name)
 		}

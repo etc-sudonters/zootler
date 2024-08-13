@@ -1,4 +1,4 @@
-package bytecode
+package runtime
 
 import (
 	"fmt"
@@ -63,10 +63,11 @@ func OperandCount(op Bytecode) int {
 
 func init() {
 	operandCount = make(map[Bytecode]int)
+	operandCount[OP_CALL0] = 1 // func idx
 	operandCount[OP_CALL1] = 1
-	operandCount[OP_CALL2] = 2
-	operandCount[OP_LOAD_CONST] = 1
-	operandCount[OP_JUMP] = 2
+	operandCount[OP_CALL2] = 1
+	operandCount[OP_LOAD_CONST] = 1 // const idx
+	operandCount[OP_JUMP] = 2       //  PC 1: lower 8bits 2: upper 8bits
 	operandCount[OP_JUMP_FALSE] = 2
 	operandCount[OP_JUMP_TRUE] = 2
 }
