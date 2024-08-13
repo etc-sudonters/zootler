@@ -1,6 +1,33 @@
 package bytecode
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
+
+var ErrUnsupportedType error = errors.New("unsupported type")
+
+func ValueFrom(t interface{}) (Value, error) {
+	switch v := t.(type) {
+	case bool:
+		return ValueFromBool(v), nil
+	case int:
+		return ValueFromInt(v), nil
+	case float64:
+		return ValueFromFloat(v), nil
+	default:
+		return NullValue(), ErrUnsupportedType
+	}
+}
+
+func ValueOrPanic(t interface{}) Value {
+	v, err := ValueFrom(t)
+	if err != nil {
+		panic(err)
+	}
+
+	return v
+}
 
 func NullValue() Value {
 	return Value{

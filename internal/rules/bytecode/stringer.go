@@ -28,22 +28,31 @@ func disassemble(c *Chunk, tag string) string {
 		pos = pc
 		op := c.Ops[pc]
 		switch bc := Bytecode(op); bc {
-		case OP_NOP, OP_RETURN, OP_DEBUG_STACK,
+		case OP_NOP, OP_RETURN, DEBUG_STACK_OP,
 			OP_EQ, OP_NEQ, OP_LT,
 			OP_DUP, OP_ROTATE2,
-			OP_AND, OP_OR:
+			OP_AND, OP_OR, OP_SET_RETURN:
 			writer.WriteOp(pc, bc)
 			pc++
 			break
-		case OP_CONST:
-			idx := int(c.Ops[pc+1])
-			v := c.Constants[idx]
+		case OP_LOAD_CONST:
+			idx := c.Ops[pc+1]
+			v := c.Constants[int(idx)]
 			writer.WriteConst(pc, idx, v)
 			pc += 2
 			break
-		case OP_JUMP_FALSE, OP_JUMP:
+		case OP_LOAD_IDENT:
+			idx := c.Ops[pc+1]
+			v := c.Names[int(idx)]
+			writer.WriteLoad(pc, idx, v)
+			pc += 2
+			break
+		case OP_JUMP_FALSE, OP_JUMP, OP_JUMP_TRUE:
 			writer.WriteJump(pc, bc, c.Ops[pc+1], c.Ops[pc+2])
 			pc += 3
+		case OP_CALL:
+			writer.WriteOp2(pc, bc, c.Ops[pc+1], c.Ops[pc+2])
+			break
 		default:
 			panic(slipup.Create("unknown opcode: 0x%02X @ 0x%04X", op, pc))
 		}
@@ -62,30 +71,53 @@ func (b *bytecodewriter) WriteOp(pos int, op Bytecode) {
 	fmt.Fprintf(b.b, "0x%04X   0x%02X %-16s", pos, uint8(op), op)
 }
 
-func (b *bytecodewriter) WriteConst(pos int, idx int, v Value) {
-	b.WriteOp(pos, OP_CONST)
-	fmt.Fprintf(b.b, " %02X %+v", idx, v)
+func (b *bytecodewriter) WriteOp1(pos int, op Bytecode, _1 uint8) {
+	b.WriteOp(pos, op)
+	b.writeu8(_1)
+}
+
+func (b *bytecodewriter) WriteOp2(pos int, op Bytecode, _1, _2 uint8) {
+	b.WriteOp1(pos, op, _1)
+	b.writeu8(_2)
+}
+
+func (b *bytecodewriter) WriteConst(pos int, idx uint8, v Value) {
+	b.WriteOp1(pos, OP_LOAD_CONST, idx)
+	b.writeLiteral(v)
+}
+
+func (b *bytecodewriter) WriteLoad(pos int, idx uint8, name string) {
+	b.WriteOp1(pos, OP_LOAD_IDENT, idx)
+	b.writeLiteral(name)
 }
 
 func (b *bytecodewriter) WriteJump(pos int, jmp Bytecode, lower, upper uint8) {
+	dest := DecodeU16[uint16](lower, upper)
 	b.WriteOp(pos, jmp)
-	b.writeInlineOperand(lower)
-	offset := DecodeU16(lower, upper)
-	dest := pos + int(offset)
-	fmt.Fprintf(b.b, " 0x%04X", offset)
-	fmt.Fprintf(b.b, " 0x%04X", dest)
-	b.writeOperandLine(upper)
-	if jmp == OP_JUMP_FALSE {
-		fmt.Fprintf(b.b, " 0x%04X", pos+OperandCount(jmp))
+	b.writeu8(lower)
+	b.writeu8(upper)
+	b.writeOperandLine()
+	b.writeu16(dest)
+	if jmp == OP_JUMP_FALSE || jmp == OP_JUMP_TRUE { // OP_JUMP doesn't branch
+		b.writeOperandLine()
+		b.writeu16(uint16(pos + OperandCount(jmp)))
 	}
 }
 
-func (b *bytecodewriter) writeInlineOperand(v uint8) {
-	fmt.Fprintf(b.b, " 0x%02X", v)
+func (b *bytecodewriter) writeu8(u uint8) {
+	fmt.Fprintf(b.b, " 0x%02X", u)
 }
 
-func (b *bytecodewriter) writeOperandLine(v uint8) {
-	fmt.Fprintf(b.b, "\n                               0x%02X", v)
+func (b *bytecodewriter) writeu16(u uint16) {
+	fmt.Fprintf(b.b, " 0x%04X", u)
+}
+
+func (b *bytecodewriter) writeOperandLine() {
+	fmt.Fprint(b.b, "\n                              ")
+}
+
+func (b *bytecodewriter) writeLiteral(v any) {
+	fmt.Fprintf(b.b, " %+v", v)
 }
 
 func (op Bytecode) String() string {
@@ -94,8 +126,12 @@ func (op Bytecode) String() string {
 		return "OP_NOP"
 	case OP_RETURN:
 		return "OP_RETURN"
-	case OP_CONST:
-		return "OP_CONST"
+	case OP_LOAD_CONST:
+		return "OP_LOAD_CONST"
+	case OP_LOAD_IDENT:
+		return "OP_LOAD_IDENT"
+	case OP_SET_RETURN:
+		return "OP_SET_RETURN"
 	case OP_EQ:
 		return "OP_EQ"
 	case OP_NEQ:
@@ -118,9 +154,11 @@ func (op Bytecode) String() string {
 		return "OP_JUMP"
 	case OP_JUMP_FALSE:
 		return "OP_JUMP_FALSE"
+	case OP_JUMP_TRUE:
+		return "OP_JUMP_TRUE"
 	case OP_POP:
 		return "OP_POP"
-	case OP_DEBUG_STACK:
+	case DEBUG_STACK_OP:
 		return "OP_DEBUG_STACK"
 	default:
 		panic(slipup.Create("unknown bytecode op '%04X'", uint8(op)))

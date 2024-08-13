@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"sudonters/zootler/internal/rules/bytecode"
 	"sudonters/zootler/internal/slipup"
 
@@ -11,14 +12,19 @@ import (
 )
 
 var ErrStackOverflow = errors.New("stackoverflow")
+var ErrOutOfBoundsCounter = errors.New("out of bound access for program counter")
+var ErrUnboundName = errors.New("unbound name")
 
 const maxStack = 256
 
-func Evaluate(ctx context.Context, chunk *bytecode.Chunk) (*Execution, error) {
+// Evaluate is goroutine safe as long as chunk will not result in env being modified
+func Evaluate(ctx context.Context, chunk *bytecode.Chunk, env *ExecutionEnvironment) (*Execution, error) {
 	vm := &Execution{
-		Chunk: chunk,
-		pc:    0,
-		stack: stack.Make[bytecode.Value](0, 256),
+		pc:     0,
+		result: bytecode.NullValue(),
+		Chunk:  chunk,
+		Env:    env,
+		stack:  stack.Make[bytecode.Value](0, 256),
 	}
 
 	err := vm.Run(ctx)
@@ -26,17 +32,20 @@ func Evaluate(ctx context.Context, chunk *bytecode.Chunk) (*Execution, error) {
 }
 
 type Execution struct {
-	Chunk *bytecode.Chunk
-	pc    int
-	stack *stack.S[bytecode.Value]
+	result bytecode.Value
+	pc     uint16
+	debug  bool
+	Chunk  *bytecode.Chunk
+	Env    *ExecutionEnvironment
+	stack  *stack.S[bytecode.Value]
+}
+
+func (v *Execution) Debug() {
+	v.debug = true
 }
 
 func (v *Execution) Result() bytecode.Value {
-	if v.stack.Len() == 0 {
-		return bytecode.NullValue()
-	}
-
-	return peekStack(v.stack)
+	return v.result
 }
 
 func peekStack(s *stack.S[bytecode.Value]) bytecode.Value {
@@ -44,29 +53,61 @@ func peekStack(s *stack.S[bytecode.Value]) bytecode.Value {
 }
 
 func (v *Execution) Run(_ context.Context) error {
+	var pos uint16 = math.MaxUint16
 	v.pc = 0
+
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Print(operationAt(v.Chunk, pos))
+			dumpStack(v.stack)
+			panic(r)
+		}
+	}()
+
 	size := v.Chunk.Len()
-	pos := -1
+	debug := v.debug
 
 loop:
-	for v.pc < size {
+	for {
+		if int(v.pc) > size {
+			return slipup.TraceMsg(ErrOutOfBoundsCounter, operationAt(v.Chunk, pos))
+		}
 		if pos == v.pc {
-			panic(fmt.Errorf(
+			return fmt.Errorf(
 				"'%s' did not increment program counter",
 				bytecode.Bytecode(v.Chunk.Ops[pos]),
-			))
+			)
 		}
 		pos = v.pc
-		switch op := bytecode.Bytecode(v.Chunk.Ops[v.pc]); op {
+		code := v.Chunk.Ops[v.pc]
+		op := bytecode.Bytecode(code)
+		if debug {
+			fmt.Println(operationAt(v.Chunk, v.pc))
+		}
+		switch op {
 		case bytecode.OP_NOP:
 			v.pc++
 			break
 		case bytecode.OP_RETURN:
 			v.pc++
 			break loop
-		case bytecode.OP_CONST:
+		case bytecode.OP_SET_RETURN:
+			v.result = v.popStack()
+			v.pc++
+			break
+		case bytecode.OP_LOAD_CONST:
 			idx := v.Chunk.Ops[v.pc+1]
 			v.pushStack(v.Chunk.Constants[idx])
+			v.pc += 2
+			break
+		case bytecode.OP_LOAD_IDENT:
+			idx := v.Chunk.Ops[v.pc+1]
+			name := v.Chunk.Names[idx]
+			value, found := v.Env.Lookup(name)
+			if !found {
+				return slipup.TraceMsg(ErrUnboundName, "%s : %s", name, operationAt(v.Chunk, v.pc))
+			}
+			v.pushStack(value)
 			v.pc += 2
 			break
 		case bytecode.OP_EQ:
@@ -81,22 +122,33 @@ loop:
 			a := v.popStack()
 			v.pushStack(bytecode.ValueFromBool(a.Lt(b)))
 			v.pc++
-		case bytecode.OP_DEBUG_STACK:
-			dumpStack(v.stack)
+		case bytecode.DEBUG_STACK_OP:
+			if v.debug {
+				dumpStack(v.stack)
+			}
 			v.pc++
 			break
 		case bytecode.OP_JUMP_FALSE:
 			test := v.popStack().Truthy()
 			if !test {
-				offset := v.Chunk.ReadU16(bytecode.PC(v.pc + 1))
-				v.pc += int(offset)
+				dest := v.Chunk.ReadU16(bytecode.PC(v.pc + 1))
+				v.pc = dest
+				break
+			}
+			v.pc += 3
+			break
+		case bytecode.OP_JUMP_TRUE:
+			test := v.popStack().Truthy()
+			if test {
+				dest := v.Chunk.ReadU16(bytecode.PC(v.pc + 1))
+				v.pc = dest
 				break
 			}
 			v.pc += 3
 			break
 		case bytecode.OP_JUMP:
-			offset := v.Chunk.ReadU16(bytecode.PC(v.pc + 1))
-			v.pc += int(offset)
+			dest := v.Chunk.ReadU16(bytecode.PC(v.pc + 1))
+			v.pc = dest
 			break
 		case bytecode.OP_DUP:
 			dup := v.popStack()
@@ -155,4 +207,9 @@ func dumpStack(s *stack.S[bytecode.Value]) {
 
 func notImpl(op bytecode.Bytecode) error {
 	return fmt.Errorf("%s not implemented", op)
+}
+
+func operationAt(c *bytecode.Chunk, pos uint16) string {
+	op := c.Ops[int(pos)]
+	return fmt.Sprintf("handling: 0x%04X 0x%02X %s", pos, op, bytecode.Bytecode(op))
 }
