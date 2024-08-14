@@ -61,6 +61,10 @@ func (v *VM) RunCompiledFunc(ctx context.Context, f *CompiledFunc, values Values
 }
 
 func (vm *VM) execute(ctx context.Context, execution *Execution) error {
+	if execution.Chunk.Len() == 0 {
+		return slipup.Create("empty program passed")
+	}
+
 	var pos uint16 = math.MaxUint16
 	execution.pc = 0
 

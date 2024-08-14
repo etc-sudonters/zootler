@@ -104,11 +104,7 @@ func main() {
 		return
 	}
 
-	if appCmdErr := z.Run(manualProgram); appCmdErr != nil {
-		exitWithErr(4, appCmdErr)
-	}
-
-	if appCmdErr := z.Run(entropy); appCmdErr != nil {
+	if appCmdErr := z.Run(example); appCmdErr != nil {
 		exitWithErr(4, appCmdErr)
 	}
 }

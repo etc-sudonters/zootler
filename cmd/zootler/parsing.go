@@ -6,7 +6,6 @@ import (
 	"sudonters/zootler/internal/components"
 	"sudonters/zootler/internal/query"
 	"sudonters/zootler/internal/rules/parser"
-	"sudonters/zootler/internal/rules/runtime"
 	"sudonters/zootler/internal/slipup"
 	"sudonters/zootler/internal/table"
 
@@ -35,19 +34,21 @@ func (l *LogicCompiler) Setup(ctx context.Context, e query.Engine) error {
 			return slipup.Trace(initErr, "while initing edge rules")
 		}
 
-		ast, parseErr := parser.Parse(string(edge.RawLogic.Rule))
+		_, parseErr := parser.Parse(string(edge.RawLogic.Rule))
 		if parseErr != nil {
 			return slipup.TraceMsg(parseErr, "while parsing rule for '%s'", edge.Name)
 		}
 
-		bc, compileErr := runtime.Compile(ast)
-		if compileErr != nil {
-			return slipup.TraceMsg(compileErr, "while compiling rule for '%s'", edge.Name)
-		}
+		/*
+			bc, compileErr := runtime.Compile(ast)
+			if compileErr != nil {
+				return slipup.TraceMsg(compileErr, "while compiling rule for '%s'", edge.Name)
+			}
 
-		if setErr := e.SetValues(current.Id, table.Values{components.CompiledRule{Bytecode: bc}}); setErr != nil {
-			return setErr
-		}
+			if setErr := e.SetValues(current.Id, table.Values{components.CompiledRule{Bytecode: *bc}}); setErr != nil {
+				return setErr
+			}
+		*/
 	}
 
 	return nil

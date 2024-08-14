@@ -4,7 +4,7 @@ import "sudonters/zootler/internal/entity"
 
 type (
 	Collectable struct{}
-	Collected   struct{}
+	Collected   int
 	DefaultItem entity.Model
 	Inhabited   entity.Model
 	Inhabits    entity.Model

@@ -119,6 +119,7 @@ func MakeDDL() []DDL {
 		columns.HashMapColumn[components.Edge],
 		columns.HashMapColumn[components.SavewarpName],
 		columns.HashMapColumn[components.DefaultItem],
+		columns.HashMapColumn[components.Collected],
 
 		// bit columns only track singletons
 		columns.BitColumnOf[components.ExitEdge],
@@ -138,7 +139,6 @@ func MakeDDL() []DDL {
 		columns.BitColumnOf[components.Chest],
 		columns.BitColumnOf[components.CollectableGameToken],
 		columns.BitColumnOf[components.Collectable],
-		columns.BitColumnOf[components.Collected],
 		columns.BitColumnOf[components.Compass],
 		columns.BitColumnOf[components.Cows],
 		columns.BitColumnOf[components.Crate],
