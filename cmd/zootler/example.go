@@ -3,9 +3,11 @@ package main
 import (
 	"context"
 	"errors"
+	"math/rand"
 	"sudonters/zootler/internal/app"
 	"sudonters/zootler/internal/components"
 	"sudonters/zootler/internal/query"
+	"sudonters/zootler/internal/rng"
 	"sudonters/zootler/internal/rules/runtime"
 	"sudonters/zootler/internal/slipup"
 	"sudonters/zootler/internal/table"
@@ -196,4 +198,15 @@ func manualProgram(z *app.Zootlr) error {
 	}
 	WriteLineOut(z.Ctx(), "vm dump:\n%#v", vm)
 	return runErr
+}
+
+func entropy(z *app.Zootlr) error {
+	var iterations [20]struct{}
+	x := rng.NewXoshiro256PPFromU64(0xDEADBEEFBABE)
+	rand := rand.New(rng.Xoshiro256PPSource64(x))
+	for range iterations {
+		WriteLineOut(z.Ctx(), "%f", rand.Float64())
+	}
+
+	return nil
 }
