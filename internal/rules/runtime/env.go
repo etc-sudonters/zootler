@@ -28,7 +28,7 @@ func (e *ExecutionEnvironment) Lookup(name string) (Value, bool) {
 	}
 
 	if e.parent != nil {
-		return e.Lookup(name)
+		return e.parent.Lookup(name)
 	}
 
 	return NullValue(), false

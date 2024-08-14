@@ -16,15 +16,15 @@ var ErrUnboundName = errors.New("unbound name")
 
 const maxStack = 256
 
-func CreateVM(globals *ExecutionEnvironment, heap *VmHeap) (vm VM) {
+func CreateVM(globals *ExecutionEnvironment, mem *VmMemory) (vm VM) {
 	vm.globals = globals
-	vm.heap = heap
+	vm.mem = mem
 	return
 }
 
 type VM struct {
 	globals *ExecutionEnvironment
-	heap    *VmHeap
+	mem     *VmMemory
 	debug   bool
 }
 
@@ -47,8 +47,15 @@ func (v *VM) Run(ctx context.Context, chunk *Chunk) (Value, error) {
 	return execution.GetResult(), err
 }
 
-func (v *VM) RunCompiledFunc(ctx context.Context, f *CompiledFuncValue, values Values) (Value, error) {
-	execution := CreateExecution(f.chunk, f.env)
+func (v *VM) RunCompiledFunc(ctx context.Context, f *CompiledFunc, values Values) (Value, error) {
+	// write first N name+values into environment
+	scope := f.env.ChildScope()
+	for i := range values {
+		scope.Set(f.chunk.Names[i], values[i])
+	}
+
+	execution := CreateExecution(f.chunk, scope)
+	execution.debug = v.debug || execution.debug
 	err := v.execute(ctx, &execution)
 	return execution.GetResult(), err
 }
@@ -97,18 +104,14 @@ loop:
 			execution.pc++
 			break
 		case OP_LOAD_CONST:
-			idx := execution.Chunk.Ops[execution.pc+1]
-			execution.pushStack(execution.Chunk.Constants[idx])
+			execution.loadConst()
 			execution.pc += 2
 			break
 		case OP_LOAD_IDENT:
-			idx := execution.Chunk.Ops[execution.pc+1]
-			name := execution.Chunk.Names[idx]
-			value, found := execution.Env.Lookup(name)
-			if !found {
-				return slipup.TraceMsg(ErrUnboundName, "%s : %s", name, operationAt(execution.Chunk, execution.pc))
+			loadErr := execution.loadName()
+			if loadErr != nil {
+				return loadErr
 			}
-			execution.pushStack(value)
 			execution.pc += 2
 			break
 		case OP_EQ:
@@ -151,19 +154,6 @@ loop:
 			dest := execution.Chunk.ReadU16(PC(execution.pc + 1))
 			execution.pc = dest
 			break
-		case OP_DUP:
-			dup := execution.popStack()
-			execution.pushStack(dup)
-			execution.pushStack(dup)
-			execution.pc++
-			break
-		case OP_ROTATE2:
-			pop1 := execution.popStack()
-			pop2 := execution.popStack()
-			execution.pushStack(pop1)
-			execution.pushStack(pop2)
-			execution.pc++
-			break
 		case OP_AND:
 			lhs, rhs := execution.popStack(), execution.popStack()
 			execution.pushStack(ValueFromBool(lhs.Truthy() && rhs.Truthy()))
@@ -179,10 +169,10 @@ loop:
 			name := execution.Chunk.Names[idx]
 			value, err := vm.callFunc(ctx, name, nil)
 			if err != nil {
-				return err
+				return slipup.TraceMsg(err, operationAt(execution.Chunk, pos))
 			}
 			execution.pushStack(value)
-			execution.pc++
+			execution.pc += 2
 			break
 		case OP_CALL1:
 			arg := execution.popStack()
@@ -190,21 +180,21 @@ loop:
 			name := execution.Chunk.Names[idx]
 			value, err := vm.callFunc(ctx, name, Values{arg})
 			if err != nil {
-				return err
+				return slipup.TraceMsg(err, operationAt(execution.Chunk, pos))
 			}
 			execution.pushStack(value)
-			execution.pc++
+			execution.pc += 2
 			break
 		case OP_CALL2:
-			arg1, arg2 := execution.popStack(), execution.popStack()
+			arg2, arg1 := execution.popStack(), execution.popStack()
 			idx := execution.Chunk.Ops[execution.pc+1]
 			name := execution.Chunk.Names[idx]
 			value, err := vm.callFunc(ctx, name, Values{arg1, arg2})
 			if err != nil {
-				return err
+				return slipup.TraceMsg(err, operationAt(execution.Chunk, pos))
 			}
 			execution.pushStack(value)
-			execution.pc++
+			execution.pc += 2
 			break
 		default:
 			panic(notImpl(op))
@@ -215,11 +205,15 @@ loop:
 }
 
 func (vm *VM) callFunc(ctx context.Context, name string, values Values) (Value, error) {
-	f := vm.heap.Funcs[name]
+	f := vm.mem.funcs[name]
 	if f == nil {
-		return NullValue(), ErrUnboundName
+		return NullValue(), slipup.TraceMsg(ErrUnboundName, "function '%s'", name)
 	}
-	return f.Run(ctx, vm, values)
+	value, err := f.Run(ctx, vm, values)
+	if err != nil {
+		err = slipup.TraceMsg(err, "function call '%s'", name)
+	}
+	return value, err
 }
 
 type Execution struct {
@@ -243,6 +237,21 @@ func (e *Execution) SetResult(v Value) {
 	e.result = v
 }
 
+func (e *Execution) loadConst() {
+	e.pushStack(e.Chunk.GetConstAt(PC(e.pc + 1)))
+}
+
+func (e *Execution) loadName() error {
+	idx := e.Chunk.Ops[e.pc+1]
+	name := e.Chunk.Names[idx]
+	value, found := e.Env.Lookup(name)
+	if !found {
+		return slipup.TraceMsg(ErrUnboundName, "%s : %s", name, operationAt(e.Chunk, e.pc))
+	}
+	e.pushStack(value)
+	return nil
+}
+
 func (e *Execution) popStack() Value {
 	val, err := e.stack.Pop()
 	if err != nil {
@@ -257,6 +266,10 @@ func (e *Execution) pushStack(val Value) error {
 	}
 	e.stack.Push(val)
 	return nil
+}
+
+func (e *Execution) currentOpDisplay() string {
+	return operationAt(e.Chunk, e.pc)
 }
 
 func dumpStack(s *stack.S[Value]) {

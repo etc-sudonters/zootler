@@ -7,6 +7,7 @@ import (
 	"sudonters/zootler/internal/components"
 	"sudonters/zootler/internal/query"
 	"sudonters/zootler/internal/rules/runtime"
+	"sudonters/zootler/internal/slipup"
 	"sudonters/zootler/internal/table"
 )
 
@@ -163,39 +164,36 @@ func (h *hintable) init(r *table.RowTuple) error {
 
 func manualProgram(z *app.Zootlr) error {
 	c := new(runtime.ChunkBuilder)
-	c.LoadConst(runtime.StackValueOrPanic(1))
-	c.LoadConst(runtime.StackValueOrPanic(0))
-	c.Equal()
-	jmpTrue := c.JumpIfTrue()
-	c.LoadConst(runtime.StackValueOrPanic(2))
-	c.LoadConst(runtime.StackValueOrPanic(1))
-	c.Equal()
-	jumpFalse := c.JumpIfFalse()
-	jmp1Target, _ := c.LoadConst(runtime.StackValueOrPanic(true))
-	convergeJump := c.UnconditionalJump()
-	jmp2Target, _ := c.LoadConst(runtime.StackValueOrPanic(false))
-	converge, _ := c.LoadConst(runtime.StackValueOrPanic(3.14))
-	c.LoadIdentifier("frank")
-	c.DumpStack()
+	c.LoadConst(runtime.ValueFromInt(13))
+	c.Call("nativeFunc0", 0)
+	c.LessThan()
 	c.SetReturn()
 	c.Return()
-
-	c.PatchJump(jmpTrue, jmp1Target)
-	c.PatchJump(jumpFalse, jmp2Target)
-	c.PatchJump(convergeJump, converge)
-
 	WriteLineOut(z.Ctx(), c.Disassemble("test"))
-	WriteLineOut(z.Ctx(), "%s\n", c.Ops)
 
 	env := runtime.NewEnv()
 	env.Set("frank", runtime.StackValueOrPanic(3.14))
+	memory := runtime.NewVmMem()
+	memory.AddFunc("nativeFunc0", runtime.NewSimpleNativeFunc(
+		0,
+		func(ctx context.Context, vm *runtime.VM, _ runtime.Values) (runtime.Value, error) {
+			storage := z.Engine()
+			q := storage.CreateQuery()
+			q.Exists(T[components.Song]())
+			q.Exists(T[components.Location]())
+			res, err := storage.Retrieve(q)
+			if err != nil {
+				return runtime.NullValue(), slipup.TraceMsg(err, "while counting song locations")
+			}
+			return runtime.ValueFromInt(res.Len()), nil
+		}))
 
-	vm := runtime.CreateVM(env)
+	vm := runtime.CreateVM(env, memory)
 	vm.Debug(true)
 	result, runErr := vm.Run(z.Ctx(), &c.Chunk)
-	WriteLineOut(z.Ctx(), "vm dump:\n%#v", result)
 	if runErr == nil {
 		WriteLineOut(z.Ctx(), "result:\t%#v", result.Unwrap())
 	}
+	WriteLineOut(z.Ctx(), "vm dump:\n%#v", vm)
 	return runErr
 }

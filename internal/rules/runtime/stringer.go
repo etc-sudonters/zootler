@@ -30,7 +30,6 @@ func disassemble(c *Chunk, tag string) string {
 		switch bc := Bytecode(op); bc {
 		case OP_NOP, OP_RETURN, DEBUG_STACK_OP,
 			OP_EQ, OP_NEQ, OP_LT,
-			OP_DUP, OP_ROTATE2,
 			OP_AND, OP_OR, OP_SET_RETURN:
 			writer.WriteOp(pc, bc)
 			pc++
@@ -149,18 +148,12 @@ func (op Bytecode) String() string {
 		return "OP_NEQ"
 	case OP_LT:
 		return "OP_LT"
-	case OP_CONTAIN:
-		return "OP_CONTAIN"
 	case OP_AND:
 		return "OP_AND"
 	case OP_OR:
 		return "OP_OR"
 	case OP_NOT:
 		return "OP_NOT"
-	case OP_DUP:
-		return "OP_DUP"
-	case OP_ROTATE2:
-		return "OP_ROTATE2"
 	case OP_JUMP:
 		return "OP_JUMP"
 	case OP_JUMP_FALSE:
@@ -171,6 +164,12 @@ func (op Bytecode) String() string {
 		return "OP_POP"
 	case DEBUG_STACK_OP:
 		return "OP_DEBUG_STACK"
+	case OP_CALL0:
+		return "OP_CALL0"
+	case OP_CALL1:
+		return "OP_CALL1"
+	case OP_CALL2:
+		return "OP_CALL2"
 	default:
 		panic(slipup.Create("unknown bytecode op '%04X'", uint8(op)))
 	}

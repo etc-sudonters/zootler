@@ -7,20 +7,6 @@ import (
 
 var ErrUnsupportedType error = errors.New("unsupported type")
 
-func HeapValueFrom(t interface{}, ptr int) (Value, error) {
-	switch t.(type) {
-	case CompiledFuncValue:
-		break
-	case NativeFuncValue:
-		break
-	case string:
-		break
-	default:
-		return NullValue(), ErrUnsupportedType
-	}
-	return NullValue(), ErrUnsupportedType
-}
-
 func StackValueFrom(t interface{}) (Value, error) {
 	switch v := t.(type) {
 	case bool:

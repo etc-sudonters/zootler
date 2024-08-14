@@ -24,11 +24,13 @@ func (c Chunk) Disassemble(tag string) string {
 }
 
 func (c Chunk) GetConstAt(pc PC) Value {
-	panic("ah!")
+	cid := c.Ops[int(pc)]
+	return c.Constants[cid]
 }
 
-func (c Chunk) GetNameAt(pc PC) Value {
-	panic("ah!")
+func (c Chunk) GetNameAt(pc PC) string {
+	nid := c.Ops[int(pc)]
+	return c.Names[nid]
 }
 
 func (c Chunk) ReadU8(pc PC) uint8 {
@@ -78,6 +80,34 @@ func (c *ChunkBuilder) Call(name string, arity int) (PC, NameIdx) {
 
 func (c *ChunkBuilder) Equal() PC {
 	return c.write(OP_EQ)
+}
+
+func (c *ChunkBuilder) NotEqual() PC {
+	return c.write(OP_NEQ)
+}
+
+func (c *ChunkBuilder) LessThan() PC {
+	return c.write(OP_LT)
+}
+
+func (c *ChunkBuilder) And() PC {
+	return c.write(OP_AND)
+}
+
+func (c *ChunkBuilder) Or() PC {
+	return c.write(OP_OR)
+}
+
+func (c *ChunkBuilder) Not() PC {
+	return c.write(OP_NOT)
+}
+
+func (c *ChunkBuilder) Pop() PC {
+	return c.write(OP_POP)
+}
+
+func (c *ChunkBuilder) Nop() PC {
+	return c.write(OP_NOP)
 }
 
 func (c *ChunkBuilder) JumpIfTrue() PC {
