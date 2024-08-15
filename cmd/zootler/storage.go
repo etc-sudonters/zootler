@@ -30,14 +30,14 @@ type DataFileLoader[T IntoComponents] struct {
 func (l DataFileLoader[T]) Setup(ctx context.Context, storage query.Engine) error {
 	if l.Add != nil {
 		if initErr := l.Add.Init(ctx, storage); initErr != nil {
-			return slipup.TraceMsg(initErr, "while preparing to read file: '%s'", l.Path)
+			return slipup.Describef(initErr, "while preparing to read file: '%s'", l.Path)
 		}
 	}
 
 	WriteLineOut(ctx, "reading file '%s'", l.Path)
 	ts, err := ReadJsonFile[[]T](l.Path)
 	if err != nil {
-		return slipup.Trace(err, l.Path)
+		return slipup.Describe(err, l.Path)
 	}
 
 	for _, t := range ts {
@@ -48,16 +48,16 @@ func (l DataFileLoader[T]) Setup(ctx context.Context, storage query.Engine) erro
 
 		row, insertErr := storage.InsertRow(name)
 		if insertErr != nil {
-			return slipup.TraceMsg(insertErr, "while creating row for %+v", t)
+			return slipup.Describef(insertErr, "while creating row for %+v", t)
 		}
 
 		if valuesErr := t.AddComponents(row, storage); valuesErr != nil {
-			return slipup.TraceMsg(valuesErr, "while adding core components to %+v", t)
+			return slipup.Describef(valuesErr, "while adding core components to %+v", t)
 		}
 
 		if l.Add != nil {
 			if additonalErr := l.Add.Components(ctx, row, t, storage); additonalErr != nil {
-				return slipup.TraceMsg(additonalErr, "while adding additional components to %+v", t)
+				return slipup.Describef(additonalErr, "while adding additional components to %+v", t)
 			}
 		}
 	}

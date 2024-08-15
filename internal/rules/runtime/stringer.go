@@ -56,7 +56,7 @@ func disassemble(c *Chunk, tag string) string {
 			pc += 2
 			break
 		default:
-			panic(slipup.Create("unknown opcode: 0x%02X @ 0x%04X", op, pc))
+			panic(slipup.Createf("unknown opcode: 0x%02X @ 0x%04X", op, pc))
 		}
 		b.WriteRune('\n')
 	}
@@ -171,6 +171,6 @@ func (op Bytecode) String() string {
 	case OP_CALL2:
 		return "OP_CALL2"
 	default:
-		panic(slipup.Create("unknown bytecode op '%04X'", uint8(op)))
+		panic(slipup.Createf("unknown bytecode op '%04X'", uint8(op)))
 	}
 }

@@ -25,12 +25,12 @@ func (w WorldFileLoader) Setup(ctx context.Context, e query.Engine) error {
 	WriteLineOut(ctx, "reading dir  '%s'", w.Path)
 	directory, dirErr := os.ReadDir(w.Path)
 	if dirErr != nil {
-		return slipup.Trace(dirErr, w.Path)
+		return slipup.Describe(dirErr, w.Path)
 	}
 
 	locTbl, locErr := CreateLocationMap(ctx, e)
 	if locErr != nil {
-		return slipup.Trace(locErr, "creating location id table")
+		return slipup.Describe(locErr, "creating location id table")
 	}
 
 	for _, entry := range directory {
@@ -40,7 +40,7 @@ func (w WorldFileLoader) Setup(ctx context.Context, e query.Engine) error {
 
 		path := path.Join(w.Path, entry.Name())
 		if err := w.logicFile(ctx, path, locTbl); err != nil {
-			return slipup.Trace(err, path)
+			return slipup.Describe(err, path)
 		}
 	}
 
@@ -67,13 +67,13 @@ func (w WorldFileLoader) logicFile(
 
 	rawLocs, readErr := ReadJsonFile[[]WorldFileLocation](path)
 	if readErr != nil {
-		return slipup.Trace(readErr, path)
+		return slipup.Describe(readErr, path)
 	}
 
 	for _, raw := range rawLocs {
 		here, buildErr := locations.Build(components.Name(raw.Name))
 		if buildErr != nil {
-			return slipup.TraceMsg(buildErr, "building %s", raw.Name)
+			return slipup.Describef(buildErr, "building %s", raw.Name)
 		}
 
 		values := table.Values{
@@ -104,27 +104,27 @@ func (w WorldFileLoader) logicFile(
 		}
 
 		if err := here.add(values); err != nil {
-			return slipup.TraceMsg(err, "while populating %s", raw.Name)
+			return slipup.Describef(err, "while populating %s", raw.Name)
 		}
 
 		for destination, rule := range raw.Exits {
 			linkErr := here.linkTo(components.Name(destination), components.RawLogic{Rule: rule}, components.ExitEdge{})
 			if linkErr != nil {
-				return slipup.TraceMsg(linkErr, "while linking '%s -> %s'", here.name, destination)
+				return slipup.Describef(linkErr, "while linking '%s -> %s'", here.name, destination)
 			}
 		}
 
 		for check, rule := range raw.Locations {
 			linkErr := here.linkTo(components.Name(check), components.RawLogic{Rule: rule}, components.CheckEdge{})
 			if linkErr != nil {
-				return slipup.TraceMsg(linkErr, "while linking '%s -> %s'", here.name, check)
+				return slipup.Describef(linkErr, "while linking '%s -> %s'", here.name, check)
 			}
 		}
 
 		for event, rule := range raw.Events {
 			linkErr := here.linkTo(components.Name(event), components.RawLogic{Rule: rule}, components.EventEdge{})
 			if linkErr != nil {
-				return slipup.TraceMsg(linkErr, "while linking '%s -> %s'", here.name, event)
+				return slipup.Describef(linkErr, "while linking '%s -> %s'", here.name, event)
 			}
 		}
 
@@ -161,7 +161,7 @@ func (l locationBuilder) linkTo(name components.Name, rule components.RawLogic, 
 	edgeName := fmt.Sprintf("%s -> %s", l.name, name)
 	destination, linkErr := l.parent.Build(name)
 	if linkErr != nil {
-		return slipup.TraceMsg(linkErr, "while linking '%s'", edgeName)
+		return slipup.Describef(linkErr, "while linking '%s'", edgeName)
 	}
 
 	edge, edgeCreateErr := l.parent.e.InsertRow(components.Name(edgeName), rule, components.Edge{
@@ -169,12 +169,12 @@ func (l locationBuilder) linkTo(name components.Name, rule components.RawLogic, 
 		Dest:   entity.Model(destination.id),
 	})
 	if edgeCreateErr != nil {
-		return slipup.TraceMsg(edgeCreateErr, "while creating edge %s", edgeName)
+		return slipup.Describef(edgeCreateErr, "while creating edge %s", edgeName)
 	}
 
 	if len(vs) != 0 {
 		if additionalErr := l.parent.e.SetValues(edge, table.Values(vs)); additionalErr != nil {
-			return slipup.TraceMsg(additionalErr, "while customizing '%s'", edgeName)
+			return slipup.Describef(additionalErr, "while customizing '%s'", edgeName)
 		}
 	}
 	return nil

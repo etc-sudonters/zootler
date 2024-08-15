@@ -1,17 +1,24 @@
 package slipup
 
 import (
+	"errors"
 	"fmt"
 )
 
-func Trace(e error, s string) error {
+var ErrNotImplemented = errors.New("not implemented")
+
+func Describe(e error, s string) error {
 	return fmt.Errorf("%s: %w", s, e)
 }
 
-func TraceMsg(e error, tpl string, v ...any) error {
-	return Trace(e, fmt.Sprintf(tpl, v...))
+func Describef(e error, tpl string, v ...any) error {
+	return Describe(e, fmt.Sprintf(tpl, v...))
 }
 
-func Create(tpl string, v ...any) error {
+func Createf(tpl string, v ...any) error {
 	return fmt.Errorf(tpl, v...)
+}
+
+func NotImplemented(name string) error {
+	return Describe(ErrNotImplemented, name)
 }

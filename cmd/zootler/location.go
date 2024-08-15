@@ -506,11 +506,11 @@ func (a *AttachDefaultItem) Init(_ context.Context, storage query.Engine) error 
 	q.Exists(T[components.CollectableGameToken]())
 	names, err := storage.Retrieve(q)
 	if err != nil {
-		return slipup.Trace(err, "while building item name map")
+		return slipup.Describe(err, "while building item name map")
 	}
 
 	if names.Len() == 0 {
-		return slipup.Create("no items load")
+		return slipup.Createf("no items load")
 	}
 
 	for names.MoveNext() {
@@ -529,7 +529,7 @@ func (a *AttachDefaultItem) Components(_ context.Context, id table.RowId, l File
 
 	itemId, exists := a.items[l.Default]
 	if !exists {
-		return slipup.Create("item '%s' was not found in the loaded items list", l.Default)
+		return slipup.Createf("item '%s' was not found in the loaded items list", l.Default)
 	}
 
 	return e.SetValues(id, table.Values{components.DefaultItem(itemId)})

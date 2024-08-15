@@ -12,33 +12,27 @@ import (
 )
 
 func example(z *app.Zootlr) error {
-	// hardcoded to progressive hookshot right now
-	name := "has(amount)"
-	code := name
+	code := "has('Progressive Hookshot', 2)"
 	ast, parseErr := parser.Parse(code)
 	if parseErr != nil {
-		return slipup.TraceMsg(parseErr, "while parsing rule '%s'", code)
+		return slipup.Describef(parseErr, "while parsing rule '%s'", code)
 	}
 
 	c, compileErr := runtime.Compile(ast)
 	if compileErr != nil {
-		return slipup.TraceMsg(parseErr, "while compiling rule '%s'", code)
+		return slipup.Describef(compileErr, "while compiling rule '%s'", code)
 	}
 
 	env := runtime.NewEnv()
-	env.Set("amount", runtime.StackValueOrPanic(2))
-	memory := runtime.NewVmMem()
+	env.Set("amount", runtime.ValueFromInt(2))
+	memory := runtime.NewFuncNamespace()
 	memory.AddFunc("has", &HasQtyOf{z.Engine()})
-
-	WriteLineOut(z.Ctx(), c.Disassemble(name))
-
+	WriteLineOut(z.Ctx(), c.Disassemble(code))
 	vm := runtime.CreateVM(env, memory)
-	vm.Debug(true)
 	result, runErr := vm.Run(z.Ctx(), c)
 	if runErr == nil {
 		WriteLineOut(z.Ctx(), "result:\t%#v", result.Unwrap())
 	}
-	WriteLineOut(z.Ctx(), "vm dump:\n%#v", vm)
 	return runErr
 }
 
@@ -47,17 +41,25 @@ type HasQtyOf struct {
 }
 
 func (h HasQtyOf) Arity() int {
-	return 1
+	return 2
 }
 
 func (h HasQtyOf) Run(ctx context.Context, _ *runtime.VM, values runtime.Values) (runtime.Value, error) {
-	if len(values) != 1 {
-		return runtime.NullValue(), slipup.Create("expected 1 arguments, received: %d", len(values))
+	if len(values) != 2 {
+		return runtime.NullValue(), slipup.Createf("expected 2 arguments, received: %d", len(values))
 	}
 
-	qty := values[0].Unwrap().(int)
+	name, castErr := values[0].AsStr()
+	if castErr != nil {
+		return runtime.NullValue(), slipup.Describe(castErr, "expected qty to be string")
+	}
 
-	has, err := h.qtyOf(ctx, "Progressive Hookshot")
+	qty, castErr := values[1].AsInt()
+	if castErr != nil {
+		return runtime.NullValue(), slipup.Describe(castErr, "expected qty to be number")
+	}
+
+	has, err := h.qtyOf(ctx, name)
 	if err != nil {
 		return runtime.NullValue(), err
 	}
@@ -65,7 +67,7 @@ func (h HasQtyOf) Run(ctx context.Context, _ *runtime.VM, values runtime.Values)
 	return runtime.ValueFromBool(has >= qty), nil
 }
 
-func (h *HasQtyOf) qtyOf(ctx context.Context, needle string) (int, error) {
+func (h *HasQtyOf) qtyOf(_ context.Context, needle string) (int, error) {
 	q := h.storage.CreateQuery()
 	q.Exists(T[components.CollectableGameToken]())
 	q.Exists(T[components.Advancement]())
@@ -73,7 +75,7 @@ func (h *HasQtyOf) qtyOf(ctx context.Context, needle string) (int, error) {
 
 	haystack, err := h.storage.Retrieve(q)
 	if err != nil {
-		return -1, slipup.Trace(err, "while looking up collected items")
+		return -1, slipup.Describe(err, "while looking up collected items")
 	}
 
 	qty := 0
@@ -84,6 +86,5 @@ func (h *HasQtyOf) qtyOf(ctx context.Context, needle string) (int, error) {
 		}
 	}
 
-	WriteLineOut(ctx, "Found %d %s", qty, needle)
 	return qty, nil
 }

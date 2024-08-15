@@ -1,20 +1,14 @@
 package rng
 
-import "math/rand"
-
 type Xoshiro256PP [4]uint64
 
-func Xoshiro256PPSource64(x *Xoshiro256PP) rand.Source64 {
-	return &randAdapter{x}
-}
-
-func NewXoshiro256PPFromU64(seed uint64) *Xoshiro256PP {
+func NewXoshiro256PPFromU64(seed uint64) Xoshiro256PP {
 	x := Xoshiro256PP([4]uint64{0, 0, 0, 0})
 	for i := range x {
 		seed = SplitMix64(seed)
 		x[i] = seed
 	}
-	return &x
+	return x
 }
 
 func (x *Xoshiro256PP) NextUint64() uint64 {
@@ -29,6 +23,11 @@ func (x *Xoshiro256PP) NextUint64() uint64 {
 	return result
 }
 
+func (x *Xoshiro256PP) NextFloat64() float64 {
+	n := x.NextUint64()
+	return float64(n) * 0x1.0p-32
+}
+
 func rotl(x uint64, k int) uint64 {
 	return (x << k) | (x >> (64 - k))
 }
@@ -40,19 +39,19 @@ func SplitMix64(state uint64) uint64 {
 	return z ^ (z >> 31)
 }
 
-type randAdapter struct {
-	x *Xoshiro256PP
+type Xoshiro256PPSource64 struct {
+	X Xoshiro256PP
 }
 
-func (a *randAdapter) Int63() int64 {
-	n := a.x.NextUint64()
-	return int64(n << 1 >> 1)
+func (a *Xoshiro256PPSource64) Int63() int64 {
+	n := a.X.NextUint64()
+	return int64((n << 1) >> 1)
 }
 
-func (a *randAdapter) Seed(seed int64) {
-	a.x = NewXoshiro256PPFromU64(uint64(seed))
+func (a *Xoshiro256PPSource64) Seed(seed int64) {
+	a.X = NewXoshiro256PPFromU64(uint64(seed))
 }
 
-func (a *randAdapter) Uint64() uint64 {
-	return a.x.NextUint64()
+func (a *Xoshiro256PPSource64) Uint64() uint64 {
+	return a.X.NextUint64()
 }

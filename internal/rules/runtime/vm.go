@@ -16,7 +16,7 @@ var ErrUnboundName = errors.New("unbound name")
 
 const maxStack = 256
 
-func CreateVM(globals *ExecutionEnvironment, mem *VmMemory) (vm VM) {
+func CreateVM(globals *ExecutionEnvironment, mem *FuncNamespace) (vm VM) {
 	vm.globals = globals
 	vm.mem = mem
 	return
@@ -24,7 +24,7 @@ func CreateVM(globals *ExecutionEnvironment, mem *VmMemory) (vm VM) {
 
 type VM struct {
 	globals *ExecutionEnvironment
-	mem     *VmMemory
+	mem     *FuncNamespace
 	debug   bool
 }
 
@@ -47,6 +47,7 @@ func (v *VM) Run(ctx context.Context, chunk *Chunk) (Value, error) {
 	return execution.GetResult(), err
 }
 
+// TODO instead of recursing (indirectly), should look at managing via call stack
 func (v *VM) RunCompiledFunc(ctx context.Context, f *CompiledFunc, values Values) (Value, error) {
 	// write first N name+values into environment
 	scope := f.env.ChildScope()
@@ -62,7 +63,7 @@ func (v *VM) RunCompiledFunc(ctx context.Context, f *CompiledFunc, values Values
 
 func (vm *VM) execute(ctx context.Context, execution *Execution) error {
 	if execution.Chunk.Len() == 0 {
-		return slipup.Create("empty program passed")
+		return slipup.Createf("empty program passed")
 	}
 
 	var pos uint16 = math.MaxUint16
@@ -76,20 +77,10 @@ func (vm *VM) execute(ctx context.Context, execution *Execution) error {
 		}
 	}()
 
-	size := execution.Chunk.Len()
 	debug := vm.debug || execution.debug
 
 loop:
 	for {
-		if int(execution.pc) > size {
-			return slipup.TraceMsg(ErrOutOfBoundsCounter, operationAt(execution.Chunk, pos))
-		}
-		if pos == execution.pc {
-			return fmt.Errorf(
-				"'%s' did not increment program counter",
-				Bytecode(execution.Chunk.Ops[pos]),
-			)
-		}
 		pos = execution.pc
 		code := execution.Chunk.Ops[execution.pc]
 		op := Bytecode(code)
@@ -125,10 +116,10 @@ loop:
 			execution.pushStack(ValueFromBool(!execution.popStack().Eq(execution.popStack())))
 			execution.pc++
 		case OP_LT:
-			// care about order
 			b := execution.popStack()
 			a := execution.popStack()
-			execution.pushStack(ValueFromBool(a.Lt(b)))
+			val := ValueFromBool(a.Lt(b))
+			execution.pushStack(val)
 			execution.pc++
 		case DEBUG_STACK_OP:
 			if debug {
@@ -173,7 +164,7 @@ loop:
 			name := execution.Chunk.Names[idx]
 			value, err := vm.callFunc(ctx, name, nil)
 			if err != nil {
-				return slipup.TraceMsg(err, operationAt(execution.Chunk, pos))
+				return slipup.Describef(err, operationAt(execution.Chunk, pos))
 			}
 			execution.pushStack(value)
 			execution.pc += 2
@@ -184,7 +175,7 @@ loop:
 			name := execution.Chunk.Names[idx]
 			value, err := vm.callFunc(ctx, name, Values{arg})
 			if err != nil {
-				return slipup.TraceMsg(err, operationAt(execution.Chunk, pos))
+				return slipup.Describef(err, operationAt(execution.Chunk, pos))
 			}
 			execution.pushStack(value)
 			execution.pc += 2
@@ -195,7 +186,7 @@ loop:
 			name := execution.Chunk.Names[idx]
 			value, err := vm.callFunc(ctx, name, Values{arg1, arg2})
 			if err != nil {
-				return slipup.TraceMsg(err, operationAt(execution.Chunk, pos))
+				return slipup.Describef(err, operationAt(execution.Chunk, pos))
 			}
 			execution.pushStack(value)
 			execution.pc += 2
@@ -211,11 +202,11 @@ loop:
 func (vm *VM) callFunc(ctx context.Context, name string, values Values) (Value, error) {
 	f := vm.mem.funcs[name]
 	if f == nil {
-		return NullValue(), slipup.TraceMsg(ErrUnboundName, "function '%s'", name)
+		return NullValue(), slipup.Describef(ErrUnboundName, "function '%s'", name)
 	}
 	value, err := f.Run(ctx, vm, values)
 	if err != nil {
-		err = slipup.TraceMsg(err, "function call '%s'", name)
+		err = slipup.Describef(err, "function call '%s'", name)
 	}
 	return value, err
 }
@@ -250,7 +241,7 @@ func (e *Execution) loadName() error {
 	name := e.Chunk.Names[idx]
 	value, found := e.Env.Lookup(name)
 	if !found {
-		return slipup.TraceMsg(ErrUnboundName, "%s : %s", name, operationAt(e.Chunk, e.pc))
+		return slipup.Describef(ErrUnboundName, "%s : %s", name, operationAt(e.Chunk, e.pc))
 	}
 	e.pushStack(value)
 	return nil
@@ -259,7 +250,7 @@ func (e *Execution) loadName() error {
 func (e *Execution) popStack() Value {
 	val, err := e.stack.Pop()
 	if err != nil {
-		panic(slipup.Trace(err, "vm stack"))
+		panic(slipup.Describe(err, "vm stack"))
 	}
 	return val
 }

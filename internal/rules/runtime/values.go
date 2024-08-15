@@ -3,11 +3,12 @@ package runtime
 import (
 	"errors"
 	"fmt"
+	"sudonters/zootler/internal/slipup"
 )
 
 var ErrUnsupportedType error = errors.New("unsupported type")
 
-func StackValueFrom(t interface{}) (Value, error) {
+func ValueFrom(t interface{}) (Value, error) {
 	switch v := t.(type) {
 	case bool:
 		return ValueFromBool(v), nil
@@ -15,13 +16,15 @@ func StackValueFrom(t interface{}) (Value, error) {
 		return ValueFromInt(v), nil
 	case float64:
 		return ValueFromFloat(v), nil
+	case string:
+		return ValueFromStr(v), nil
 	default:
 		return NullValue(), ErrUnsupportedType
 	}
 }
 
-func StackValueOrPanic(t interface{}) Value {
-	v, err := StackValueFrom(t)
+func ValueOrPanic(t interface{}) Value {
+	v, err := ValueFrom(t)
 	if err != nil {
 		panic(err)
 	}
@@ -56,6 +59,13 @@ func ValueFromFloat(v float64) Value {
 	}
 }
 
+func ValueFromStr(v string) Value {
+	return Value{
+		kind: VAL_STR,
+		v:    v,
+	}
+}
+
 type ValueKind uint8
 
 func (v ValueKind) String() string {
@@ -68,6 +78,8 @@ func (v ValueKind) String() string {
 		return "float"
 	case VAL_BOOL:
 		return "bool"
+	case VAL_STR:
+		return "str"
 	default:
 		panic(fmt.Errorf("unknown value kind: %02X", uint8(v)))
 	}
@@ -78,6 +90,7 @@ const (
 	VAL_INT
 	VAL_FLOAT
 	VAL_BOOL
+	VAL_STR
 )
 
 type Value struct {
@@ -87,6 +100,14 @@ type Value struct {
 type Values []Value
 
 func (v Value) Eq(o Value) bool {
+	if v.kind == VAL_INT && o.kind == VAL_FLOAT {
+		return float64(v.v.(int)) == o.v.(float64)
+	}
+
+	if v.kind == VAL_FLOAT && o.kind == VAL_INT {
+		return v.v.(float64) == float64(o.v.(int))
+	}
+
 	if v.kind != o.kind {
 		return false
 	}
@@ -100,22 +121,26 @@ func (v Value) Eq(o Value) bool {
 		return v.v.(float64) == o.v.(float64)
 	case VAL_BOOL:
 		return v.v.(bool) == o.v.(bool)
+	case VAL_STR:
+		return v.v.(string) == o.v.(string)
 	default:
 		return false
 	}
 }
 
 func (v Value) Lt(o Value) bool {
-	if v.kind != o.kind {
-		panic(fmt.Errorf("unorderable types: '%s' and '%s'", v.kind, o.kind))
-	}
-
 	switch v.kind {
 	case VAL_NULL:
 		panic("null dereference")
 	case VAL_INT:
+		if o.kind == VAL_FLOAT {
+			return float64(v.v.(int)) < o.v.(float64)
+		}
 		return v.v.(int) < o.v.(int)
 	case VAL_FLOAT:
+		if o.kind == VAL_INT {
+			return v.v.(float64) == float64(o.v.(int))
+		}
 		return v.v.(float64) < o.v.(float64)
 	}
 
@@ -139,4 +164,44 @@ func (v Value) Truthy() bool {
 
 func (v Value) Unwrap() interface{} {
 	return v.v
+}
+
+func (v Value) AsInt() (int, error) {
+	switch i := v.v.(type) {
+	case int:
+		return i, nil
+	case float64:
+		return int(i), nil
+	default:
+		return 0, slipup.Describef(ErrUnsupportedType, "cannot convert '%+v' to int", v)
+	}
+}
+
+func (v Value) AsFloat() (float64, error) {
+	switch i := v.v.(type) {
+	case int:
+		return float64(i), nil
+	case float64:
+		return i, nil
+	default:
+		return 0, slipup.Describef(ErrUnsupportedType, "cannot convert '%+v' to int", v)
+	}
+}
+
+func (v Value) AsBool() (bool, error) {
+	switch i := v.v.(type) {
+	case bool:
+		return i, nil
+	default:
+		return false, slipup.Describef(ErrUnsupportedType, "cannot convert '%+v' to bool", v)
+	}
+}
+
+func (v Value) AsStr() (string, error) {
+	switch i := v.v.(type) {
+	case string:
+		return i, nil
+	default:
+		return "", slipup.Describef(ErrUnsupportedType, "cannot convert '%+v' to string", v)
+	}
 }

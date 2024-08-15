@@ -45,7 +45,7 @@ func (i InspectTable) Setup(ctx context.Context, storage query.Engine) error {
 			return fmt.Errorf("could not find column for '%s'", t.Name())
 		}
 		if err := examineColumn(ctx, tbl.Cols[id]); err != nil {
-			return slipup.TraceMsg(err, "while inspecting column '%s'", t.Name())
+			return slipup.Describef(err, "while inspecting column '%s'", t.Name())
 		}
 	}
 	return nil
@@ -76,7 +76,7 @@ func (iq InspectQuery) Setup(ctx context.Context, storage query.Engine) error {
 
 	results, err := storage.Retrieve(q)
 	if err != nil {
-		return slipup.Trace(err, "while inspecting query")
+		return slipup.Describe(err, "while inspecting query")
 	}
 
 	WriteLineOut(ctx, "Examining query")
