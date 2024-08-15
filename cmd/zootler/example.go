@@ -12,23 +12,24 @@ import (
 )
 
 func example(z *app.Zootlr) error {
+	env := runtime.NewEnv()
+	env.Set("amount", runtime.ValueFromInt(2))
+	functions := runtime.NewFuncNamespace()
+	functions.AddFunc("has", &HasQtyOf{z.Engine()})
+	compiler := runtime.CompilerUsing(functions, env)
 	code := "has('Progressive Hookshot', 2)"
 	ast, parseErr := parser.Parse(code)
 	if parseErr != nil {
 		return slipup.Describef(parseErr, "while parsing rule '%s'", code)
 	}
 
-	c, compileErr := runtime.Compile(ast)
+	c, compileErr := compiler.CompileEdgeRule(ast)
 	if compileErr != nil {
 		return slipup.Describef(compileErr, "while compiling rule '%s'", code)
 	}
 
-	env := runtime.NewEnv()
-	env.Set("amount", runtime.ValueFromInt(2))
-	memory := runtime.NewFuncNamespace()
-	memory.AddFunc("has", &HasQtyOf{z.Engine()})
 	WriteLineOut(z.Ctx(), c.Disassemble(code))
-	vm := runtime.CreateVM(env, memory)
+	vm := runtime.CreateVM(env, functions)
 	result, runErr := vm.Run(z.Ctx(), c)
 	if runErr == nil {
 		WriteLineOut(z.Ctx(), "result:\t%#v", result.Unwrap())

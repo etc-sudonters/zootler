@@ -55,10 +55,15 @@ func (c *ChunkBuilder) LoadConst(v Value) (PC, ConstIdx) {
 	return c.write(OP_LOAD_CONST, id), ConstIdx(id)
 }
 
-func (c *ChunkBuilder) LoadIdentifier(v string) (PC, NameIdx) {
+func (c *ChunkBuilder) DeclareIdentifier(name string) NameIdx {
 	id := uint8(len(c.Names))
-	c.Names = append(c.Names, v)
-	return c.write(OP_LOAD_IDENT, id), NameIdx(id)
+	c.Names = append(c.Names, name)
+	return NameIdx(id)
+}
+
+func (c *ChunkBuilder) LoadIdentifier(v string) (PC, NameIdx) {
+	idx := c.DeclareIdentifier(v)
+	return c.write(OP_LOAD_IDENT, uint8(idx)), idx
 
 }
 

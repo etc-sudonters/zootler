@@ -42,6 +42,12 @@ type (
 	}
 )
 
+type FunctionDecl struct {
+	Body       Expression
+	Identifier string
+	Parameters []string
+}
+
 type (
 	BoolOp struct {
 		Left  Expression

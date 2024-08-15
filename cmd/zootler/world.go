@@ -10,6 +10,8 @@ import (
 	"sudonters/zootler/internal/components"
 	"sudonters/zootler/internal/entity"
 	"sudonters/zootler/internal/query"
+	"sudonters/zootler/internal/rules/parser"
+	"sudonters/zootler/internal/rules/runtime"
 	"sudonters/zootler/internal/slipup"
 	"sudonters/zootler/internal/table"
 
@@ -19,6 +21,7 @@ import (
 type WorldFileLoader struct {
 	Path, Helpers string
 	IncludeMQ     bool
+	Compiler      runtime.Compiler
 }
 
 func (w WorldFileLoader) Setup(ctx context.Context, e query.Engine) error {
@@ -47,11 +50,17 @@ func (w WorldFileLoader) Setup(ctx context.Context, e query.Engine) error {
 	return nil
 }
 
-func (w WorldFileLoader) helpers(e query.Engine) error {
+func (w WorldFileLoader) helpers() error {
 	helpers := make(map[string]string, 256)
+	for decl, body := range helpers {
+		f, err := parser.ParseFunctionDecl(decl, body)
+		if err != nil {
+			return slipup.Describef(err, "while parsing function decl '%s'", decl)
+		}
 
-	for name, code := range helpers {
-		e.InsertRow(components.Name(name), components.RawLogic{Rule: code}, components.Helper{})
+		if compileErr := w.Compiler.CompileFunctionDecl(f); compileErr != nil {
+			return slipup.Describef(err, "while compiling function decl '%s'", decl)
+		}
 	}
 	return nil
 }

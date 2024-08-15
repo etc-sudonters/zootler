@@ -8,6 +8,7 @@ import (
 	"path"
 	"runtime/debug"
 	"sudonters/zootler/internal/app"
+	"sudonters/zootler/internal/rules/runtime"
 
 	"github.com/etc-sudonters/substrate/dontio"
 	"github.com/etc-sudonters/substrate/stageleft"
@@ -79,8 +80,11 @@ func main() {
 		return
 	}
 
-	z, appCreateErr := app.New(ctx,
+	funcs := runtime.NewFuncNamespace()
+	env := runtime.NewEnv()
+	compiler := runtime.CompilerUsing(funcs, env)
 
+	z, appCreateErr := app.New(ctx,
 		app.Setup(CreateScheme{DDL: MakeDDL()}),
 		app.Setup(DataFileLoader[FileItem]{
 			IncludeMQ: opts.includeMq,
@@ -95,8 +99,9 @@ func main() {
 			IncludeMQ: opts.includeMq,
 			Path:      opts.logicDir,
 			Helpers:   path.Join(path.Dir(opts.logicDir), "helpers.json"),
+			Compiler:  compiler,
 		}),
-		app.Setup(&LogicCompiler{}),
+		app.Setup(&LogicCompiler{Compiler: compiler}),
 	)
 
 	if appCreateErr != nil {

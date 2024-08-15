@@ -14,6 +14,7 @@ import (
 )
 
 type LogicCompiler struct {
+	Compiler         runtime.Compiler
 	compiled, failed uint64
 }
 
@@ -42,7 +43,7 @@ func (l *LogicCompiler) Setup(ctx context.Context, e query.Engine) error {
 			return slipup.Describef(parseErr, "while parsing rule for '%s'", edge.Name)
 		}
 
-		if bc, compileErr := runtime.Compile(ast); compileErr != nil {
+		if bc, compileErr := l.Compiler.CompileEdgeRule(ast); compileErr != nil {
 			l.failed++
 			WriteLineOut(ctx, "could not compile rule at '%s': %s", edge.Name, compileErr.Error())
 		} else {
