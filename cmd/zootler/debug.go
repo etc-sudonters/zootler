@@ -40,7 +40,7 @@ func (i InspectTable) Setup(ctx context.Context, storage query.Engine) error {
 	WriteLineOut(ctx, "Number of columns:\t%d", len(tbl.Cols))
 	WriteLineOut(ctx, "Number of rows:\t\t%d", len(tbl.Rows))
 	for _, t := range i.Columns {
-		id, ok := query.ColumnIdFor(storage, t)
+		id, ok := storage.ColumnIdFor(t)
 		if !ok {
 			return fmt.Errorf("could not find column for '%s'", t.Name())
 		}
@@ -67,11 +67,21 @@ func (iq InspectQuery) Setup(ctx context.Context, storage query.Engine) error {
 	q := storage.CreateQuery()
 
 	for i := range iq.Exist {
-		q.Exists(iq.Exist[i])
+		t := iq.Exist[i]
+		colId, exists := storage.ColumnIdFor(t)
+		if !exists {
+			WriteLineErr(ctx, "Unable to resolve columnId for '%s'", t)
+		}
+		q.Exists(colId)
 	}
 
 	for i := range iq.NotExist {
-		q.NotExists(iq.NotExist[i])
+		t := iq.NotExist[i]
+		colId, exists := storage.ColumnIdFor(t)
+		if !exists {
+			WriteLineErr(ctx, "Unable to resolve columnId for '%s'", t)
+		}
+		q.NotExists(colId)
 	}
 
 	results, err := storage.Retrieve(q)

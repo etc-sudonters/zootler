@@ -14,8 +14,6 @@ import (
 	"sudonters/zootler/internal/rules/runtime"
 	"sudonters/zootler/internal/slipup"
 	"sudonters/zootler/internal/table"
-
-	"github.com/etc-sudonters/substrate/mirrors"
 )
 
 type WorldFileLoader struct {
@@ -190,10 +188,10 @@ func (l locationBuilder) linkTo(name components.Name, rule components.RawLogic, 
 }
 
 func CreateLocationMap(ctx context.Context, e query.Engine) (*LocationMap, error) {
-	query := e.CreateQuery()
-	query.Load(mirrors.TypeOf[components.Name]())
-	query.Exists(mirrors.TypeOf[components.Location]())
-	rows, qErr := e.Retrieve(query)
+	q := e.CreateQuery()
+	q.Load(query.MustAsColumnId[components.Name](e))
+	q.Exists(query.MustAsColumnId[components.Location](e))
+	rows, qErr := e.Retrieve(q)
 	if qErr != nil {
 		return nil, qErr
 	}

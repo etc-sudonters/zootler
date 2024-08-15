@@ -502,8 +502,8 @@ func (a *AttachDefaultItem) Init(_ context.Context, storage query.Engine) error 
 		a.items = make(map[string]table.RowId, 256)
 	}
 	q := storage.CreateQuery()
-	q.Load(T[components.Name]())
-	q.Exists(T[components.CollectableGameToken]())
+	q.Load(query.MustAsColumnId[components.Name](storage))
+	q.Exists(query.MustAsColumnId[components.CollectableGameToken](storage))
 	names, err := storage.Retrieve(q)
 	if err != nil {
 		return slipup.Describe(err, "while building item name map")

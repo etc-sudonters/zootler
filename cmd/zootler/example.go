@@ -69,10 +69,11 @@ func (h HasQtyOf) Run(ctx context.Context, _ *runtime.VM, values runtime.Values)
 }
 
 func (h *HasQtyOf) qtyOf(_ context.Context, needle string) (int, error) {
-	q := h.storage.CreateQuery()
-	q.Exists(T[components.CollectableGameToken]())
-	q.Exists(T[components.Advancement]())
-	q.Load(T[components.Name]())
+	eng := h.storage
+	q := eng.CreateQuery()
+	q.Exists(query.MustAsColumnId[components.CollectableGameToken](eng))
+	q.Exists(query.MustAsColumnId[components.Advancement](eng))
+	q.Load(query.MustAsColumnId[components.Name](eng))
 
 	haystack, err := h.storage.Retrieve(q)
 	if err != nil {

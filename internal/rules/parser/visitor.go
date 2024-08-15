@@ -38,7 +38,44 @@ func Visit(v Visitor, node Expression) error {
 	default:
 		panic(stageleft.AttachExitCode(
 			fmt.Errorf("unknown node type %T", node),
-			stageleft.ExitCode(86),
+			stageleft.ExitCode(90),
+		))
+	}
+}
+
+type Transformer interface {
+	TransformBinOp(*BinOp) (Expression, error)
+	TransformBoolOp(*BoolOp) (Expression, error)
+	TransformCall(*Call) (Expression, error)
+	TransformIdentifier(*Identifier) (Expression, error)
+	TransformSubscript(*Subscript) (Expression, error)
+	TransformTuple(*Tuple) (Expression, error)
+	TransformUnary(*UnaryOp) (Expression, error)
+	TransformLiteral(*Literal) (Expression, error)
+}
+
+func Transform(t Transformer, node Expression) (Expression, error) {
+	switch node := node.(type) {
+	case *BinOp:
+		return t.TransformBinOp(node)
+	case *BoolOp:
+		return t.TransformBoolOp(node)
+	case *Call:
+		return t.TransformCall(node)
+	case *Identifier:
+		return t.TransformIdentifier(node)
+	case *Literal:
+		return t.TransformLiteral(node)
+	case *Subscript:
+		return t.TransformSubscript(node)
+	case *Tuple:
+		return t.TransformTuple(node)
+	case *UnaryOp:
+		return t.TransformUnary(node)
+	default:
+		panic(stageleft.AttachExitCode(
+			fmt.Errorf("unknown node type %T", node),
+			stageleft.ExitCode(91),
 		))
 	}
 }
