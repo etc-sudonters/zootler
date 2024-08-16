@@ -7,8 +7,10 @@ import (
 	"os"
 	"path"
 	"runtime/debug"
+	"sudonters/zootler/internal"
 	"sudonters/zootler/internal/app"
 	"sudonters/zootler/internal/rules/runtime"
+	"sudonters/zootler/internal/slipup"
 
 	"github.com/etc-sudonters/substrate/dontio"
 	"github.com/etc-sudonters/substrate/stageleft"
@@ -51,7 +53,7 @@ func main() {
 		Out: os.Stdout,
 		Err: os.Stderr,
 	}
-	std := std{&stdio}
+	std := internal.Std{&stdio}
 	defer func() {
 		os.Exit(int(appExitCode))
 	}()
@@ -80,12 +82,19 @@ func main() {
 		return
 	}
 
-	funcs := runtime.NewFuncNamespace()
-	env := runtime.NewEnv()
-	compiler := runtime.CompilerUsing(funcs, env)
-
 	z, appCreateErr := app.New(ctx,
 		app.Setup(CreateScheme{DDL: MakeDDL()}),
+		app.AddResource(runtime.NewFuncNamespace()),
+		app.AddResource(runtime.NewEnv()),
+		func(z *app.Zootlr) error {
+			funcs := app.GetResource[runtime.FuncNamespace](z)
+			globals := app.GetResource[runtime.ExecutionEnvironment](z)
+			if funcs == nil || globals == nil {
+				return slipup.Createf("either funcnamespace or globals are not registered")
+			}
+			compiler := runtime.CompilerUsing(&funcs.Res, &globals.Res)
+			return app.AddResource(compiler)(z)
+		},
 		app.Setup(DataFileLoader[FileItem]{
 			IncludeMQ: opts.includeMq,
 			Path:      path.Join(opts.dataDir, "items.json"),
@@ -99,9 +108,8 @@ func main() {
 			IncludeMQ: opts.includeMq,
 			Path:      opts.logicDir,
 			Helpers:   path.Join(path.Dir(opts.logicDir), "helpers.json"),
-			Compiler:  compiler,
 		}),
-		app.Setup(&LogicCompiler{Compiler: compiler}),
+		app.Setup(&LogicCompiler{}),
 	)
 
 	if appCreateErr != nil {

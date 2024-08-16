@@ -6,6 +6,8 @@ import (
 	"os"
 	"path"
 	"strings"
+	"sudonters/zootler/internal"
+	"sudonters/zootler/internal/app"
 	"sudonters/zootler/internal/bundle"
 	"sudonters/zootler/internal/components"
 	"sudonters/zootler/internal/entity"
@@ -19,23 +21,34 @@ import (
 type WorldFileLoader struct {
 	Path, Helpers string
 	IncludeMQ     bool
-	Compiler      runtime.Compiler
 }
 
-func (w WorldFileLoader) Setup(ctx context.Context, e query.Engine) error {
-	WriteLineOut(ctx, "reading dir  '%s'", w.Path)
+func (w WorldFileLoader) Setup(z *app.Zootlr) error {
+	ctx := z.Ctx()
+	eng := z.Engine()
+
+	compiler := app.GetResource[runtime.Compiler](z)
+	if compiler == nil {
+		panic(slipup.Createf("expected compiler resource to be registered"))
+	}
+
+	if helperErr := w.helpers(ctx, compiler); helperErr != nil {
+		return slipup.Describe(helperErr, "while processing helpers")
+	}
+
+	internal.WriteLineOut(ctx, "reading dir  '%s'", w.Path)
 	directory, dirErr := os.ReadDir(w.Path)
 	if dirErr != nil {
 		return slipup.Describe(dirErr, w.Path)
 	}
 
-	locTbl, locErr := CreateLocationMap(ctx, e)
+	locTbl, locErr := CreateLocationMap(ctx, eng)
 	if locErr != nil {
 		return slipup.Describe(locErr, "creating location id table")
 	}
 
 	for _, entry := range directory {
-		if !IsFile(entry) {
+		if !internal.IsFile(entry) {
 			continue
 		}
 
@@ -48,16 +61,21 @@ func (w WorldFileLoader) Setup(ctx context.Context, e query.Engine) error {
 	return nil
 }
 
-func (w WorldFileLoader) helpers() error {
-	helpers := make(map[string]string, 256)
+func (w WorldFileLoader) helpers(ctx context.Context, compiler *app.Resource[runtime.Compiler]) error {
+	helpers, helperReadErr := internal.ReadJsonFileStringMap(w.Helpers)
+	if helperReadErr != nil {
+		return slipup.Describef(helperReadErr, "while reading '%s'", w.Helpers)
+	}
 	for decl, body := range helpers {
 		f, err := parser.ParseFunctionDecl(decl, body)
 		if err != nil {
-			return slipup.Describef(err, "while parsing function decl '%s'", decl)
+			internal.WriteLineErr(ctx, "%s", slipup.Describef(err, "while parsing function decl '%s'", decl).Error())
+			continue
 		}
 
-		if compileErr := w.Compiler.CompileFunctionDecl(f); compileErr != nil {
-			return slipup.Describef(err, "while compiling function decl '%s'", decl)
+		if compileErr := compiler.Res.CompileFunctionDecl(f); compileErr != nil {
+			internal.WriteLineErr(ctx, "%s", slipup.Describef(err, "while compiling function decl '%s'", decl).Error())
+			continue
 		}
 	}
 	return nil
@@ -72,7 +90,7 @@ func (w WorldFileLoader) logicFile(
 		return nil
 	}
 
-	rawLocs, readErr := ReadJsonFile[[]WorldFileLocation](path)
+	rawLocs, readErr := internal.ReadJsonFileAs[[]WorldFileLocation](path)
 	if readErr != nil {
 		return slipup.Describe(readErr, path)
 	}
@@ -202,7 +220,7 @@ func CreateLocationMap(ctx context.Context, e query.Engine) (*LocationMap, error
 		if !ok {
 			return "", r.Id, fmt.Errorf("could not cast row %+v to 'components.Name'", r)
 		}
-		return normalize(name), model, nil
+		return internal.Normalize(name), model, nil
 	})
 
 	if loadErr != nil {
@@ -224,7 +242,7 @@ func (l *LocationMap) Build(name components.Name) (*locationBuilder, error) {
 	var b locationBuilder
 	b.name = name
 	b.parent = l
-	normalized := normalize(name)
+	normalized := internal.Normalize(name)
 	if id, ok := l.locations[normalized]; ok {
 		b.id = id
 		return &b, nil

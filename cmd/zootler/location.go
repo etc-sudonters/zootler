@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"sudonters/zootler/internal"
 	"sudonters/zootler/internal/components"
 	"sudonters/zootler/internal/query"
 	"sudonters/zootler/internal/slipup"
@@ -37,7 +38,7 @@ func (item FileLocation) AddComponents(rid table.RowId, storage query.Engine) er
 }
 
 func (item FileLocation) kind(rid table.RowId, storage query.Engine) error {
-	switch normalize(item.Type) {
+	switch internal.Normalize(item.Type) {
 	case "beehive":
 		return storage.SetValues(rid, table.Values{components.Beehive{}})
 	case "boss":
@@ -95,7 +96,7 @@ func (item FileLocation) kind(rid table.RowId, storage query.Engine) error {
 
 func (item FileLocation) categories(rid table.RowId, storage query.Engine) error {
 	for _, category := range item.Categories {
-		switch normalize(category) {
+		switch internal.Normalize(category) {
 		case "beehives":
 			if err := storage.SetValues(rid, table.Values{components.Beehive{}}); err != nil {
 				return err

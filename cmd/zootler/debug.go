@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"sudonters/zootler/internal"
 	"sudonters/zootler/internal/query"
 	"sudonters/zootler/internal/slipup"
 	"sudonters/zootler/internal/table"
@@ -16,8 +17,8 @@ func examineTable(ctx context.Context, storage query.Engine) error {
 		return extractTblErr
 	}
 
-	WriteLineOut(ctx, "Number of columns:\t%d", len(tbl.Cols))
-	WriteLineOut(ctx, "Number of rows:\t\t%d", len(tbl.Rows))
+	internal.WriteLineOut(ctx, "Number of columns:\t%d", len(tbl.Cols))
+	internal.WriteLineOut(ctx, "Number of rows:\t\t%d", len(tbl.Rows))
 	return nil
 }
 
@@ -37,8 +38,8 @@ func (i InspectTable) Setup(ctx context.Context, storage query.Engine) error {
 		return extractTblErr
 	}
 
-	WriteLineOut(ctx, "Number of columns:\t%d", len(tbl.Cols))
-	WriteLineOut(ctx, "Number of rows:\t\t%d", len(tbl.Rows))
+	internal.WriteLineOut(ctx, "Number of columns:\t%d", len(tbl.Cols))
+	internal.WriteLineOut(ctx, "Number of rows:\t\t%d", len(tbl.Rows))
 	for _, t := range i.Columns {
 		id, ok := storage.ColumnIdFor(t)
 		if !ok {
@@ -52,9 +53,9 @@ func (i InspectTable) Setup(ctx context.Context, storage query.Engine) error {
 }
 
 func examineColumn(ctx context.Context, col table.ColumnData) error {
-	WriteLineOut(ctx, "Column:\t\t%s", col.Type().Name())
-	WriteLineOut(ctx, "Id:\t\t%d", col.Id())
-	WriteLineOut(ctx, "Population:\t%d", col.Column().Len())
+	internal.WriteLineOut(ctx, "Column:\t\t%s", col.Type().Name())
+	internal.WriteLineOut(ctx, "Id:\t\t%d", col.Id())
+	internal.WriteLineOut(ctx, "Population:\t%d", col.Column().Len())
 	return nil
 }
 
@@ -70,7 +71,7 @@ func (iq InspectQuery) Setup(ctx context.Context, storage query.Engine) error {
 		t := iq.Exist[i]
 		colId, exists := storage.ColumnIdFor(t)
 		if !exists {
-			WriteLineErr(ctx, "Unable to resolve columnId for '%s'", t)
+			internal.WriteLineErr(ctx, "Unable to resolve columnId for '%s'", t)
 		}
 		q.Exists(colId)
 	}
@@ -79,7 +80,7 @@ func (iq InspectQuery) Setup(ctx context.Context, storage query.Engine) error {
 		t := iq.NotExist[i]
 		colId, exists := storage.ColumnIdFor(t)
 		if !exists {
-			WriteLineErr(ctx, "Unable to resolve columnId for '%s'", t)
+			internal.WriteLineErr(ctx, "Unable to resolve columnId for '%s'", t)
 		}
 		q.NotExists(colId)
 	}
@@ -89,10 +90,10 @@ func (iq InspectQuery) Setup(ctx context.Context, storage query.Engine) error {
 		return slipup.Describe(err, "while inspecting query")
 	}
 
-	WriteLineOut(ctx, "Examining query")
-	WriteLineOut(ctx, "Exists:\t\t%s", showNames(iq.Exist))
-	WriteLineOut(ctx, "NotExist:\t%s", showNames(iq.NotExist))
-	WriteLineOut(ctx, "Population:\t%d", results.Len())
+	internal.WriteLineOut(ctx, "Examining query")
+	internal.WriteLineOut(ctx, "Exists:\t\t%s", showNames(iq.Exist))
+	internal.WriteLineOut(ctx, "NotExist:\t%s", showNames(iq.NotExist))
+	internal.WriteLineOut(ctx, "Population:\t%d", results.Len())
 	return nil
 }
 

@@ -6,8 +6,8 @@ import (
 )
 
 type Compiler struct {
-	funcs   *FuncNamespace
-	globals *ExecutionEnvironment
+	Funcs   *FuncNamespace
+	Globals *ExecutionEnvironment
 }
 
 type compiling struct {
@@ -22,16 +22,16 @@ func CompilerUsing(funcs *FuncNamespace, globals *ExecutionEnvironment) Compiler
 
 func NewCompiler() Compiler {
 	return Compiler{
-		funcs:   NewFuncNamespace(),
-		globals: NewEnv(),
+		Funcs:   NewFuncNamespace(),
+		Globals: NewEnv(),
 	}
 }
 
 func (c Compiler) CompileFunctionDecl(decl parser.FunctionDecl) error {
 	var f CompiledFunc
-	c.funcs.DeclFunction(decl.Identifier)
+	c.Funcs.DeclFunction(decl.Identifier)
 	f.arity = len(decl.Parameters)
-	f.env = c.globals.ChildScope()
+	f.env = c.Globals.ChildScope()
 	f.chunk = new(Chunk)
 	builder := &ChunkBuilder{*f.chunk}
 
@@ -39,17 +39,17 @@ func (c Compiler) CompileFunctionDecl(decl parser.FunctionDecl) error {
 		builder.DeclareIdentifier(name)
 	}
 
-	compiling := compiling{builder, c.funcs, f.env}
+	compiling := compiling{builder, c.Funcs, f.env}
 	if err := c.compileUnit(decl.Body, compiling); err != nil {
 		return err
 	}
 
-	c.funcs.AddFunc(decl.Identifier, &f)
+	c.Funcs.AddFunc(decl.Identifier, &f)
 	return nil
 }
 
 func (c Compiler) CompileEdgeRule(ast parser.Expression) (*Chunk, error) {
-	code := compiling{new(ChunkBuilder), c.funcs, c.globals}
+	code := compiling{new(ChunkBuilder), c.Funcs, c.Globals}
 	if err := c.compileUnit(ast, code); err != nil {
 		return nil, err
 	}

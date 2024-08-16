@@ -1,4 +1,4 @@
-package main
+package internal
 
 import (
 	"context"
@@ -14,17 +14,28 @@ import (
 	"muzzammil.xyz/jsonc"
 )
 
-var alphaOnly = regexp.MustCompile("[^a-z]+")
+var alphanumonly = regexp.MustCompile("[^a-z0-9]+")
 
-func normalize[S ~string](s S) string {
-	return alphaOnly.ReplaceAllString(strings.ToLower(string(s)), "")
+func Normalize[S ~string](s S) string {
+	return alphanumonly.ReplaceAllString(strings.ToLower(string(s)), "")
 }
 
 func IsFile(e fs.DirEntry) bool {
 	return e.Type()&fs.ModeType == 0
 }
 
-func ReadJsonFile[T any](path string) (T, error) {
+func ReadJsonFileStringMap(path string) (map[string]string, error) {
+	t := make(map[string]string)
+	raw, readErr := os.ReadFile(path)
+	if readErr != nil {
+		return t, readErr
+	}
+
+	err := jsonc.Unmarshal(raw, &t)
+	return t, err
+}
+
+func ReadJsonFileAs[T any](path string) (T, error) {
 	var t T
 	raw, readErr := os.ReadFile(path)
 	if readErr != nil {
@@ -39,13 +50,13 @@ func T[E any]() reflect.Type {
 	return mirrors.TypeOf[E]()
 }
 
-type std struct{ *dontio.Std }
+type Std struct{ *dontio.Std }
 
-func (s std) WriteLineOut(msg string, v ...any) {
+func (s Std) WriteLineOut(msg string, v ...any) {
 	fmt.Fprintf(s.Out, msg+"\n", v...)
 }
 
-func (s std) WriteLineErr(msg string, v ...any) {
+func (s Std) WriteLineErr(msg string, v ...any) {
 	fmt.Fprintf(s.Err, msg+"\n", v...)
 }
 
@@ -54,7 +65,7 @@ func WriteLineOut(ctx context.Context, tpl string, v ...any) error {
 	if stdErr != nil {
 		return stdErr
 	}
-	std{stdio}.WriteLineOut(tpl, v...)
+	Std{stdio}.WriteLineOut(tpl, v...)
 	return nil
 }
 
@@ -63,6 +74,6 @@ func WriteLineErr(ctx context.Context, tpl string, v ...any) error {
 	if stdErr != nil {
 		return stdErr
 	}
-	std{stdio}.WriteLineErr(tpl, v...)
+	Std{stdio}.WriteLineErr(tpl, v...)
 	return nil
 }

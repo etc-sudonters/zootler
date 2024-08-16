@@ -2,7 +2,10 @@ package app
 
 import (
 	"context"
+	"reflect"
 	"sudonters/zootler/internal/query"
+
+	"github.com/etc-sudonters/substrate/mirrors"
 )
 
 type ApplicationShuttingDown struct{}
@@ -12,10 +15,11 @@ func (_ ApplicationShuttingDown) Error() string {
 }
 
 type Zootlr struct {
-	ctx     context.Context
-	cancel  context.CancelCauseFunc
-	reason  error
-	storage query.Engine
+	ctx       context.Context
+	cancel    context.CancelCauseFunc
+	reason    error
+	storage   query.Engine
+	resources map[reflect.Type]any
 }
 
 func (z *Zootlr) Run(cmd AppCmd) error {
@@ -45,13 +49,34 @@ type SetupFunc func(*Zootlr) error
 
 func Setup(sc SetupApp) SetupFunc {
 	return func(z *Zootlr) error {
-		return sc.Setup(z.Ctx(), z.Engine())
+		return sc.Setup(z)
 	}
+}
+
+func AddResource[T any](res T) SetupFunc {
+	return func(z *Zootlr) error {
+		z.resources[mirrors.TypeOf[T]()] = res
+		return nil
+	}
+}
+
+type Resource[T any] struct {
+	Res T
+}
+
+func GetResource[T any](z *Zootlr) *Resource[T] {
+	resource, exists := z.resources[mirrors.TypeOf[T]()]
+	if exists {
+		return &Resource[T]{Res: resource.(T)}
+	}
+
+	return nil
 }
 
 func New(ctx context.Context, ops ...SetupFunc) (*Zootlr, error) {
 	var z Zootlr
 	var engineError error
+	z.resources = make(map[reflect.Type]any)
 	z.storage, engineError = query.NewEngine()
 	if engineError != nil {
 		return nil, engineError
@@ -67,7 +92,7 @@ func New(ctx context.Context, ops ...SetupFunc) (*Zootlr, error) {
 }
 
 type SetupApp interface {
-	Setup(context.Context, query.Engine) error
+	Setup(*Zootlr) error
 }
 
 type AppCmd func(*Zootlr) error

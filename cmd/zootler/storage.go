@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"strings"
+	"sudonters/zootler/internal"
+	"sudonters/zootler/internal/app"
 	"sudonters/zootler/internal/components"
 	"sudonters/zootler/internal/query"
 	"sudonters/zootler/internal/slipup"
@@ -27,15 +29,17 @@ type DataFileLoader[T IntoComponents] struct {
 	Add       AdditionalComponents[T]
 }
 
-func (l DataFileLoader[T]) Setup(ctx context.Context, storage query.Engine) error {
+func (l DataFileLoader[T]) Setup(z *app.Zootlr) error {
+	ctx := z.Ctx()
+	storage := z.Engine()
 	if l.Add != nil {
 		if initErr := l.Add.Init(ctx, storage); initErr != nil {
 			return slipup.Describef(initErr, "while preparing to read file: '%s'", l.Path)
 		}
 	}
 
-	WriteLineOut(ctx, "reading file '%s'", l.Path)
-	ts, err := ReadJsonFile[[]T](l.Path)
+	internal.WriteLineOut(ctx, "reading file '%s'", l.Path)
+	ts, err := internal.ReadJsonFileAs[[]T](l.Path)
 	if err != nil {
 		return slipup.Describe(err, l.Path)
 	}
@@ -76,8 +80,9 @@ func indexed(ddl DDL, i table.Index) DDL {
 	}
 }
 
-func (cs CreateScheme) Setup(ctx context.Context, storage query.Engine) error {
-	WriteLineOut(ctx, "running DDL")
+func (cs CreateScheme) Setup(z *app.Zootlr) error {
+	internal.WriteLineOut(z.Ctx(), "running DDL")
+	storage := z.Engine()
 	for _, ddl := range cs.DDL {
 		if _, err := storage.CreateColumn(ddl()); err != nil {
 			return err
@@ -88,7 +93,7 @@ func (cs CreateScheme) Setup(ctx context.Context, storage query.Engine) error {
 }
 
 func NormalizedNameIndex[T ~string](c T) (string, bool) {
-	return normalize(string(c)), true
+	return internal.Normalize(string(c)), true
 }
 
 func MakeDDL() []DDL {
@@ -103,7 +108,7 @@ func MakeDDL() []DDL {
 		indexed(
 			columns.HashMapColumn[components.HintRegion],
 			indexes.CreateHashIndex(func(s components.HintRegion) (string, bool) {
-				return normalize(s.Name), true
+				return internal.Normalize(s.Name), true
 			}),
 		),
 

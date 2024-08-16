@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"strings"
+	"sudonters/zootler/internal"
 	"sudonters/zootler/internal/app"
 	"sudonters/zootler/internal/components"
 	"sudonters/zootler/internal/query"
@@ -28,11 +29,11 @@ func example(z *app.Zootlr) error {
 		return slipup.Describef(compileErr, "while compiling rule '%s'", code)
 	}
 
-	WriteLineOut(z.Ctx(), c.Disassemble(code))
+	internal.WriteLineOut(z.Ctx(), c.Disassemble(code))
 	vm := runtime.CreateVM(env, functions)
 	result, runErr := vm.Run(z.Ctx(), c)
 	if runErr == nil {
-		WriteLineOut(z.Ctx(), "result:\t%#v", result.Unwrap())
+		internal.WriteLineOut(z.Ctx(), "result:\t%#v", result.Unwrap())
 	}
 	return runErr
 }

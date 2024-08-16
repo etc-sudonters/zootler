@@ -1,8 +1,9 @@
 package main
 
 import (
-	"context"
 	"errors"
+	"sudonters/zootler/internal"
+	"sudonters/zootler/internal/app"
 	"sudonters/zootler/internal/components"
 	"sudonters/zootler/internal/query"
 	"sudonters/zootler/internal/rules/parser"
@@ -12,11 +13,16 @@ import (
 )
 
 type LogicCompiler struct {
-	Compiler         runtime.Compiler
 	compiled, failed uint64
 }
 
-func (l *LogicCompiler) Setup(ctx context.Context, e query.Engine) error {
+func (l *LogicCompiler) Setup(z *app.Zootlr) error {
+	ctx := z.Ctx()
+	e := z.Engine()
+	compiler := app.GetResource[runtime.Compiler](z)
+	if compiler == nil {
+		return slipup.Createf("expected compiler resource to be available")
+	}
 	edge := new(ParsableEdge)
 	q := e.CreateQuery()
 	q.Load(query.MustAsColumnId[components.Name](e))
@@ -41,9 +47,9 @@ func (l *LogicCompiler) Setup(ctx context.Context, e query.Engine) error {
 			return slipup.Describef(parseErr, "while parsing rule for '%s'", edge.Name)
 		}
 
-		if bc, compileErr := l.Compiler.CompileEdgeRule(ast); compileErr != nil {
+		if bc, compileErr := compiler.Res.CompileEdgeRule(ast); compileErr != nil {
 			l.failed++
-			WriteLineOut(ctx, "could not compile rule at '%s': %s", edge.Name, compileErr.Error())
+			internal.WriteLineOut(ctx, "could not compile rule at '%s': %s", edge.Name, compileErr.Error())
 		} else {
 			l.compiled++
 			if setErr := e.SetValues(current.Id, table.Values{components.CompiledRule{Bytecode: *bc}}); setErr != nil {
@@ -52,7 +58,7 @@ func (l *LogicCompiler) Setup(ctx context.Context, e query.Engine) error {
 		}
 	}
 
-	WriteLineOut(ctx, "compiled %d rules\nfailed %d rules", l.compiled, l.failed)
+	internal.WriteLineOut(ctx, "compiled %d rules\nfailed %d rules", l.compiled, l.failed)
 	return nil
 }
 

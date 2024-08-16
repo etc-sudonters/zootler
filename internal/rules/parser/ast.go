@@ -1,8 +1,57 @@
 package parser
 
+import (
+	"math"
+)
+
 type BinOpKind string
 type BoolOpKind string
 type UnaryOpKind string
+
+type AnyNumeric interface {
+	~int | ~int8 | ~int16 | ~int32 | ~int64 |
+		~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 |
+		~float32 | ~float64
+}
+
+func Identify(name string) *Identifier {
+	return &Identifier{Value: name}
+}
+
+func TokenLiteral(t uint64) *Literal {
+	return NumberLiteral(t)
+}
+
+func BoolLiteral(b bool) *Literal {
+	return &Literal{
+		Kind:  LiteralBool,
+		Value: b,
+	}
+}
+
+func NumberLiteral[N AnyNumeric](n N) *Literal {
+	return &Literal{
+		Kind:  LiteralNum,
+		Value: float64(n),
+	}
+}
+
+func StringLiteral(s string) *Literal {
+	return &Literal{
+		Kind:  LiteralStr,
+		Value: s,
+	}
+}
+func MakeCall(callee Expression, args []Expression) *Call {
+	return &Call{
+		Callee: callee,
+		Args:   args,
+	}
+}
+
+func MakeCallSplat(callee Expression, args ...Expression) *Call {
+	return MakeCall(callee, args)
+}
 
 var (
 	BinOpEq       BinOpKind   = "=="
@@ -33,6 +82,9 @@ const (
 	LiteralBool LiteralKind = "Boolean"
 	LiteralNum              = "Number"
 	LiteralStr              = "String"
+
+	// placeholder
+	LiteralToken = LiteralNum
 )
 
 type (
@@ -107,3 +159,25 @@ func (expr *Subscript) Type() ExprType  { return ExprSubscript }
 func (expr *Tuple) Type() ExprType      { return ExprTuple }
 func (expr *UnaryOp) Type() ExprType    { return ExprUnaryOp }
 func (expr *Literal) Type() ExprType    { return ExprLiteral }
+
+func (expr *Literal) AsBool() (bool, bool) {
+	if expr.Kind == LiteralBool {
+		return expr.Value.(bool), true
+	}
+	return false, false
+}
+
+func (expr *Literal) AsNumber() (float64, bool) {
+	if expr.Kind == LiteralNum {
+		return expr.Value.(float64), true
+	}
+
+	return math.NaN(), false
+}
+
+func (expr *Literal) AsString() (string, bool) {
+	if expr.Kind == LiteralStr {
+		return expr.Value.(string), true
+	}
+	return "", false
+}

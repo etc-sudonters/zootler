@@ -1,4 +1,4 @@
-package items
+package defaults
 
 import (
 	"math"
