@@ -7,7 +7,8 @@ import (
 	"sudonters/zootler/internal/app"
 	"sudonters/zootler/internal/components"
 	"sudonters/zootler/internal/query"
-	"sudonters/zootler/internal/slipup"
+	"github.com/etc-sudonters/substrate/slipup"
+	"github.com/etc-sudonters/substrate/dontio"
 	"sudonters/zootler/internal/table"
 	"sudonters/zootler/internal/table/columns"
 	"sudonters/zootler/internal/table/indexes"
@@ -38,7 +39,7 @@ func (l DataFileLoader[T]) Setup(z *app.Zootlr) error {
 		}
 	}
 
-	internal.WriteLineOut(ctx, "reading file '%s'", l.Path)
+	dontio.WriteLineOut(ctx, "reading file '%s'", l.Path)
 	ts, err := internal.ReadJsonFileAs[[]T](l.Path)
 	if err != nil {
 		return slipup.Describe(err, l.Path)
@@ -81,7 +82,7 @@ func indexed(ddl DDL, i table.Index) DDL {
 }
 
 func (cs CreateScheme) Setup(z *app.Zootlr) error {
-	internal.WriteLineOut(z.Ctx(), "running DDL")
+	dontio.WriteLineOut(z.Ctx(), "running DDL")
 	storage := z.Engine()
 	for _, ddl := range cs.DDL {
 		if _, err := storage.CreateColumn(ddl()); err != nil {
@@ -92,7 +93,7 @@ func (cs CreateScheme) Setup(z *app.Zootlr) error {
 	return nil
 }
 
-func NormalizedNameIndex[T ~string](c T) (string, bool) {
+func NormalizedNameIndex[T ~string](c T) (internal.NormalizedStr, bool) {
 	return internal.Normalize(string(c)), true
 }
 
@@ -107,7 +108,7 @@ func MakeDDL() []DDL {
 		),
 		indexed(
 			columns.HashMapColumn[components.HintRegion],
-			indexes.CreateHashIndex(func(s components.HintRegion) (string, bool) {
+			indexes.CreateHashIndex(func(s components.HintRegion) (internal.NormalizedStr, bool) {
 				return internal.Normalize(s.Name), true
 			}),
 		),

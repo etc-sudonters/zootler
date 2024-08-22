@@ -3,7 +3,7 @@ package runtime
 import (
 	"fmt"
 	"strings"
-	"sudonters/zootler/internal/slipup"
+	"github.com/etc-sudonters/substrate/slipup"
 )
 
 func disassemble(c *Chunk, tag string) string {

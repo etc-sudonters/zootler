@@ -3,13 +3,13 @@ package main
 import (
 	"context"
 	"strings"
-	"sudonters/zootler/internal"
+	"github.com/etc-sudonters/substrate/dontio"
 	"sudonters/zootler/internal/app"
 	"sudonters/zootler/internal/components"
 	"sudonters/zootler/internal/query"
 	"sudonters/zootler/internal/rules/parser"
 	"sudonters/zootler/internal/rules/runtime"
-	"sudonters/zootler/internal/slipup"
+	"github.com/etc-sudonters/substrate/slipup"
 )
 
 func example(z *app.Zootlr) error {
@@ -17,23 +17,23 @@ func example(z *app.Zootlr) error {
 	env.Set("amount", runtime.ValueFromInt(2))
 	functions := runtime.NewFuncNamespace()
 	functions.AddFunc("has", &HasQtyOf{z.Engine()})
-	compiler := runtime.CompilerUsing(functions, env)
+	compiler := runtime.CompilerUsing(env)
 	code := "has('Progressive Hookshot', 2)"
 	ast, parseErr := parser.Parse(code)
 	if parseErr != nil {
 		return slipup.Describef(parseErr, "while parsing rule '%s'", code)
 	}
 
-	c, compileErr := compiler.CompileEdgeRule(ast)
+	c, compileErr := runtime.CompileEdgeRule(&compiler, ast)
 	if compileErr != nil {
 		return slipup.Describef(compileErr, "while compiling rule '%s'", code)
 	}
 
-	internal.WriteLineOut(z.Ctx(), c.Disassemble(code))
+	dontio.WriteLineOut(z.Ctx(), c.Disassemble(code))
 	vm := runtime.CreateVM(env, functions)
 	result, runErr := vm.Run(z.Ctx(), c)
 	if runErr == nil {
-		internal.WriteLineOut(z.Ctx(), "result:\t%#v", result.Unwrap())
+		dontio.WriteLineOut(z.Ctx(), "result:\t%#v", result.Unwrap())
 	}
 	return runErr
 }
@@ -82,8 +82,9 @@ func (h *HasQtyOf) qtyOf(_ context.Context, needle string) (int, error) {
 	}
 
 	qty := 0
-	for haystack.MoveNext() {
-		name := haystack.Current().Values[0].(components.Name)
+
+	for _, tup := range haystack.All {
+		name := tup.Values[0].(components.Name)
 		if strings.ToLower(needle) == strings.ToLower(string(name)) {
 			qty++
 		}

@@ -3,7 +3,7 @@ package runtime
 import (
 	"errors"
 	"fmt"
-	"sudonters/zootler/internal/slipup"
+	"github.com/etc-sudonters/substrate/slipup"
 )
 
 var ErrUnsupportedType error = errors.New("unsupported type")

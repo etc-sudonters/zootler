@@ -95,9 +95,8 @@ func (row Slice) Len() int {
 }
 
 func (row Slice) scanMembers(v table.Value) (b bitset.Bitset64) {
-	biter := bitset.Iter(*row.members)
-	for biter.MoveNext() {
-		id := biter.Current()
+    bititer := bitset.Iter64(*row.members)
+	for id := range bititer.All {
 		value := row.components[id]
 		if value == nil {
 			panic(fmt.Errorf("nil value indexed in slice row at %d", id))

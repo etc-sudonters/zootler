@@ -8,7 +8,7 @@ type PackedValue float64
 
 func (p PackedValue) AsBool() (bool, error)       { panic("not implemented") }
 func (p PackedValue) AsFloat64() (float64, error) { panic("not implemented") }
-func (p PackedValue) AsInt64() (int64, error)     { panic("not implemented") }
+func (p PackedValue) AsToken() (uint64, error)    { panic("not implemented") }
 
 func IsRealNan(f float64) bool {
 	panic("not implemented")
@@ -22,7 +22,11 @@ func PackFloat(f float64) PackedValue {
 	return PackedValue(f)
 }
 
-func PackInt(i int) PackedValue {
+func PackSigil[T ~uint64](t T) PackedValue {
+	panic("not implemented")
+}
+
+func PackShortStr(s string) (PackedValue, error) {
 	panic("not implemented")
 }
 

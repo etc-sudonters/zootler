@@ -2,13 +2,13 @@ package main
 
 import (
 	"errors"
-	"sudonters/zootler/internal"
+	"github.com/etc-sudonters/substrate/dontio"
 	"sudonters/zootler/internal/app"
 	"sudonters/zootler/internal/components"
 	"sudonters/zootler/internal/query"
 	"sudonters/zootler/internal/rules/parser"
 	"sudonters/zootler/internal/rules/runtime"
-	"sudonters/zootler/internal/slipup"
+	"github.com/etc-sudonters/substrate/slipup"
 	"sudonters/zootler/internal/table"
 )
 
@@ -36,9 +36,8 @@ func (l *LogicCompiler) Setup(z *app.Zootlr) error {
 		return errors.New("did not find any logic rules to compile")
 	}
 
-	for edgeRules.MoveNext() {
-		current := edgeRules.Current()
-		if initErr := edge.Init(current); initErr != nil {
+	for id, tup := range edgeRules.All {
+		if initErr := edge.Init(id, tup); initErr != nil {
 			return slipup.Describe(initErr, "while initing edge rules")
 		}
 
@@ -47,18 +46,18 @@ func (l *LogicCompiler) Setup(z *app.Zootlr) error {
 			return slipup.Describef(parseErr, "while parsing rule for '%s'", edge.Name)
 		}
 
-		if bc, compileErr := compiler.Res.CompileEdgeRule(ast); compileErr != nil {
+		if bc, compileErr := runtime.CompileEdgeRule(&compiler.Res, ast); compileErr != nil {
 			l.failed++
-			internal.WriteLineOut(ctx, "could not compile rule at '%s': %s", edge.Name, compileErr.Error())
+			dontio.WriteLineOut(ctx, "could not compile rule at '%s': %s", edge.Name, compileErr.Error())
 		} else {
 			l.compiled++
-			if setErr := e.SetValues(current.Id, table.Values{components.CompiledRule{Bytecode: *bc}}); setErr != nil {
+			if setErr := e.SetValues(id, table.Values{components.CompiledRule{Bytecode: *bc}}); setErr != nil {
 				return setErr
 			}
 		}
 	}
 
-	internal.WriteLineOut(ctx, "compiled %d rules\nfailed %d rules", l.compiled, l.failed)
+	dontio.WriteLineOut(ctx, "compiled %d rules\nfailed %d rules", l.compiled, l.failed)
 	return nil
 }
 
@@ -67,8 +66,8 @@ type ParsableEdge struct {
 	RawLogic components.RawLogic
 }
 
-func (p *ParsableEdge) Init(vs *table.RowTuple) error {
-	p.Name = vs.Values[0].(components.Name)
-	p.RawLogic = vs.Values[1].(components.RawLogic)
+func (p *ParsableEdge) Init(_ table.RowId, tup table.ValueTuple) error {
+	p.Name = tup.Values[0].(components.Name)
+	p.RawLogic = tup.Values[1].(components.RawLogic)
 	return nil
 }

@@ -1,23 +1,22 @@
 package internal
 
 import (
-	"context"
-	"fmt"
 	"io/fs"
 	"os"
 	"reflect"
 	"regexp"
 	"strings"
-
-	"github.com/etc-sudonters/substrate/dontio"
+	"github.com/etc-sudonters/substrate/slipup"
 	"github.com/etc-sudonters/substrate/mirrors"
 	"muzzammil.xyz/jsonc"
 )
 
 var alphanumonly = regexp.MustCompile("[^a-z0-9]+")
 
-func Normalize[S ~string](s S) string {
-	return alphanumonly.ReplaceAllString(strings.ToLower(string(s)), "")
+type NormalizedStr string
+
+func Normalize[S ~string](s S) NormalizedStr {
+	return NormalizedStr(alphanumonly.ReplaceAllString(strings.ToLower(string(s)), ""))
 }
 
 func IsFile(e fs.DirEntry) bool {
@@ -50,30 +49,11 @@ func T[E any]() reflect.Type {
 	return mirrors.TypeOf[E]()
 }
 
-type Std struct{ *dontio.Std }
-
-func (s Std) WriteLineOut(msg string, v ...any) {
-	fmt.Fprintf(s.Out, msg+"\n", v...)
-}
-
-func (s Std) WriteLineErr(msg string, v ...any) {
-	fmt.Fprintf(s.Err, msg+"\n", v...)
-}
-
-func WriteLineOut(ctx context.Context, tpl string, v ...any) error {
-	stdio, stdErr := dontio.StdFromContext(ctx)
-	if stdErr != nil {
-		return stdErr
+func TypeAssert[T any](a any) (t T, err error) {
+	t, cast := a.(T)
+	if !cast {
+		err = slipup.Createf("failed to cast %v to %s", a, mirrors.TypeOf[T]().Name())
 	}
-	Std{stdio}.WriteLineOut(tpl, v...)
-	return nil
-}
-
-func WriteLineErr(ctx context.Context, tpl string, v ...any) error {
-	stdio, stdErr := dontio.StdFromContext(ctx)
-	if stdErr != nil {
-		return stdErr
-	}
-	Std{stdio}.WriteLineErr(tpl, v...)
-	return nil
+	err = nil
+	return
 }

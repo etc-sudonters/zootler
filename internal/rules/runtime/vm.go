@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"sudonters/zootler/internal/slipup"
+	"github.com/etc-sudonters/substrate/slipup"
 
 	"github.com/etc-sudonters/substrate/skelly/stack"
 )

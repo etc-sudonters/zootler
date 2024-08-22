@@ -6,7 +6,7 @@ import (
 	"sudonters/zootler/internal"
 	"sudonters/zootler/internal/components"
 	"sudonters/zootler/internal/query"
-	"sudonters/zootler/internal/slipup"
+	"github.com/etc-sudonters/substrate/slipup"
 	"sudonters/zootler/internal/table"
 )
 
@@ -514,10 +514,12 @@ func (a *AttachDefaultItem) Init(_ context.Context, storage query.Engine) error 
 		return slipup.Createf("no items load")
 	}
 
-	for names.MoveNext() {
-		current := names.Current()
-		name := names.Current().Values[0].(components.Name)
-		a.items[string(name)] = current.Id
+	for id, tup := range names.All {
+		name, castErr := internal.TypeAssert[components.Name](tup.Values[0])
+		if castErr != nil {
+			return slipup.Describef(castErr, "gathering from row %d", id)
+		}
+		a.items[string(name)] = id
 	}
 
 	return nil

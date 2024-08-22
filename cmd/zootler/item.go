@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"sudonters/zootler/internal"
 	"sudonters/zootler/internal/components"
 	"sudonters/zootler/internal/query"
 	"sudonters/zootler/internal/table"
@@ -30,8 +29,6 @@ func (item FileItem) AddComponents(rid table.RowId, storage query.Engine) error 
 	}
 
 	if item.Advancement {
-		fmt.Println("advancement item found", item.Name, "normalized name", internal.Normalize(item.Name))
-
 		if err := storage.SetValues(rid, table.Values{components.Advancement{}}); err != nil {
 			return err
 		}

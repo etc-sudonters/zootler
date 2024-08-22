@@ -2,7 +2,7 @@ package defaults
 
 import (
 	"math"
-	"sudonters/zootler//settings"
+	"sudonters/zootler/settings"
 )
 
 // todo: Also extract all of this into JSON files

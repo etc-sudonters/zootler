@@ -19,7 +19,10 @@ func Identify(name string) *Identifier {
 }
 
 func TokenLiteral(t uint64) *Literal {
-	return NumberLiteral(t)
+	return &Literal{
+		Kind:  LiteralToken,
+		Value: t,
+	}
 }
 
 func BoolLiteral(b bool) *Literal {
@@ -79,12 +82,10 @@ const (
 type LiteralKind string
 
 const (
-	LiteralBool LiteralKind = "Boolean"
-	LiteralNum              = "Number"
-	LiteralStr              = "String"
-
-	// placeholder
-	LiteralToken = LiteralNum
+	LiteralBool  LiteralKind = "Boolean"
+	LiteralNum               = "Number"
+	LiteralStr               = "String"
+	LiteralToken             = "Token"
 )
 
 type (

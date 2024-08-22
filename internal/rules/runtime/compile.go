@@ -2,54 +2,50 @@ package runtime
 
 import (
 	"sudonters/zootler/internal/rules/parser"
-	"sudonters/zootler/internal/slipup"
+	"github.com/etc-sudonters/substrate/slipup"
 )
 
 type Compiler struct {
-	Funcs   *FuncNamespace
 	Globals *ExecutionEnvironment
 }
 
 type compiling struct {
 	*ChunkBuilder
-	funcs *FuncNamespace
-	env   *ExecutionEnvironment
+	env *ExecutionEnvironment
 }
 
-func CompilerUsing(funcs *FuncNamespace, globals *ExecutionEnvironment) Compiler {
-	return Compiler{funcs, globals}
+func CompilerUsing(globals *ExecutionEnvironment) Compiler {
+	return Compiler{globals}
 }
 
 func NewCompiler() Compiler {
 	return Compiler{
-		Funcs:   NewFuncNamespace(),
 		Globals: NewEnv(),
 	}
 }
 
-func (c Compiler) CompileFunctionDecl(decl parser.FunctionDecl) error {
-	var f CompiledFunc
-	c.Funcs.DeclFunction(decl.Identifier)
+func CompileFunctionDecl(c *Compiler, decl parser.FunctionDecl) (Function, error) {
+	var f *CompiledFunc = new(CompiledFunc)
 	f.arity = len(decl.Parameters)
 	f.env = c.Globals.ChildScope()
-	f.chunk = new(Chunk)
-	builder := &ChunkBuilder{*f.chunk}
+	builder := new(ChunkBuilder)
 
 	for _, name := range decl.Parameters {
 		builder.DeclareIdentifier(name)
 	}
 
-	compiling := compiling{builder, c.Funcs, f.env}
+	compiling := compiling{builder, f.env}
 	if err := c.compileUnit(decl.Body, compiling); err != nil {
-		return err
+		return nil, err
 	}
 
-	c.Funcs.AddFunc(decl.Identifier, &f)
-	return nil
+	f.chunk = &builder.Chunk
+
+	return f, nil
 }
 
-func (c Compiler) CompileEdgeRule(ast parser.Expression) (*Chunk, error) {
-	code := compiling{new(ChunkBuilder), c.Funcs, c.Globals}
+func CompileEdgeRule(c *Compiler, ast parser.Expression) (*Chunk, error) {
+	code := compiling{new(ChunkBuilder), c.Globals}
 	if err := c.compileUnit(ast, code); err != nil {
 		return nil, err
 	}
@@ -134,11 +130,6 @@ func (c compiling) VisitCall(call *parser.Call) error {
 }
 
 func (c compiling) VisitIdentifier(node *parser.Identifier) error {
-	if c.funcs.IsFunc(node.Value) {
-		c.Call(node.Value, 0)
-		return nil
-	}
-
 	c.LoadIdentifier(node.Value)
 	return nil
 }

@@ -6,10 +6,10 @@ import (
 	"math"
 	"reflect"
 	"sudonters/zootler/internal/bundle"
-	"sudonters/zootler/internal/slipup"
 	"sudonters/zootler/internal/table"
 	"sudonters/zootler/internal/table/columns"
 
+	"github.com/etc-sudonters/substrate/slipup"
 	"github.com/etc-sudonters/substrate/mirrors"
 	"github.com/etc-sudonters/substrate/skelly/bitset"
 )

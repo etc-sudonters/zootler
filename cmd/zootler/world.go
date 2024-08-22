@@ -8,14 +8,14 @@ import (
 	"strings"
 	"sudonters/zootler/internal"
 	"sudonters/zootler/internal/app"
-	"sudonters/zootler/internal/bundle"
 	"sudonters/zootler/internal/components"
 	"sudonters/zootler/internal/entity"
 	"sudonters/zootler/internal/query"
 	"sudonters/zootler/internal/rules/parser"
 	"sudonters/zootler/internal/rules/runtime"
-	"sudonters/zootler/internal/slipup"
+	"github.com/etc-sudonters/substrate/slipup"
 	"sudonters/zootler/internal/table"
+	"github.com/etc-sudonters/substrate/dontio"
 )
 
 type WorldFileLoader struct {
@@ -36,7 +36,7 @@ func (w WorldFileLoader) Setup(z *app.Zootlr) error {
 		return slipup.Describe(helperErr, "while processing helpers")
 	}
 
-	internal.WriteLineOut(ctx, "reading dir  '%s'", w.Path)
+	dontio.WriteLineOut(ctx, "reading dir  '%s'", w.Path)
 	directory, dirErr := os.ReadDir(w.Path)
 	if dirErr != nil {
 		return slipup.Describe(dirErr, w.Path)
@@ -67,14 +67,15 @@ func (w WorldFileLoader) helpers(ctx context.Context, compiler *app.Resource[run
 		return slipup.Describef(helperReadErr, "while reading '%s'", w.Helpers)
 	}
 	for decl, body := range helpers {
-		f, err := parser.ParseFunctionDecl(decl, body)
-		if err != nil {
-			internal.WriteLineErr(ctx, "%s", slipup.Describef(err, "while parsing function decl '%s'", decl).Error())
+		f, parseErr := parser.ParseFunctionDecl(decl, body)
+		if parseErr != nil {
+			dontio.WriteLineErr(ctx, "%s", slipup.Describef(parseErr, "while parsing function decl '%s'", decl).Error())
 			continue
 		}
 
-		if compileErr := compiler.Res.CompileFunctionDecl(f); compileErr != nil {
-			internal.WriteLineErr(ctx, "%s", slipup.Describef(err, "while compiling function decl '%s'", decl).Error())
+		_, compileErr := runtime.CompileFunctionDecl(&compiler.Res, f)
+		if compileErr != nil {
+			dontio.WriteLineErr(ctx, "%s", slipup.Describef(compileErr, "while compiling function decl '%s'", decl).Error())
 			continue
 		}
 	}
@@ -214,17 +215,15 @@ func CreateLocationMap(ctx context.Context, e query.Engine) (*LocationMap, error
 		return nil, qErr
 	}
 
-	locations, loadErr := bundle.ToMap(rows, func(r *table.RowTuple) (string, table.RowId, error) {
-		model := r.Id
-		name, ok := r.Values[0].(components.Name)
-		if !ok {
-			return "", r.Id, fmt.Errorf("could not cast row %+v to 'components.Name'", r)
-		}
-		return internal.Normalize(name), model, nil
-	})
+	locations := make(map[internal.NormalizedStr]table.RowId, rows.Len())
 
-	if loadErr != nil {
-		return nil, loadErr
+	for id, tup := range rows.All {
+		name, ok := tup.Values[0].(components.Name)
+		if !ok {
+			return nil, fmt.Errorf("could not cast row %d %+v to 'components.Name'", id, tup)
+		}
+
+		locations[internal.Normalize(name)] = id
 	}
 
 	return &LocationMap{
@@ -235,7 +234,7 @@ func CreateLocationMap(ctx context.Context, e query.Engine) (*LocationMap, error
 
 type LocationMap struct {
 	e         query.Engine
-	locations map[string]table.RowId
+	locations map[internal.NormalizedStr]table.RowId
 }
 
 func (l *LocationMap) Build(name components.Name) (*locationBuilder, error) {

@@ -7,10 +7,9 @@ import (
 	"os"
 	"path"
 	"runtime/debug"
-	"sudonters/zootler/internal"
 	"sudonters/zootler/internal/app"
 	"sudonters/zootler/internal/rules/runtime"
-	"sudonters/zootler/internal/slipup"
+	"github.com/etc-sudonters/substrate/slipup"
 
 	"github.com/etc-sudonters/substrate/dontio"
 	"github.com/etc-sudonters/substrate/stageleft"
@@ -48,12 +47,11 @@ func (opts *cliOptions) init() error {
 func main() {
 	var opts cliOptions
 	var appExitCode stageleft.ExitCode = stageleft.ExitSuccess
-	stdio := dontio.Std{
+	std := dontio.Std{
 		In:  os.Stdin,
 		Out: os.Stdout,
 		Err: os.Stderr,
 	}
-	std := internal.Std{&stdio}
 	defer func() {
 		os.Exit(int(appExitCode))
 	}()
@@ -75,7 +73,7 @@ func main() {
 	}
 
 	ctx := context.Background()
-	ctx = dontio.AddStdToContext(ctx, &stdio)
+	ctx = dontio.AddStdToContext(ctx, &std)
 
 	if argsErr := (&opts).init(); argsErr != nil {
 		exitWithErr(2, argsErr)
@@ -87,12 +85,11 @@ func main() {
 		app.AddResource(runtime.NewFuncNamespace()),
 		app.AddResource(runtime.NewEnv()),
 		func(z *app.Zootlr) error {
-			funcs := app.GetResource[runtime.FuncNamespace](z)
-			globals := app.GetResource[runtime.ExecutionEnvironment](z)
-			if funcs == nil || globals == nil {
-				return slipup.Createf("either funcnamespace or globals are not registered")
+			globals := app.GetResource[*runtime.ExecutionEnvironment](z)
+			if globals == nil {
+				return slipup.Createf("globals are not registered")
 			}
-			compiler := runtime.CompilerUsing(&funcs.Res, &globals.Res)
+			compiler := runtime.CompilerUsing(globals.Res)
 			return app.AddResource(compiler)(z)
 		},
 		app.Setup(DataFileLoader[FileItem]{
@@ -107,7 +104,7 @@ func main() {
 		app.Setup(WorldFileLoader{
 			IncludeMQ: opts.includeMq,
 			Path:      opts.logicDir,
-			Helpers:   path.Join(path.Dir(opts.logicDir), "helpers.json"),
+			Helpers:   path.Join(path.Dir(opts.logicDir), "..", "helpers.json"),
 		}),
 		app.Setup(&LogicCompiler{}),
 	)
