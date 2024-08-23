@@ -2,6 +2,9 @@ package parser
 
 import (
 	"math"
+
+	"github.com/etc-sudonters/substrate/mirrors"
+	"github.com/etc-sudonters/substrate/slipup"
 )
 
 type BinOpKind string
@@ -54,6 +57,25 @@ func MakeCall(callee Expression, args []Expression) *Call {
 
 func MakeCallSplat(callee Expression, args ...Expression) *Call {
 	return MakeCall(callee, args)
+}
+
+func AssertAs[T Expression](ast Expression) (T, error) {
+    if cast, casted := ast.(T); casted {
+        return cast, nil
+    }
+
+    return mirrors.Empty[T](), slipup.Createf("could not cast %+v to %s", ast, mirrors.TypeOf[T]().Name())
+}
+
+func Unify[A Expression, B Expression, C any](ast Expression, a func(A) (C, error), b func(B) (C, error)) (C, error) {
+    switch ast := ast.(type) {
+    case A:
+        return a(ast)
+    case B:
+        return b(ast)
+    default:
+    return mirrors.Empty[C](), slipup.Createf("could not cast %+v to %s or", ast, mirrors.T[A]().Name(), mirrors.T[B]().Name())
+    }
 }
 
 var (
