@@ -1,22 +1,22 @@
 package internal
 
 import (
+	"github.com/etc-sudonters/substrate/mirrors"
+	"github.com/etc-sudonters/substrate/slipup"
 	"io/fs"
+	"muzzammil.xyz/jsonc"
 	"os"
 	"reflect"
 	"regexp"
 	"strings"
-	"github.com/etc-sudonters/substrate/slipup"
-	"github.com/etc-sudonters/substrate/mirrors"
-	"muzzammil.xyz/jsonc"
 )
 
-var alphanumonly = regexp.MustCompile("[^a-z0-9]+")
+var idcharsonly = regexp.MustCompile("[^a-z0-9]+")
 
 type NormalizedStr string
 
 func Normalize[S ~string](s S) NormalizedStr {
-	return NormalizedStr(alphanumonly.ReplaceAllString(strings.ToLower(string(s)), ""))
+	return NormalizedStr(idcharsonly.ReplaceAllString(strings.ToLower(string(s)), ""))
 }
 
 func IsFile(e fs.DirEntry) bool {

@@ -48,6 +48,7 @@ func StringLiteral(s string) *Literal {
 		Value: s,
 	}
 }
+
 func MakeCall(callee Expression, args []Expression) *Call {
 	return &Call{
 		Callee: callee,
@@ -60,22 +61,22 @@ func MakeCallSplat(callee Expression, args ...Expression) *Call {
 }
 
 func AssertAs[T Expression](ast Expression) (T, error) {
-    if cast, casted := ast.(T); casted {
-        return cast, nil
-    }
+	if cast, casted := ast.(T); casted {
+		return cast, nil
+	}
 
-    return mirrors.Empty[T](), slipup.Createf("could not cast %+v to %s", ast, mirrors.TypeOf[T]().Name())
+	return mirrors.Empty[T](), slipup.Createf("could not cast %+v to %s", ast, mirrors.TypeOf[T]().Name())
 }
 
 func Unify[A Expression, B Expression, C any](ast Expression, a func(A) (C, error), b func(B) (C, error)) (C, error) {
-    switch ast := ast.(type) {
-    case A:
-        return a(ast)
-    case B:
-        return b(ast)
-    default:
-    return mirrors.Empty[C](), slipup.Createf("could not cast %+v to %s or", ast, mirrors.T[A]().Name(), mirrors.T[B]().Name())
-    }
+	switch ast := ast.(type) {
+	case A:
+		return a(ast)
+	case B:
+		return b(ast)
+	default:
+		return mirrors.Empty[C](), slipup.Createf("could not cast %+v to %s or", ast, mirrors.T[A]().Name(), mirrors.T[B]().Name())
+	}
 }
 
 var (
@@ -118,8 +119,8 @@ type (
 )
 
 type FunctionDecl struct {
-	Body       Expression
 	Identifier string
+	Body       Expression
 	Parameters []string
 }
 

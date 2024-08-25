@@ -8,8 +8,7 @@ import (
 	"path"
 	"runtime/debug"
 	"sudonters/zootler/internal/app"
-	"sudonters/zootler/internal/rules/runtime"
-	"github.com/etc-sudonters/substrate/slipup"
+	"sudonters/zootler/internal/settings"
 
 	"github.com/etc-sudonters/substrate/dontio"
 	"github.com/etc-sudonters/substrate/stageleft"
@@ -82,16 +81,6 @@ func main() {
 
 	z, appCreateErr := app.New(ctx,
 		app.Setup(CreateScheme{DDL: MakeDDL()}),
-		app.AddResource(runtime.NewFuncNamespace()),
-		app.AddResource(runtime.NewEnv()),
-		func(z *app.Zootlr) error {
-			globals := app.GetResource[*runtime.ExecutionEnvironment](z)
-			if globals == nil {
-				return slipup.Createf("globals are not registered")
-			}
-			compiler := runtime.CompilerUsing(globals.Res)
-			return app.AddResource(compiler)(z)
-		},
 		app.Setup(DataFileLoader[FileItem]{
 			IncludeMQ: opts.includeMq,
 			Path:      path.Join(opts.dataDir, "items.json"),
@@ -101,12 +90,11 @@ func main() {
 			Path:      path.Join(opts.dataDir, "locations.json"),
 			Add:       new(AttachDefaultItem),
 		}),
-		app.Setup(WorldFileLoader{
-			IncludeMQ: opts.includeMq,
-			Path:      opts.logicDir,
-			Helpers:   path.Join(path.Dir(opts.logicDir), "..", "helpers.json"),
+		app.AddResource[settings.ZootrSettings](settings.Default()), // pretend we loaded it from somewhere
+		app.Setup(WorldLoader{
+			Path:    opts.logicDir,
+			Helpers: path.Join(path.Dir(opts.logicDir), "..", "helpers.json"),
 		}),
-		app.Setup(&LogicCompiler{}),
 	)
 
 	if appCreateErr != nil {

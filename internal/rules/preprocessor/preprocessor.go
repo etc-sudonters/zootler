@@ -1,29 +1,44 @@
-package rules
+package preprocessor
 
 import (
 	"errors"
-	"strings"
 	"sudonters/zootler/internal/rules/parser"
+	"sudonters/zootler/internal/rules/visitor"
+	"unicode"
 
 	"github.com/etc-sudonters/substrate/slipup"
 )
 
-type AstEnvironment map[string]parser.Literal
-type FunctionTracker map[string]parser.FunctionDecl
-type DelayedRules map[string][]DelayedRule
-type DelayedRule struct {
-	Target, Name string
-	Rule         parser.Expression
+type state struct {
+	location string
+	parent   *P
 }
 
-type AstInterpreter struct {
-	Current     string
-	Environment AstEnvironment
-	Functions   FunctionTracker
-	Delayed     DelayedRules
+type P struct {
+	// at rules sink
+	Delayed   DelayedRules
+	Functions FunctionTable
+	Env       ValuesTable
 }
 
-func (a *AstInterpreter) TransformBinOp(op *parser.BinOp) (parser.Expression, error) {
+func (parent *P) Process(location string, rules map[string]parser.Expression) (map[string]parser.Expression, error) {
+	s := state{location, parent}
+
+	processed := make(map[string]parser.Expression, len(rules))
+
+	for edge, rule := range rules {
+		transformed, err := visitor.Transform(&s, rule)
+		if err != nil {
+			return nil, slipup.Describef(err, "while transforming %s -> %s", location, edge)
+		}
+
+		processed[edge] = transformed
+	}
+
+	return processed, nil
+}
+
+func (s *state) TransformBinOp(op *parser.BinOp) (parser.Expression, error) {
 	if areSameIdentifier(op.Left, op.Right) {
 		return parser.BoolLiteral(op.Op == parser.BinOpEq), nil
 	}
@@ -33,19 +48,18 @@ func (a *AstInterpreter) TransformBinOp(op *parser.BinOp) (parser.Expression, er
 	}
 
 	if op.Op == parser.BinOpContains && op.Left.Type() == parser.ExprLiteral && op.Right.Type() == parser.ExprIdentifier {
-        str, isStr := assertAsStr(op.Left)   
-        if !isStr {
-            return nil, slipup.Createf("expected construction of 'str in identifier', received: %+v", op)
-        }
+		str, isStr := assertAsStr(op.Left)
+		if !isStr {
+			return nil, slipup.Createf("expected construction of 'str in identifier', received: %+v", op)
+		}
 
-        ident := op.Right.(*parser.Identifier)
+		ident := op.Right.(*parser.Identifier)
 
-        settingName := flattenNestedSetting(ident.Value, str)
-        return a.resolveSettingValue(settingName)
+		return s.parent.Env.MustResolveNested(ident.Value, str)
 	}
 
-	lhs, lhsErr := parser.Transform(a, op.Left)
-	rhs, rhsErr := parser.Transform(a, op.Right)
+	lhs, lhsErr := visitor.Transform(s, op.Left)
+	rhs, rhsErr := visitor.Transform(s, op.Right)
 
 	if joined := errors.Join(lhsErr, rhsErr); joined != nil {
 		return nil, slipup.Describef(joined, "while transforming boolop %+v", op)
@@ -79,9 +93,9 @@ func (a *AstInterpreter) TransformBinOp(op *parser.BinOp) (parser.Expression, er
 	}
 }
 
-func (a *AstInterpreter) TransformBoolOp(op *parser.BoolOp) (parser.Expression, error) {
-	lhs, lhsErr := parser.Transform(a, op.Left)
-	rhs, rhsErr := parser.Transform(a, op.Right)
+func (s *state) TransformBoolOp(op *parser.BoolOp) (parser.Expression, error) {
+	lhs, lhsErr := visitor.Transform(s, op.Left)
+	rhs, rhsErr := visitor.Transform(s, op.Right)
 
 	if joined := errors.Join(lhsErr, rhsErr); joined != nil {
 		return nil, slipup.Describef(joined, "while transforming boolop %+v", op)
@@ -131,15 +145,15 @@ func (a *AstInterpreter) TransformBoolOp(op *parser.BoolOp) (parser.Expression, 
 	}, nil
 }
 
-func (a *AstInterpreter) TransformCall(call *parser.Call) (parser.Expression, error) {
-	//SAFETY: don't call parser.Transform to visit child nodes here
+func (s *state) TransformCall(call *parser.Call) (parser.Expression, error) {
+	//SAFETY: don't call visitor.Transform(s, ...) to visit child nodes here
 	id, invalidFnIdentifier := parser.AssertAs[*parser.Identifier](call.Callee)
 	if invalidFnIdentifier != nil {
 		return nil, slipup.Createf("invalid function identifier: %+v", call)
 	}
 
-	if decl, decld := a.Functions[id.Value]; decld {
-		return a.tryInlineCall(call, decl)
+	if decl, _ := s.parent.Functions.Retrieve(id.Value); decl != nil {
+		return s.tryInlineCall(call, decl)
 	}
 
 	switch id.Value {
@@ -148,21 +162,21 @@ func (a *AstInterpreter) TransformCall(call *parser.Call) (parser.Expression, er
 		if targetErr != nil || target.Kind != parser.LiteralStr {
 			return nil, slipup.Createf("expected location target name as first argument: %+v", call)
 		}
-		str, _ := target.AsString()
-		return a.handleMacro(str, call.Args[1])
+		targetName, _ := target.AsString()
+		return s.handleMacro(targetName, call.Args[1])
 	case "here":
-		return a.handleMacro(a.Current, call.Args[0])
+		return s.handleMacro(s.location, call.Args[0])
 	default:
-		return nil, slipup.Createf("could not transform call %+v", call)
+		return nil, slipup.Createf("'%s' is not a known function", call.Callee)
 	}
 }
 
-func (a *AstInterpreter) TransformIdentifier(id *parser.Identifier) (parser.Expression, error) {
-	if value, envDecld := a.Environment[id.Value]; envDecld {
-		return &value, nil
+func (s *state) TransformIdentifier(id *parser.Identifier) (parser.Expression, error) {
+	if value, decld := s.parent.Env.Resolve(id.Value); decld {
+		return value, nil
 	}
 
-	if fn, isDecld := a.Functions[id.Value]; isDecld {
+	if fn, _ := s.parent.Functions.Retrieve(id.Value); fn != nil {
 		if len(fn.Parameters) != 0 {
 			return nil, slipup.Createf("expected function with 0 arguments but found %+v", fn)
 		}
@@ -170,18 +184,18 @@ func (a *AstInterpreter) TransformIdentifier(id *parser.Identifier) (parser.Expr
 		return parser.MakeCall(id, nil), nil
 	}
 
-	if tok, tokErr := a.resolveTokenLiteral(id.Value); tokErr == nil {
+	if tok, tokErr := s.parent.Env.ResolveAsToken(id.Value); tokErr == nil {
 		return tok, nil
 	}
 
-	if setting, settingErr := a.resolveSettingValue(id.Value); settingErr == nil {
+	if setting, exists := s.parent.Env.Resolve(id.Value); exists {
 		return setting, nil
 	}
 
 	return nil, slipup.Createf("could not resolve %+v to any value", id)
 }
 
-func (a *AstInterpreter) TransformSubscript(lookup *parser.Subscript) (parser.Expression, error) {
+func (s *state) TransformSubscript(lookup *parser.Subscript) (parser.Expression, error) {
 	target, targetErr := parser.AssertAs[*parser.Identifier](lookup.Target)
 	index, indexErr := parser.AssertAs[*parser.Identifier](lookup.Index)
 
@@ -189,11 +203,10 @@ func (a *AstInterpreter) TransformSubscript(lookup *parser.Subscript) (parser.Ex
 		return nil, slipup.Createf("cannot inline subscript: %+v", lookup)
 	}
 
-	settingName := flattenNestedSetting(target.Value, index.Value)
-	return a.resolveSettingValue(settingName)
+	return s.parent.Env.MustResolveNested(target.Value, index.Value)
 }
 
-func (a *AstInterpreter) TransformTuple(tup *parser.Tuple) (parser.Expression, error) {
+func (s *state) TransformTuple(tup *parser.Tuple) (parser.Expression, error) {
 	if len(tup.Elems) != 2 {
 		return tup, slipup.Createf("expected exactly 2 elements -- identifier and amount -- for tuple expression\nrecieved: %+v", tup)
 	}
@@ -211,7 +224,7 @@ func (a *AstInterpreter) TransformTuple(tup *parser.Tuple) (parser.Expression, e
 	amount, amountErr := parser.Unify(
 		tup.Elems[1],
 		func(i *parser.Identifier) (float64, error) {
-			setting, settingErr := a.resolveSettingValue(i.Value)
+			setting, settingErr := s.parent.Env.MustResolve(i.Value)
 			if settingErr != nil {
 				return -1, slipup.Describef(settingErr, "while resolving identifier %+v", i)
 			}
@@ -234,15 +247,15 @@ func (a *AstInterpreter) TransformTuple(tup *parser.Tuple) (parser.Expression, e
 		return nil, joined
 	}
 
-	return a.makeHasCall(ident, amount)
+	return s.makeHasCall(ident, amount)
 }
 
-func (a *AstInterpreter) TransformUnary(unary *parser.UnaryOp) (parser.Expression, error) {
+func (s *state) TransformUnary(unary *parser.UnaryOp) (parser.Expression, error) {
 	if unary.Op != parser.UnaryNot {
 		panic("unknown op: %+v")
 	}
 
-	value, transformError := parser.Transform(a, unary.Target)
+	value, transformError := visitor.Transform(s, unary.Target)
 	if transformError != nil {
 		return nil, slipup.Describef(transformError, "while transforming %+v", unary.Target)
 	}
@@ -265,13 +278,13 @@ func (a *AstInterpreter) TransformUnary(unary *parser.UnaryOp) (parser.Expressio
 
 }
 
-func (a *AstInterpreter) TransformLiteral(lit *parser.Literal) (parser.Expression, error) {
+func (s *state) TransformLiteral(lit *parser.Literal) (parser.Expression, error) {
 	str, isStr := lit.AsString()
 	if !isStr {
 		return lit, nil
 	}
 
-	tok, err := a.resolveTokenLiteral(str)
+	tok, err := s.parent.Env.ResolveAsToken(str)
 	if err == nil {
 		return tok, nil
 	}
@@ -279,24 +292,59 @@ func (a *AstInterpreter) TransformLiteral(lit *parser.Literal) (parser.Expressio
 	return lit, nil
 }
 
-func (a *AstInterpreter) resolveSettingValue(setting string) (*parser.Literal, error) {
-	return nil, nil
+func (s *state) resolveTokenLiteral(given string) (*parser.Literal, error) {
+	first := []rune(given)[0]
+	if !unicode.IsUpper(first) {
+		return nil, slipup.Createf("token literals must begin with upper case letter: %s", given)
+	}
+
+	value, exists := s.parent.Env.Resolve(given)
+	if !exists {
+		return nil, slipup.Createf("token %s not found", given)
+	}
+
+	if value.Kind != parser.LiteralToken {
+		return nil, slipup.Createf("expected token but resolved: %+v", value)
+	}
+
+	return value, nil
 }
 
-func (a *AstInterpreter) resolveTokenLiteral(given string) (*parser.Literal, error) {
-	return nil, nil
+func (s *state) makeHasCall(token string, amount float64) (*parser.Call, error) {
+	return parser.MakeCallSplat(parser.Identify("has"), parser.StringLiteral(token), parser.NumberLiteral(amount)), nil
 }
 
-func (a *AstInterpreter) makeHasCall(token string, amount float64) (*parser.Call, error) {
-	return nil, nil
+func (s *state) handleMacro(target string, rule parser.Expression) (*parser.Call, error) {
+	tokenname := s.parent.Delayed.Add(target, rule)
+	return parser.MakeCallSplat(
+		parser.Identify("has"),
+		parser.StringLiteral(tokenname),
+		parser.NumberLiteral(1),
+	), nil
 }
 
-func (a *AstInterpreter) handleMacro(target string, rule parser.Expression) (*parser.Call, error) {
-	return nil, nil
-}
+func (s *state) tryInlineCall(call *parser.Call, decl *parser.FunctionDecl) (parser.Expression, error) {
+	// built in, impossible to inline
+	if decl.Body == nil {
+		return call, nil
+	}
 
-func (a *AstInterpreter) tryInlineCall(call *parser.Call, decl parser.FunctionDecl) (parser.Expression, error) {
-	return call, nil
+	if len(call.Args) != len(decl.Parameters) {
+		return nil, slipup.Createf("%s expected %d arguments but received %d", decl.Identifier, len(decl.Parameters), len(call.Args))
+	}
+
+	replacements := make(map[string]parser.Expression, len(call.Args))
+
+	for i := range len(call.Args) {
+		replacements[decl.Parameters[i]] = call.Args[i]
+	}
+
+	renamed, renameErr := visitor.Transform(rewritefuncparams(replacements), decl.Body)
+	if renameErr != nil {
+		return nil, slipup.Describef(renameErr, "while inlining %s", call.Callee)
+	}
+
+	return visitor.Transform(s, renamed)
 }
 
 func assertAsBool(ast parser.Expression) (bool, bool) {
@@ -338,9 +386,3 @@ func areDifferentIdentifier(lhs, rhs parser.Expression) bool {
 
 	return lhi.Value != rhi.Value
 }
-
-func flattenNestedSetting(tiers ...string) string {
-	return strings.Join(tiers, "__")
-}
-
-

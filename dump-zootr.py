@@ -97,7 +97,6 @@ def copy_file(src: pathlib.Path, dest: pathlib.Path) -> None:
 
 
 def rearrange_location_table(tbl) -> Any:
-
     return [{
         "name": name,
         **dict(

@@ -45,6 +45,10 @@ func (z *Zootlr) Error(err error) {
 	}
 }
 
+func(z *Zootlr) AddResource(t any) {
+    z.resources[reflect.TypeOf(t)] = t
+}
+
 type SetupFunc func(*Zootlr) error
 
 func Setup(sc SetupApp) SetupFunc {

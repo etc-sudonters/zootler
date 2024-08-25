@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math"
 	"github.com/etc-sudonters/substrate/slipup"
+	"math"
 
 	"github.com/etc-sudonters/substrate/skelly/stack"
 )
@@ -34,8 +34,8 @@ func (v *VM) Debug(d bool) {
 
 func CreateExecution(chunk *Chunk, env *ExecutionEnvironment) Execution {
 	return Execution{
-		Chunk: chunk,
-		Env:   env,
+		chunk: chunk,
+		env:   env,
 		pc:    0,
 		stack: stack.Make[Value](0, 16),
 	}
@@ -62,7 +62,7 @@ func (v *VM) RunCompiledFunc(ctx context.Context, f *CompiledFunc, values Values
 }
 
 func (vm *VM) execute(ctx context.Context, execution *Execution) error {
-	if execution.Chunk.Len() == 0 {
+	if execution.chunk.Len() == 0 {
 		return slipup.Createf("empty program passed")
 	}
 
@@ -71,7 +71,7 @@ func (vm *VM) execute(ctx context.Context, execution *Execution) error {
 
 	defer func() {
 		if r := recover(); r != nil {
-			fmt.Print(operationAt(execution.Chunk, pos))
+			fmt.Print(operationAt(execution.chunk, pos))
 			dumpStack(execution.stack)
 			panic(r)
 		}
@@ -82,10 +82,10 @@ func (vm *VM) execute(ctx context.Context, execution *Execution) error {
 loop:
 	for {
 		pos = execution.pc
-		code := execution.Chunk.Ops[execution.pc]
+		code := execution.chunk.Ops[execution.pc]
 		op := Bytecode(code)
 		if debug {
-			fmt.Println(operationAt(execution.Chunk, execution.pc))
+			fmt.Println(operationAt(execution.chunk, execution.pc))
 		}
 		switch op {
 		case OP_NOP:
@@ -130,7 +130,7 @@ loop:
 		case OP_JUMP_FALSE:
 			test := execution.popStack().Truthy()
 			if !test {
-				dest := execution.Chunk.ReadU16(PC(execution.pc + 1))
+				dest := execution.chunk.ReadU16(PC(execution.pc + 1))
 				execution.pc = dest
 				break
 			}
@@ -139,14 +139,14 @@ loop:
 		case OP_JUMP_TRUE:
 			test := execution.popStack().Truthy()
 			if test {
-				dest := execution.Chunk.ReadU16(PC(execution.pc + 1))
+				dest := execution.chunk.ReadU16(PC(execution.pc + 1))
 				execution.pc = dest
 				break
 			}
 			execution.pc += 3
 			break
 		case OP_JUMP:
-			dest := execution.Chunk.ReadU16(PC(execution.pc + 1))
+			dest := execution.chunk.ReadU16(PC(execution.pc + 1))
 			execution.pc = dest
 			break
 		case OP_AND:
@@ -160,33 +160,33 @@ loop:
 			execution.pc++
 			break
 		case OP_CALL0:
-			idx := execution.Chunk.Ops[execution.pc+1]
-			name := execution.Chunk.Names[idx]
+			idx := execution.chunk.Ops[execution.pc+1]
+			name := execution.chunk.Names[idx]
 			value, err := vm.callFunc(ctx, name, nil)
 			if err != nil {
-				return slipup.Describef(err, operationAt(execution.Chunk, pos))
+				return slipup.Describef(err, operationAt(execution.chunk, pos))
 			}
 			execution.pushStack(value)
 			execution.pc += 2
 			break
 		case OP_CALL1:
 			arg := execution.popStack()
-			idx := execution.Chunk.Ops[execution.pc+1]
-			name := execution.Chunk.Names[idx]
+			idx := execution.chunk.Ops[execution.pc+1]
+			name := execution.chunk.Names[idx]
 			value, err := vm.callFunc(ctx, name, Values{arg})
 			if err != nil {
-				return slipup.Describef(err, operationAt(execution.Chunk, pos))
+				return slipup.Describef(err, operationAt(execution.chunk, pos))
 			}
 			execution.pushStack(value)
 			execution.pc += 2
 			break
 		case OP_CALL2:
 			arg2, arg1 := execution.popStack(), execution.popStack()
-			idx := execution.Chunk.Ops[execution.pc+1]
-			name := execution.Chunk.Names[idx]
+			idx := execution.chunk.Ops[execution.pc+1]
+			name := execution.chunk.Names[idx]
 			value, err := vm.callFunc(ctx, name, Values{arg1, arg2})
 			if err != nil {
-				return slipup.Describef(err, operationAt(execution.Chunk, pos))
+				return slipup.Describef(err, operationAt(execution.chunk, pos))
 			}
 			execution.pushStack(value)
 			execution.pc += 2
@@ -212,12 +212,12 @@ func (vm *VM) callFunc(ctx context.Context, name string, values Values) (Value, 
 }
 
 type Execution struct {
-	Chunk  *Chunk
-	Env    *ExecutionEnvironment
-	pc     uint16
 	debug  bool
-	stack  *stack.S[Value]
+	pc     uint16
 	result Value
+	chunk  *Chunk
+	env    *ExecutionEnvironment
+	stack  *stack.S[Value]
 }
 
 func (e *Execution) Debug() {
@@ -233,15 +233,15 @@ func (e *Execution) SetResult(v Value) {
 }
 
 func (e *Execution) loadConst() {
-	e.pushStack(e.Chunk.GetConstAt(PC(e.pc + 1)))
+	e.pushStack(e.chunk.GetConstAt(PC(e.pc + 1)))
 }
 
 func (e *Execution) loadName() error {
-	idx := e.Chunk.Ops[e.pc+1]
-	name := e.Chunk.Names[idx]
-	value, found := e.Env.Lookup(name)
+	idx := e.chunk.Ops[e.pc+1]
+	name := e.chunk.Names[idx]
+	value, found := e.env.Lookup(name)
 	if !found {
-		return slipup.Describef(ErrUnboundName, "%s : %s", name, operationAt(e.Chunk, e.pc))
+		return slipup.Describef(ErrUnboundName, "%s : %s", name, operationAt(e.chunk, e.pc))
 	}
 	e.pushStack(value)
 	return nil
@@ -264,7 +264,7 @@ func (e *Execution) pushStack(val Value) error {
 }
 
 func (e *Execution) currentOpDisplay() string {
-	return operationAt(e.Chunk, e.pc)
+	return operationAt(e.chunk, e.pc)
 }
 
 func dumpStack(s *stack.S[Value]) {

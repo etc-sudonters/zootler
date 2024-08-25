@@ -1,8 +1,9 @@
 package runtime
 
 import (
-	"sudonters/zootler/internal/rules/parser"
 	"github.com/etc-sudonters/substrate/slipup"
+	"sudonters/zootler/internal/rules/parser"
+	"sudonters/zootler/internal/rules/visitor"
 )
 
 type Compiler struct {
@@ -11,7 +12,6 @@ type Compiler struct {
 
 type compiling struct {
 	*ChunkBuilder
-	env *ExecutionEnvironment
 }
 
 func CompilerUsing(globals *ExecutionEnvironment) Compiler {
@@ -34,7 +34,7 @@ func CompileFunctionDecl(c *Compiler, decl parser.FunctionDecl) (Function, error
 		builder.DeclareIdentifier(name)
 	}
 
-	compiling := compiling{builder, f.env}
+	compiling := compiling{builder}
 	if err := c.compileUnit(decl.Body, compiling); err != nil {
 		return nil, err
 	}
@@ -45,7 +45,7 @@ func CompileFunctionDecl(c *Compiler, decl parser.FunctionDecl) (Function, error
 }
 
 func CompileEdgeRule(c *Compiler, ast parser.Expression) (*Chunk, error) {
-	code := compiling{new(ChunkBuilder), c.Globals}
+	code := compiling{new(ChunkBuilder)}
 	if err := c.compileUnit(ast, code); err != nil {
 		return nil, err
 	}
@@ -54,7 +54,7 @@ func CompileEdgeRule(c *Compiler, ast parser.Expression) (*Chunk, error) {
 
 func (c Compiler) compileUnit(ast parser.Expression, compiling compiling) error {
 	compiling.Preamble()
-	if err := parser.Visit(compiling, ast); err != nil {
+	if err := visitor.Visit(compiling, ast); err != nil {
 		return err
 	}
 	compiling.Epilogue()
@@ -70,10 +70,10 @@ func (c compiling) Epilogue() {
 }
 
 func (c compiling) VisitBinOp(node *parser.BinOp) error {
-	if err := parser.Visit(c, node.Left); err != nil {
+	if err := visitor.Visit(c, node.Left); err != nil {
 		return slipup.Describef(err, "while writing binop %+v", node)
 	}
-	if err := parser.Visit(c, node.Right); err != nil {
+	if err := visitor.Visit(c, node.Right); err != nil {
 		return slipup.Describef(err, "while writing binop %+v", node)
 	}
 	switch node.Op {
@@ -92,10 +92,10 @@ func (c compiling) VisitBinOp(node *parser.BinOp) error {
 }
 
 func (c compiling) VisitBoolOp(node *parser.BoolOp) error {
-	if err := parser.Visit(c, node.Left); err != nil {
+	if err := visitor.Visit(c, node.Left); err != nil {
 		return slipup.Describef(err, "while writing boolop %+v", node)
 	}
-	if err := parser.Visit(c, node.Right); err != nil {
+	if err := visitor.Visit(c, node.Right); err != nil {
 		return slipup.Describef(err, "while writing boolop %+v", node)
 	}
 
@@ -120,7 +120,7 @@ func (c compiling) VisitCall(call *parser.Call) error {
 	size := len(call.Args)
 
 	for _, arg := range call.Args {
-		if err := parser.Visit(c, arg); err != nil {
+		if err := visitor.Visit(c, arg); err != nil {
 			return err
 		}
 	}
@@ -143,8 +143,8 @@ func (c compiling) VisitTuple(node *parser.Tuple) error {
 		return slipup.Createf("expected 2 arguments for has, got %d", len(node.Elems))
 	}
 
-	parser.Visit(c, node.Elems[0])
-	parser.Visit(c, node.Elems[1])
+	visitor.Visit(c, node.Elems[0])
+	visitor.Visit(c, node.Elems[1])
 	c.Call("has", 2)
 	return nil
 }
