@@ -21,10 +21,10 @@ func Identify(name string) *Identifier {
 	return &Identifier{Value: name}
 }
 
-func TokenLiteral(t uint64) *Literal {
+func TokenLiteral[T ~uint64](t T) *Literal {
 	return &Literal{
 		Kind:  LiteralToken,
-		Value: t,
+		Value: uint64(t),
 	}
 }
 

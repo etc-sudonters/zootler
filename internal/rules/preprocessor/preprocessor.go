@@ -21,24 +21,11 @@ type P struct {
 	Env       ValuesTable
 }
 
-func (parent *P) Process(location string, rules map[string]parser.Expression) (map[string]parser.Expression, error) {
-	s := state{location, parent}
-
-	processed := make(map[string]parser.Expression, len(rules))
-
-	for edge, rule := range rules {
-		transformed, err := visitor.Transform(&s, rule)
-		if err != nil {
-			return nil, slipup.Describef(err, "while transforming %s -> %s", location, edge)
-		}
-
-		processed[edge] = transformed
-	}
-
-	return processed, nil
+func (parent *P) Process(origin string, rule parser.Expression) (parser.Expression, error) {
+	return visitor.Transform(state{origin, parent}, rule)
 }
 
-func (s *state) TransformBinOp(op *parser.BinOp) (parser.Expression, error) {
+func (s state) TransformBinOp(op *parser.BinOp) (parser.Expression, error) {
 	if areSameIdentifier(op.Left, op.Right) {
 		return parser.BoolLiteral(op.Op == parser.BinOpEq), nil
 	}
@@ -93,7 +80,7 @@ func (s *state) TransformBinOp(op *parser.BinOp) (parser.Expression, error) {
 	}
 }
 
-func (s *state) TransformBoolOp(op *parser.BoolOp) (parser.Expression, error) {
+func (s state) TransformBoolOp(op *parser.BoolOp) (parser.Expression, error) {
 	lhs, lhsErr := visitor.Transform(s, op.Left)
 	rhs, rhsErr := visitor.Transform(s, op.Right)
 
@@ -145,7 +132,7 @@ func (s *state) TransformBoolOp(op *parser.BoolOp) (parser.Expression, error) {
 	}, nil
 }
 
-func (s *state) TransformCall(call *parser.Call) (parser.Expression, error) {
+func (s state) TransformCall(call *parser.Call) (parser.Expression, error) {
 	//SAFETY: don't call visitor.Transform(s, ...) to visit child nodes here
 	id, invalidFnIdentifier := parser.AssertAs[*parser.Identifier](call.Callee)
 	if invalidFnIdentifier != nil {
@@ -171,7 +158,7 @@ func (s *state) TransformCall(call *parser.Call) (parser.Expression, error) {
 	}
 }
 
-func (s *state) TransformIdentifier(id *parser.Identifier) (parser.Expression, error) {
+func (s state) TransformIdentifier(id *parser.Identifier) (parser.Expression, error) {
 	if value, decld := s.parent.Env.Resolve(id.Value); decld {
 		return value, nil
 	}
@@ -195,7 +182,7 @@ func (s *state) TransformIdentifier(id *parser.Identifier) (parser.Expression, e
 	return nil, slipup.Createf("could not resolve %+v to any value", id)
 }
 
-func (s *state) TransformSubscript(lookup *parser.Subscript) (parser.Expression, error) {
+func (s state) TransformSubscript(lookup *parser.Subscript) (parser.Expression, error) {
 	target, targetErr := parser.AssertAs[*parser.Identifier](lookup.Target)
 	index, indexErr := parser.AssertAs[*parser.Identifier](lookup.Index)
 
@@ -206,7 +193,7 @@ func (s *state) TransformSubscript(lookup *parser.Subscript) (parser.Expression,
 	return s.parent.Env.MustResolveNested(target.Value, index.Value)
 }
 
-func (s *state) TransformTuple(tup *parser.Tuple) (parser.Expression, error) {
+func (s state) TransformTuple(tup *parser.Tuple) (parser.Expression, error) {
 	if len(tup.Elems) != 2 {
 		return tup, slipup.Createf("expected exactly 2 elements -- identifier and amount -- for tuple expression\nrecieved: %+v", tup)
 	}
@@ -250,7 +237,7 @@ func (s *state) TransformTuple(tup *parser.Tuple) (parser.Expression, error) {
 	return s.makeHasCall(ident, amount)
 }
 
-func (s *state) TransformUnary(unary *parser.UnaryOp) (parser.Expression, error) {
+func (s state) TransformUnary(unary *parser.UnaryOp) (parser.Expression, error) {
 	if unary.Op != parser.UnaryNot {
 		panic("unknown op: %+v")
 	}
@@ -278,7 +265,7 @@ func (s *state) TransformUnary(unary *parser.UnaryOp) (parser.Expression, error)
 
 }
 
-func (s *state) TransformLiteral(lit *parser.Literal) (parser.Expression, error) {
+func (s state) TransformLiteral(lit *parser.Literal) (parser.Expression, error) {
 	str, isStr := lit.AsString()
 	if !isStr {
 		return lit, nil
@@ -292,7 +279,7 @@ func (s *state) TransformLiteral(lit *parser.Literal) (parser.Expression, error)
 	return lit, nil
 }
 
-func (s *state) resolveTokenLiteral(given string) (*parser.Literal, error) {
+func (s state) resolveTokenLiteral(given string) (*parser.Literal, error) {
 	first := []rune(given)[0]
 	if !unicode.IsUpper(first) {
 		return nil, slipup.Createf("token literals must begin with upper case letter: %s", given)
@@ -310,11 +297,11 @@ func (s *state) resolveTokenLiteral(given string) (*parser.Literal, error) {
 	return value, nil
 }
 
-func (s *state) makeHasCall(token string, amount float64) (*parser.Call, error) {
+func (s state) makeHasCall(token string, amount float64) (*parser.Call, error) {
 	return parser.MakeCallSplat(parser.Identify("has"), parser.StringLiteral(token), parser.NumberLiteral(amount)), nil
 }
 
-func (s *state) handleMacro(target string, rule parser.Expression) (*parser.Call, error) {
+func (s state) handleMacro(target string, rule parser.Expression) (*parser.Call, error) {
 	tokenname := s.parent.Delayed.Add(target, rule)
 	return parser.MakeCallSplat(
 		parser.Identify("has"),
@@ -323,7 +310,7 @@ func (s *state) handleMacro(target string, rule parser.Expression) (*parser.Call
 	), nil
 }
 
-func (s *state) tryInlineCall(call *parser.Call, decl *parser.FunctionDecl) (parser.Expression, error) {
+func (s state) tryInlineCall(call *parser.Call, decl *parser.FunctionDecl) (parser.Expression, error) {
 	// built in, impossible to inline
 	if decl.Body == nil {
 		return call, nil

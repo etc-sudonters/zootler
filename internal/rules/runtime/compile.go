@@ -44,12 +44,10 @@ func CompileFunctionDecl(c *Compiler, decl parser.FunctionDecl) (Function, error
 	return f, nil
 }
 
-func CompileEdgeRule(c *Compiler, ast parser.Expression) (*Chunk, error) {
+func CompileEdgeRule(c *Compiler, ast parser.Expression) (Chunk, error) {
 	code := compiling{new(ChunkBuilder)}
-	if err := c.compileUnit(ast, code); err != nil {
-		return nil, err
-	}
-	return &code.Chunk, nil
+	err := c.compileUnit(ast, code)
+	return code.Chunk, err
 }
 
 func (c Compiler) compileUnit(ast parser.Expression, compiling compiling) error {

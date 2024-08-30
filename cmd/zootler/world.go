@@ -14,10 +14,12 @@ import (
 	"sudonters/zootler/internal/query"
 	"sudonters/zootler/internal/rules/parser"
 	"sudonters/zootler/internal/rules/preprocessor"
+	"sudonters/zootler/internal/rules/runtime"
 	"sudonters/zootler/internal/settings"
 	"sudonters/zootler/internal/table"
 
 	"github.com/etc-sudonters/substrate/dontio"
+	"github.com/etc-sudonters/substrate/skelly/graph"
 	"github.com/etc-sudonters/substrate/slipup"
 )
 
@@ -52,8 +54,9 @@ func (w WorldLoader) Setup(z *app.Zootlr) error {
 	return nil
 }
 
-func (w WorldLoader) processLocations(_ context.Context, a *assistant) error {
+func (w WorldLoader) processLocations(ctx context.Context, a *assistant) error {
 	pre := a.preprocessor()
+	compiler := runtime.NewCompiler()
 	var errs []error
 
 	for loc := range a.locs.loaded {
@@ -65,6 +68,13 @@ func (w WorldLoader) processLocations(_ context.Context, a *assistant) error {
 		}
 
 		loc.rules = processed
+
+		for name, ast := range loc.rules {
+			_, compileErr := runtime.CompileEdgeRule(&compiler, ast)
+			if compileErr != nil {
+				dontio.WriteLineOut(ctx, "failed to compile %s: %s", name, compileErr)
+			}
+		}
 	}
 
 	return errors.Join(errs...)
@@ -92,6 +102,7 @@ func (w WorldLoader) loadDirectory(ctx context.Context, a *assistant) error {
 
 func (w WorldLoader) assistant(ctx context.Context, eng query.Engine, settings settings.ZootrSettings) (*assistant, error) {
 	a := new(assistant)
+	a.eng = eng
 	if locs, err := createLocationTable(ctx, eng); err != nil {
 		return nil, slipup.Describe(err, "while building location table")
 	} else {
@@ -109,13 +120,19 @@ func (w WorldLoader) assistant(ctx context.Context, eng query.Engine, settings s
 	} else {
 		a.vals = vals
 	}
+
+	a.graph = graph.Builder{
+		G: graph.New(),
+	}
 	return a, nil
 }
 
 type assistant struct {
-	ft   preprocessor.FunctionTable
-	locs *LocationTable
-	vals preprocessor.ValuesTable
+	ft    preprocessor.FunctionTable
+	locs  *LocationTable
+	vals  preprocessor.ValuesTable
+	eng   query.Engine
+	graph graph.Builder
 }
 
 func (a assistant) preprocessor() *preprocessor.P {
@@ -170,45 +187,36 @@ func (a assistant) loadLogicFile(path string) error {
 		}
 
 		for destination, rule := range raw.Exits {
-			linkErr := here.linkTo(destination, rule, components.ExitEdge{})
+			_, linkErr := here.linkTo(destination, rule, components.ExitEdge{})
 			if linkErr != nil {
 				return slipup.Describef(linkErr, "while linking '%s -> %s'", here.name, destination)
 			}
 		}
 
 		for check, rule := range raw.Locations {
-			linkErr := here.linkTo(check, rule, components.CheckEdge{})
+			_, linkErr := here.linkTo(check, rule, components.CheckEdge{})
 			if linkErr != nil {
 				return slipup.Describef(linkErr, "while linking '%s -> %s'", here.name, check)
 			}
 		}
 
 		for event, rule := range raw.Events {
-			linkErr := here.linkTo(event, rule, components.EventEdge{})
-			// TODO: create a token for the event as well
+			eventId, linkErr := here.linkTo(
+				event, rule,
+				components.EventEdge{},
+				components.CollectableGameToken{},
+				components.Advancement{},
+			)
 			if linkErr != nil {
 				return slipup.Describef(linkErr, "while linking '%s -> %s'", here.name, event)
 			}
+			a.vals[internal.Normalize(event)] = parser.TokenLiteral(uint64(eventId))
 		}
 
 	}
 
 	return nil
 
-}
-
-type logicLocation struct {
-	BossRoom      bool              `json:"is_boss_room"`
-	DoesTimePass  bool              `json:"time_passes"`
-	Dungeon       string            `json:"dungeon"`
-	HintRegion    string            `json:"hint"`     // hint zone
-	HintRegionAlt string            `json:"alt_hint"` // more specific location -- restricted to gannon's chambers?
-	Name          string            `json:"region_name"`
-	Savewarp      string            `json:"savewarp"` // effectively another exit
-	Scene         string            `json:"scene"`    // similar to hint?
-	Events        map[string]string `json:"events"`
-	Exits         map[string]string `json:"exits"`
-	Locations     map[string]string `json:"locations"`
 }
 
 type locationBuilder struct {
@@ -227,17 +235,17 @@ func (l locationBuilder) add(v table.Values) error {
 	return l.parent.queries.SetValues(l.id, v)
 }
 
-func (l *locationBuilder) linkTo(name, rule string, vs ...table.Value) error {
+func (l *locationBuilder) linkTo(name, rule string, vs ...table.Value) (table.RowId, error) {
 	edgeName := fmt.Sprintf("%s -> %s", l.name, name)
 
 	ast, parseErr := parser.Parse(rule)
 	if parseErr != nil {
-		return slipup.Describef(parseErr, "while parsing rule '%s'", rule)
+		return 0, slipup.Describef(parseErr, "while parsing rule '%s'", rule)
 	}
 
 	destination, linkErr := l.parent.Build(components.Name(name))
 	if linkErr != nil {
-		return slipup.Describef(linkErr, "while linking '%s'", edgeName)
+		return 0, slipup.Describef(linkErr, "while linking '%s'", edgeName)
 	}
 
 	edge, edgeCreateErr := l.parent.queries.InsertRow(components.Name(edgeName), components.Edge{
@@ -246,17 +254,17 @@ func (l *locationBuilder) linkTo(name, rule string, vs ...table.Value) error {
 	})
 
 	if edgeCreateErr != nil {
-		return slipup.Describef(edgeCreateErr, "while creating edge %s", edgeName)
+		return 0, slipup.Describef(edgeCreateErr, "while creating edge %s", edgeName)
 	}
 
 	if len(vs) != 0 {
 		if additionalErr := l.parent.queries.SetValues(edge, table.Values(vs)); additionalErr != nil {
-			return slipup.Describef(additionalErr, "while customizing '%s'", edgeName)
+			return 0, slipup.Describef(additionalErr, "while customizing '%s'", edgeName)
 		}
 	}
 
 	l.rules[name] = ast
-	return nil
+	return edge, nil
 }
 
 func createLocationTable(_ context.Context, e query.Engine) (*LocationTable, error) {

@@ -3,10 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/etc-sudonters/substrate/slipup"
 	"sudonters/zootler/internal"
 	"sudonters/zootler/internal/components"
 	"sudonters/zootler/internal/query"
-	"github.com/etc-sudonters/substrate/slipup"
 	"sudonters/zootler/internal/table"
 )
 
@@ -218,7 +218,7 @@ func (item FileLocation) categories(rid table.RowId, storage query.Engine) error
 			}
 			break
 		case "freestandings":
-			if err := storage.SetValues(rid, table.Values{components.Freestanding{}}); err != nil {
+			if err := storage.SetValues(rid, table.Values{components.Freestandings{}}); err != nil {
 				return err
 			}
 			break

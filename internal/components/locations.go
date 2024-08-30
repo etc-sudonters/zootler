@@ -29,6 +29,7 @@ type (
 	ForestArea             struct{}
 	ForestTemple           struct{}
 	ForestTempleMQ         struct{}
+	Freestandings          struct{}
 	Freestanding           struct{}
 	GanonsCastle           struct{}
 	GanonsCastleMQ         struct{}

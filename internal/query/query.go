@@ -9,9 +9,9 @@ import (
 	"sudonters/zootler/internal/table"
 	"sudonters/zootler/internal/table/columns"
 
-	"github.com/etc-sudonters/substrate/slipup"
 	"github.com/etc-sudonters/substrate/mirrors"
 	"github.com/etc-sudonters/substrate/skelly/bitset"
+	"github.com/etc-sudonters/substrate/slipup"
 )
 
 var _ Engine = (*engine)(nil)
@@ -123,6 +123,7 @@ type Engine interface {
 	InsertRow(vs ...table.Value) (table.RowId, error)
 	Retrieve(b Query) (bundle.Interface, error)
 	Lookup(l Lookup) (bundle.Interface, error)
+	GetValues(r table.RowId, cs table.ColumnIds) (table.ValueTuple, error)
 	SetValues(r table.RowId, vs table.Values) error
 	UnsetValues(r table.RowId, cs table.ColumnIds) error
 	ColumnIdFor(reflect.Type) (table.ColumnId, bool)
@@ -325,6 +326,20 @@ func (e *engine) SetValues(r table.RowId, vs table.Values) error {
 	}
 
 	return nil
+}
+
+func (e *engine) GetValues(r table.RowId, cs table.ColumnIds) (table.ValueTuple, error) {
+	var vt table.ValueTuple
+	vt.Cols = make(table.ColumnMetas, len(cs))
+	vt.Values = make(table.Values, len(cs))
+	for i, cid := range cs {
+		c := e.tbl.Cols[cid]
+		vt.Cols[i].Id = c.Id()
+		vt.Cols[i].T = c.Type()
+		vt.Values[i] = c.Column().Get(r)
+	}
+
+	return vt, nil
 }
 
 func (e *engine) UnsetValues(r table.RowId, cs table.ColumnIds) error {

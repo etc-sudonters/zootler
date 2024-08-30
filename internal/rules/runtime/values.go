@@ -3,23 +3,27 @@ package runtime
 import (
 	"errors"
 	"fmt"
+	"reflect"
+
 	"github.com/etc-sudonters/substrate/slipup"
 )
 
 var ErrUnsupportedType error = errors.New("unsupported type")
 
-func ValueFrom(t interface{}) (Value, error) {
+func ValueFrom(t any) (Value, error) {
 	switch v := t.(type) {
 	case bool:
 		return ValueFromBool(v), nil
 	case int:
 		return ValueFromInt(v), nil
+	case uint64:
+		return ValueFromUint64(v), nil
 	case float64:
 		return ValueFromFloat(v), nil
 	case string:
 		return ValueFromStr(v), nil
 	default:
-		return NullValue(), ErrUnsupportedType
+		return NullValue(), slipup.Describef(ErrUnsupportedType, "%s %+v", reflect.TypeOf(t).Name(), t)
 	}
 }
 
@@ -66,6 +70,13 @@ func ValueFromStr(v string) Value {
 	}
 }
 
+func ValueFromUint64(v uint64) Value {
+	return Value{
+		kind: VAL_TOKEN,
+		v:    int(v),
+	}
+}
+
 type ValueKind uint8
 
 func (v ValueKind) String() string {
@@ -80,6 +91,8 @@ func (v ValueKind) String() string {
 		return "bool"
 	case VAL_STR:
 		return "str"
+	case VAL_TOKEN:
+		return "token"
 	default:
 		panic(fmt.Errorf("unknown value kind: %02X", uint8(v)))
 	}
@@ -91,6 +104,7 @@ const (
 	VAL_FLOAT
 	VAL_BOOL
 	VAL_STR
+	VAL_TOKEN
 )
 
 type Value struct {
