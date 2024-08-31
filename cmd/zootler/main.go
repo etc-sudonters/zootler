@@ -106,3 +106,8 @@ func main() {
 		exitWithErr(4, appCmdErr)
 	}
 }
+
+type LoadSettings struct{}
+type BuildWorld struct{}
+type PopulateWorld struct{}
+type SolveWorld struct{}
