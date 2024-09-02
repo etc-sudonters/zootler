@@ -4,7 +4,6 @@ import (
 	"context"
 	"math/rand/v2"
 	"reflect"
-	"sudonters/zootler/internal/app"
 	"sudonters/zootler/internal/generation"
 	"sudonters/zootler/internal/query"
 	"sudonters/zootler/internal/settings"
@@ -42,8 +41,8 @@ type defaultGenerationFactory Zootlr
 func (d *defaultGenerationFactory) New(settings settings.ZootrSettings) (*generation.Generation, error) {
 	g := d.new()
 	s := g.Seed
-	z := *app.Zootlr(d)
-	rng := GetResource[RngFactory](z)
+	z := Zootlr(*d)
+	rng := GetResource[RngFactory](&z)
 
 	if s.Settings.Seed == 0 {
 		s.Settings.Seed = rng.Res.Seed()
@@ -63,7 +62,7 @@ func (d *defaultGenerationFactory) New(settings settings.ZootrSettings) (*genera
 
 func (d *defaultGenerationFactory) new() *generation.Generation {
 	g := new(generation.Generation)
-	z := *app.Zootlr(d)
+	z := Zootlr(*d)
 
 	g.Seed = new(generation.SeedBuilder)
 	g.Ctx, g.Cancel = context.WithCancelCause(z.ctx)

@@ -21,10 +21,11 @@ func Identify(name string) *Identifier {
 	return &Identifier{Value: name}
 }
 
-func TokenLiteral[T ~uint64](t T) *Literal {
+// either a 'quoted literal' or Normalied_Identifier
+func TokenLiteral(t string) *Literal {
 	return &Literal{
 		Kind:  LiteralToken,
-		Value: uint64(t),
+		Value: t,
 	}
 }
 
@@ -60,22 +61,30 @@ func MakeCallSplat(callee Expression, args ...Expression) *Call {
 	return MakeCall(callee, args)
 }
 
-func AssertAs[T Expression](ast Expression) (T, error) {
-	if cast, casted := ast.(T); casted {
+func AssertAs[T Expression](pt Expression) (T, error) {
+	if cast, casted := pt.(T); casted {
 		return cast, nil
 	}
 
-	return mirrors.Empty[T](), slipup.Createf("could not cast %+v to %s", ast, mirrors.TypeOf[T]().Name())
+	return mirrors.Empty[T](), slipup.Createf("could not cast %+v to %s", pt, mirrors.TypeOf[T]().Name())
 }
 
-func Unify[A Expression, B Expression, C any](ast Expression, a func(A) (C, error), b func(B) (C, error)) (C, error) {
-	switch ast := ast.(type) {
+func MustAssertAs[T Expression](ast Expression) T {
+	t, err := AssertAs[T](ast)
+	if err != nil {
+		panic(err)
+	}
+	return t
+}
+
+func Unify[A Expression, B Expression, C any](pt Expression, a func(A) (C, error), b func(B) (C, error)) (C, error) {
+	switch pt := pt.(type) {
 	case A:
-		return a(ast)
+		return a(pt)
 	case B:
-		return b(ast)
+		return b(pt)
 	default:
-		return mirrors.Empty[C](), slipup.Createf("could not cast %+v to %s or", ast, mirrors.T[A]().Name(), mirrors.T[B]().Name())
+		return mirrors.Empty[C](), slipup.Createf("could not cast %+v to %s or", pt, mirrors.T[A]().Name(), mirrors.T[B]().Name())
 	}
 }
 

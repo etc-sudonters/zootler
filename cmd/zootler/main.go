@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"runtime"
 	"runtime/debug"
 	"sudonters/zootler/internal/app"
-	"sudonters/zootler/internal/settings"
 
 	"github.com/etc-sudonters/substrate/dontio"
 	"github.com/etc-sudonters/substrate/stageleft"
@@ -90,11 +90,7 @@ func main() {
 			Path:      path.Join(opts.dataDir, "locations.json"),
 			Add:       new(AttachDefaultItem),
 		}),
-		app.AddResource[settings.ZootrSettings](settings.Default()), // pretend we loaded it from somewhere
-		app.Setup(WorldLoader{
-			Path:    opts.logicDir,
-			Helpers: path.Join(path.Dir(opts.logicDir), "..", "helpers.json"),
-		}),
+		app.Setup(AllTheRulesFrom{opts.logicDir}),
 	)
 
 	if appCreateErr != nil {
@@ -102,12 +98,11 @@ func main() {
 		return
 	}
 
-	if appCmdErr := z.Run(example); appCmdErr != nil {
-		exitWithErr(4, appCmdErr)
-	}
-}
+	/*
+		if appCmdErr := z.Run(example); appCmdErr != nil {
+			exitWithErr(4, appCmdErr)
+		}
+	*/
 
-type LoadSettings struct{}
-type BuildWorld struct{}
-type PopulateWorld struct{}
-type SolveWorld struct{}
+	runtime.KeepAlive(z)
+}

@@ -2,9 +2,9 @@ package parser
 
 import (
 	"fmt"
+	"github.com/etc-sudonters/substrate/slipup"
 	"strconv"
 	"strings"
-	"github.com/etc-sudonters/substrate/slipup"
 
 	"github.com/etc-sudonters/substrate/peruse"
 )
@@ -69,6 +69,14 @@ func Parse(raw string) (Expression, error) {
 	l := NewRulesLexer(raw)
 	p := NewRulesParser(l)
 	return p.Parse()
+}
+
+func MustParse(raw string) Expression {
+	expr, err := Parse(raw)
+	if err != nil {
+		panic(err)
+	}
+	return expr
 }
 
 func NewRulesParser(l *peruse.StringLexer) *peruse.Parser[Expression] {

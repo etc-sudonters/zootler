@@ -2,13 +2,13 @@ package main
 
 import (
 	"context"
+	"github.com/etc-sudonters/substrate/dontio"
+	"github.com/etc-sudonters/substrate/slipup"
 	"strings"
 	"sudonters/zootler/internal"
 	"sudonters/zootler/internal/app"
 	"sudonters/zootler/internal/components"
 	"sudonters/zootler/internal/query"
-	"github.com/etc-sudonters/substrate/slipup"
-	"github.com/etc-sudonters/substrate/dontio"
 	"sudonters/zootler/internal/table"
 	"sudonters/zootler/internal/table/columns"
 	"sudonters/zootler/internal/table/indexes"
@@ -169,6 +169,7 @@ func MakeDDL() []DDL {
 		columns.BitColumnOf[components.ForestTempleMQ],
 		columns.BitColumnOf[components.ForestTemple],
 		columns.BitColumnOf[components.Forest],
+		columns.BitColumnOf[components.Freestandings],
 		columns.BitColumnOf[components.Freestanding],
 		columns.BitColumnOf[components.GanonBossKey],
 		columns.BitColumnOf[components.GanonsCastleMQ],

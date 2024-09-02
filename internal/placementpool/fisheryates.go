@@ -4,8 +4,6 @@ import (
 	"errors"
 	"math"
 	"math/rand/v2"
-
-	"golang.org/x/text/currency"
 )
 
 var ErrEmptyQueue = errors.New("empty queue")
