@@ -7,6 +7,7 @@ package ast
 
 type Node interface {
 	Type() AstNodeType
+	String() string
 }
 
 type AstNodeType uint8
@@ -57,13 +58,13 @@ type AstIdentifierKind uint8
 type AstLiteralKind uint8
 
 const (
-	AST_CMP_EQ AstCompareOp = iota + 1
-	AST_CMP_NQ
-	AST_CMP_LT
+	AST_CMP_EQ AstCompareOp = 1
+	AST_CMP_NQ              = 2
+	AST_CMP_LT              = 3
 
-	AST_BOOL_AND    AstBoolOp = 1
-	AST_BOOL_OR               = 2
-	AST_BOOL_NEGATE           = 3
+	AST_BOOL_AND    AstBoolOp = 4
+	AST_BOOL_OR               = 5
+	AST_BOOL_NEGATE           = 6
 
 	AST_IDENT_UNK AstIdentifierKind = 0
 	AST_IDENT_TOK                   = 2
@@ -98,3 +99,39 @@ func (n *Call) Type() AstNodeType       { return AST_NODE_CALL }
 func (n *Identifier) Type() AstNodeType { return AST_NODE_IDENT }
 func (n *Literal) Type() AstNodeType    { return AST_NODE_LITERAL }
 func (n *Empty) Type() AstNodeType      { return AST_NODE_EMPTY }
+
+func (n *Comparison) String() string {
+	var r AstRender
+	Visit(&r, n)
+	return r.String()
+}
+
+func (n *BooleanOp) String() string {
+	var r AstRender
+	Visit(&r, n)
+	return r.String()
+}
+
+func (n *Call) String() string {
+	var r AstRender
+	Visit(&r, n)
+	return r.String()
+}
+
+func (n *Identifier) String() string {
+	var r AstRender
+	Visit(&r, n)
+	return r.String()
+}
+
+func (n *Literal) String() string {
+	var r AstRender
+	Visit(&r, n)
+	return r.String()
+}
+
+func (n *Empty) String() string {
+	var r AstRender
+	Visit(&r, n)
+	return r.String()
+}

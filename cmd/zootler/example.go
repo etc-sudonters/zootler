@@ -1,8 +1,10 @@
 package main
 
+/*
+
 import (
+	"fmt"
 	"io/fs"
-	"iter"
 	"path/filepath"
 	"regexp"
 	"sudonters/zootler/internal"
@@ -16,93 +18,48 @@ import (
 	"github.com/etc-sudonters/substrate/slipup"
 )
 
-func panic_not_nil(err error) {
-	if err != nil {
-		panic(err)
-	}
-}
 
-type fileloc struct {
-	Checks map[string]string `json:"locations"`
-	Exits  map[string]string `json:"exits"`
-	Name   string            `json:"region_name"`
-}
-
-type AllTheRulesFrom struct {
-	Path string
-}
-
-var (
-	litTokenIdentRe = regexp.MustCompile("^[A-Z][A-Za-z_]+")
-	litTokenStrRe   = regexp.MustCompile("^[A-Z][A-Za-z_ ]+") // allows spaces
-	trickRe         = regexp.MustCompile("^logic_[a-z_]+")
-)
-
-type SpecialNameIdentifier ast.MacroDecls
-
-func (s SpecialNameIdentifier) Special(name string, inFuncCall bool) ast.Node {
-	if litTokenIdentRe.MatchString(name) || litTokenStrRe.MatchString(name) {
-		// TODO: ensure this is actually some kind of token by comparing to the store
-		ident := &ast.Identifier{
-			Name: string(internal.Normalize(name)),
-			Kind: ast.AST_IDENT_TOK,
-		}
-		if inFuncCall {
-			return ident
-		}
-
-		return &ast.Call{
-			Callee: "has",
-			Args: []ast.Node{
-				ident,
-				&ast.Literal{
-					Value: float64(1),
-					Kind:  ast.AST_LIT_NUM,
-				}},
-			Macro: false,
-		}
-	}
-
-	if trickRe.MatchString(name) {
-		ident := &ast.Identifier{
-			Name: string(internal.Normalize(name)),
-			Kind: ast.AST_IDENT_TRK,
-		}
-		if inFuncCall {
-			return ident
-		}
-
-		return &ast.Call{
-			Callee: "load_setting_2",
-			Args: []ast.Node{
-				&ast.Identifier{
-					Name: "tricks",
-					Kind: ast.AST_IDENT_SET,
-				},
-				ident,
-			},
-			Macro: false,
-		}
-	}
-
-	// if s.IsSettingName(name) ...
-	return nil
-}
 
 type MacroExpander struct {
 	Macros        ast.MacroDecls
 	CurrentOrigin string
+	expansions    map[string]int
 }
 
-func (x MacroExpander) Expand(node *ast.Call, scope zasm.AssemblerScope) (zasm.Instructions, error) {
+func (x *MacroExpander) Expand(node *ast.Call, scope zasm.AssemblerScope) (zasm.Instructions, error) {
 	decl, _ := x.Macros.Get(node.Callee)
 	if !decl.IsBuiltIn() {
 		return x.expandScript(node, decl, scope)
 	}
-	return nil, nil
+	return x.expandBuiltIn(node, decl, scope)
 }
 
-func (x MacroExpander) expandScript(call *ast.Call, decl ast.MacroDecl, scope zasm.AssemblerScope) (zasm.Instructions, error) {
+func (x *MacroExpander) expandBuiltIn(call *ast.Call, _ ast.MacroDecl, scope zasm.AssemblerScope) (zasm.Instructions, error) {
+	if call.Callee != "at" && call.Callee != "here" {
+		return zasm.Tape().WriteLoadBool(true).Instructions(), nil
+	}
+
+	if x.expansions == nil {
+		x.expansions = map[string]int{}
+	}
+
+	var target string
+	if call.Callee == "at" {
+		target = ast.MustAssertAs[*ast.Identifier](call.Args[0]).Name
+	} else {
+		if x.CurrentOrigin == "" {
+			panic(slipup.Createf("here invoked w/o origin set on expander: %s", call))
+		}
+		target = x.CurrentOrigin
+	}
+
+	name := fmt.Sprintf("<CANREACH>%s[%d]<%s>", target, x.expansions[target], x.CurrentOrigin)
+	x.expansions[target] += 1
+	ident := scope.Assembler.Data.Registers.Intern(name)
+	return zasm.Tape().WriteLoadIdent(uint32(ident)).WriteLoadU24(1).WriteOp(zasm.OP_CHK_QTY).Instructions(), nil
+}
+
+func (x *MacroExpander) expandScript(call *ast.Call, decl ast.MacroDecl, scope zasm.AssemblerScope) (zasm.Instructions, error) {
 	argErr := scope.InParentScope(func() error {
 		for idx, param := range decl.Params {
 			scratch := zasm.Scratch()
@@ -124,20 +81,18 @@ func (x MacroExpander) expandScript(call *ast.Call, decl ast.MacroDecl, scope za
 	return replacement.Instr, nil
 }
 
-func (s SpecialNameIdentifier) Macro(name string) bool {
-	return ast.MacroDecls(s).Exists(name)
-}
 
-func (r AllTheRulesFrom) Setup(z *app.Zootlr) error {
+func Setup(z *app.Zootlr) error {
 	ctx := z.Ctx()
-	macros, bodies := load_json_macros(filepath.Join(r.Path, "..", "helpers.json"))
+	macros, bodies := load_json_macros(filepath.Join("", "..", "helpers.json"))
+	sni := SpecialNameIdentifier{macros, make(map[string]struct{})}
 	xpander := MacroExpander{
 		Macros: macros,
 	}
 	assembly := zasm.NewAssembly()
 	assembler := zasm.Assembler{
 		Data:   zasm.NewDataBuilder(),
-		Macros: xpander,
+		Macros: &xpander,
 		Functions: map[string]int{
 			"has":                    2,
 			"has_all_notes_for_song": 1,
@@ -146,8 +101,13 @@ func (r AllTheRulesFrom) Setup(z *app.Zootlr) error {
 			"has_stones":             1,
 			"load_setting":           1,
 			"load_setting_2":         2,
+			"load_trick":             1,
 			"region_has_shortcuts":   1,
 		},
+	}
+
+	assembler.DebugOutput = func(tpl string, v ...any) {
+		dontio.WriteLineOut(ctx, tpl, v...)
 	}
 
 	macros.DeclareBuiltIn("at", []string{"target", "rule"})
@@ -156,10 +116,13 @@ func (r AllTheRulesFrom) Setup(z *app.Zootlr) error {
 	macros.DeclareBuiltIn("at_night", nil)
 	macros.DeclareBuiltIn("had_night_start", nil)
 	macros.DeclareBuiltIn("here", []string{"rule"})
-	astGen := ast.NewGenerator(SpecialNameIdentifier(macros))
+
+	sni.DeclareSetting("shuffle_individual_ocarina_notes")
+
+	astGen := ast.NewGenerator(&sni)
 	initialize_script_macros(astGen, macros, bodies)
 
-	filepath.Walk(r.Path, func(path string, info fs.FileInfo, err error) error {
+	filepath.Walk("", func(path string, info fs.FileInfo, err error) error {
 		dontio.WriteLineOut(ctx, "at logic dir file %s", path)
 		ext := filepath.Ext(path)
 		if ext != ".json" {
@@ -167,96 +130,42 @@ func (r AllTheRulesFrom) Setup(z *app.Zootlr) error {
 			return nil
 		}
 
-		locs, err := internal.ReadJsonFileAs[[]fileloc](path)
-		panic_not_nil(err)
+		locs, _ := internal.ReadJsonFileAs[[]fileloc](path)
 
-		for current, rule := range all_rules_from(locs) {
-			dontio.WriteLineOut(ctx, rule)
-			pt, parseErr := parser.Parse(rule)
+		for edge := range all_rules_from(locs) {
+			astGen.ClearStacks()
+			xpander.CurrentOrigin = edge.Origin
+			dontio.WriteLineOut(ctx, "%s -> %s: %s", edge.Origin, edge.Dest, edge.Rule)
+			pt, parseErr := parser.Parse(edge.Rule)
 			if parseErr != nil {
 				return slipup.Describe(parseErr, "while parsing")
 			}
 
-			astGen.ClearStacks()
-			ast, astErr := visitor.Transform(astGen, pt)
+			genAst, astErr := visitor.Transform(astGen, pt)
 			if astErr != nil {
 				return slipup.Describe(astErr, "pt -> ast on rule")
 			}
 
-			asmBlock, blockErr := assembly.Block(current)
+			repr := ast.AstRender{}
+			ast.Visit(&repr, genAst)
+			dontio.WriteLineOut(ctx, repr.String())
+
+			asmBlock, blockErr := assembly.Block(fmt.Sprintf("EDGE<%s>%s->%s", edge.Kind, edge.Origin, edge.Dest))
 			if blockErr != nil {
 				panic(blockErr)
 			}
-			xpander.CurrentOrigin = current
-			if err := assembler.AssembleInto(&asmBlock, ast); err != nil {
+			if err := assembler.AssembleInto(&asmBlock, genAst); err != nil {
 				panic(err)
 			}
+
+			dis := zasm.ZasmDisassembler{}
+			dontio.WriteLineOut(ctx, dis.Disassemble(asmBlock.Instr))
 		}
 
 		return nil
 	})
 
 	assembly.Load(assembler.Data)
-	dontio.WriteLineOut(ctx, "%#v", assembly.Data)
 	return nil
 }
-
-func all_rules_from(locs []fileloc) iter.Seq2[string, string] {
-	return func(yield func(string, string) bool) {
-		for _, loc := range locs {
-			for _, rule := range loc.Checks {
-				if !yield(loc.Name, rule) {
-					return
-				}
-			}
-
-			for _, rule := range loc.Exits {
-				if !yield(loc.Name, rule) {
-					return
-				}
-			}
-		}
-	}
-}
-
-func load_json_macros(path string) (ast.MacroDecls, map[string]parser.Expression) {
-	helpers, err := internal.ReadJsonFileStringMap(path)
-	if err != nil {
-		panic(err)
-	}
-
-	macros := ast.NewMacros(len(helpers))
-	macroBodies := make(map[string]parser.Expression, len(helpers))
-
-	for decl, body := range helpers {
-		decl := parser.MustParse(decl)
-		switch decl.Type() {
-		case parser.ExprCall:
-			decl := parser.MustAssertAs[*parser.Call](decl)
-			macro := ast.DeclareFromParseTree(macros, decl)
-
-			macroBodies[macro.Name] = parser.MustParse(body)
-			break
-		case parser.ExprIdentifier:
-			ident := parser.MustAssertAs[*parser.Identifier](decl)
-			macro := macros.Declare(ident.Value, nil)
-			macroBodies[macro.Name] = parser.MustParse(body)
-			break
-		default:
-			panic("macro decl wasn't call-ish or ident-ish")
-		}
-	}
-
-	return macros, macroBodies
-}
-
-func initialize_script_macros(gen *ast.AstGenerator, decls ast.MacroDecls, bodies map[string]parser.Expression) {
-	for which, body := range bodies {
-		gen.ClearStacks()
-		ast, astErr := visitor.Transform[ast.Node](gen, body)
-		if astErr != nil {
-			panic(astErr)
-		}
-		decls.Initialize(which, ast)
-	}
-}
+*/

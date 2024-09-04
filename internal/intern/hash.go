@@ -8,9 +8,10 @@ func NewInterner[T comparable]() HashIntern[T] {
 	}
 }
 
-func NewInternerF[T comparable](f func(T) T) HashInternF[T] {
-	return HashInternF[T]{
-		f: f, HashIntern: NewInterner[T](),
+func NewInternerF[T any, U comparable](f func(T) U) HashInternF[T, U] {
+	return HashInternF[T, U]{
+		f:          f,
+		HashIntern: NewInterner[U](),
 	}
 }
 
@@ -23,7 +24,7 @@ func (c HashIntern[T]) Intern(t T) Handle[T] {
 		return Handle[T](handle)
 	}
 
-	handle := Handle[T](len(c.interned))
+	handle := Handle[T](len(c.interned) + 1)
 	c.interned[t] = handle
 	return handle
 }
@@ -40,11 +41,11 @@ func (c HashIntern[T]) Len() int {
 	return len(c.interned)
 }
 
-type HashInternF[T comparable] struct {
-	HashIntern[T]
-	f func(T) T
+type HashInternF[T any, U comparable] struct {
+	HashIntern[U]
+	f func(T) U
 }
 
-func (c HashInternF[T]) Intern(t T) Handle[T] {
+func (c HashInternF[T, U]) Intern(t T) Handle[U] {
 	return c.HashIntern.Intern(c.f(t))
 }
