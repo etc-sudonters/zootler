@@ -1,0 +1,3 @@
+package jiro
+
+func LoadWorldGraph() {}

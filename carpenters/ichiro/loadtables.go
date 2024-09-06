@@ -1,0 +1,3 @@
+package ichiro
+
+func LoadDataTables() {}

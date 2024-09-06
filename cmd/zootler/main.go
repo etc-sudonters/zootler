@@ -8,8 +8,8 @@ import (
 	"path"
 	"runtime"
 	"runtime/debug"
+	"sudonters/zootler/carpenters"
 	"sudonters/zootler/internal/app"
-	"sudonters/zootler/internal/rules/ast"
 
 	"github.com/etc-sudonters/substrate/dontio"
 	"github.com/etc-sudonters/substrate/stageleft"
@@ -91,17 +91,10 @@ func main() {
 			Path:      path.Join(opts.dataDir, "locations.json"),
 			Add:       new(AttachDefaultItem),
 		}),
-		app.Setup(InstallParser{
-			MacrosPath: path.Join(opts.logicDir, "..", "helpers.json"),
+		app.AddResource(AstAllRuleEdges{
+			AllEdgeRulesFrom: AllEdgeRulesFrom{Path: opts.logicDir},
 		}),
-		app.SetupFunc(func(z *app.Zootlr) error {
-			aster := app.GetResource[*ast.AstGenerator](z)
-			z.AddResource(AstAllRuleEdges{
-				AllEdgeRulesFrom: AllEdgeRulesFrom{Path: opts.logicDir},
-				Aster:            aster.Res,
-			})
-			return nil
-		}),
+		app.Setup(&carpenters.Mutoh{}),
 		app.Setup(&IceArrowRuntime{}),
 	)
 

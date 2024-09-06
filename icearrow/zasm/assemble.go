@@ -11,8 +11,7 @@ type ZasmMacroExpander interface {
 }
 
 type Assembler struct {
-	Data   DataBuilder
-	Macros ZasmMacroExpander
+	Data DataBuilder
 }
 
 type Assembly struct {
@@ -61,10 +60,6 @@ func (a *Assembler) BooleanOp(node *ast.BooleanOp) (Instructions, error) {
 		return a.negate(node.LHS)
 	}
 
-	if instructions, didEliminate := a.eliminateConstBranchAst(node); didEliminate {
-		return instructions, nil
-	}
-
 	lhs, _ := ast.Transform(a, node.LHS)
 	rhs, _ := ast.Transform(a, node.RHS)
 
@@ -72,10 +67,6 @@ func (a *Assembler) BooleanOp(node *ast.BooleanOp) (Instructions, error) {
 }
 
 func (a *Assembler) Call(node *ast.Call) (Instructions, error) {
-	if instructions, didExpand := a.tryExpandMacro(node); didExpand {
-		return instructions, nil
-	}
-
 	if instructions, didFastOps := a.tryFastCall(node); didFastOps {
 		return instructions, nil
 	}
@@ -154,19 +145,6 @@ func (a *Assembler) eliminateConstCompareAst(node *ast.Comparison) (Instructions
 	if lhs == rhs {
 		return IW().WriteLoadBool(node.Op == ast.AST_CMP_EQ).I, true
 	}
-	return nil, false
-}
-
-func (a *Assembler) eliminateConstBranchAst(_ *ast.BooleanOp) (Instructions, bool) {
-	return nil, false
-}
-
-func (a *Assembler) tryExpandMacro(call *ast.Call) (Instructions, bool) {
-	if !call.Macro {
-		return nil, false
-	}
-
-	//return a.Macros.ExpandMacro(a, call), true
 	return nil, false
 }
 

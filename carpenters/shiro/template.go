@@ -1,0 +1,3 @@
+package shiro
+
+func CreateWorldTemplate() {}

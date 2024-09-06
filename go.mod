@@ -3,7 +3,7 @@ module sudonters/zootler
 go 1.23.0
 
 require (
-	github.com/etc-sudonters/substrate v0.0.0-20240822010006-0b2552e3f858
+	github.com/etc-sudonters/substrate v0.0.0-20240906224308-eadb50a747e5
 	muzzammil.xyz/jsonc v1.0.0
 )
 

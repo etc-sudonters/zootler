@@ -2,7 +2,6 @@ package parser
 
 import (
 	"fmt"
-	"sudonters/zootler/internal/rules/visitor"
 )
 
 type ValidatingVisitor struct {
@@ -23,11 +22,11 @@ func (v ValidatingVisitor) VisitBinOp(o *BinOp) error {
 		return v.unexpected(o)
 	}
 
-	err := visitor.Visit(ValidatingVisitor{e.Left}, o.Left)
+	err := Visit(ValidatingVisitor{e.Left}, o.Left)
 	if err != nil {
 		return v.trace(err)
 	}
-	err = visitor.Visit(ValidatingVisitor{e.Right}, o.Right)
+	err = Visit(ValidatingVisitor{e.Right}, o.Right)
 	if err != nil {
 		return v.trace(err)
 	}
@@ -41,11 +40,11 @@ func (v ValidatingVisitor) VisitBoolOp(o *BoolOp) error {
 		return v.unexpected(o)
 	}
 
-	err := visitor.Visit(ValidatingVisitor{e.Left}, o.Left)
+	err := Visit(ValidatingVisitor{e.Left}, o.Left)
 	if err != nil {
 		return v.trace(err)
 	}
-	err = visitor.Visit(ValidatingVisitor{e.Right}, o.Right)
+	err = Visit(ValidatingVisitor{e.Right}, o.Right)
 	if err != nil {
 		return v.trace(err)
 	}
@@ -59,13 +58,13 @@ func (v ValidatingVisitor) VisitCall(o *Call) error {
 		return v.unexpected(o)
 	}
 
-	err := visitor.Visit(ValidatingVisitor{e.Callee}, o.Callee)
+	err := Visit(ValidatingVisitor{e.Callee}, o.Callee)
 	if err != nil {
 		return v.trace(err)
 	}
 
 	for i := range o.Args {
-		err = visitor.Visit(ValidatingVisitor{e.Args[i]}, o.Args[i])
+		err = Visit(ValidatingVisitor{e.Args[i]}, o.Args[i])
 		if err != nil {
 			return v.trace(err)
 		}
@@ -88,12 +87,12 @@ func (v ValidatingVisitor) VisitSubscript(o *Subscript) error {
 		return v.unexpected(o)
 	}
 
-	err := visitor.Visit(ValidatingVisitor{e.Target}, o.Target)
+	err := Visit(ValidatingVisitor{e.Target}, o.Target)
 	if err != nil {
 		return v.trace(err)
 	}
 
-	err = visitor.Visit(ValidatingVisitor{e.Index}, o.Index)
+	err = Visit(ValidatingVisitor{e.Index}, o.Index)
 	if err != nil {
 		return v.trace(err)
 	}
@@ -108,7 +107,7 @@ func (v ValidatingVisitor) VisitTuple(o *Tuple) error {
 	}
 
 	for i := range o.Elems {
-		err := visitor.Visit(ValidatingVisitor{e.Elems[i]}, o.Elems[i])
+		err := Visit(ValidatingVisitor{e.Elems[i]}, o.Elems[i])
 		if err != nil {
 			return v.trace(err)
 		}
@@ -123,7 +122,7 @@ func (v ValidatingVisitor) VisitUnary(o *UnaryOp) error {
 		return v.unexpected(o)
 	}
 
-	err := visitor.Visit(ValidatingVisitor{e.Target}, o.Target)
+	err := Visit(ValidatingVisitor{e.Target}, o.Target)
 	if err != nil {
 		err = v.trace(err)
 	}

@@ -17,7 +17,7 @@ const (
 	notWord    = "not"
 	inWord     = "in"
 
-	_ peruse.TokenType = iota
+	BAD_TOK peruse.TokenType = iota
 	TokenOpenParen
 	TokenCloseParen
 	TokenOpenBracket
@@ -35,6 +35,9 @@ const (
 	TokenLt
 	TokenUnaryNot
 	TokenContains
+
+	TOK_MACRO_ARG_1 = 0xFFFF0001
+	TOK_MACRO_ARG_2 = 0xFFFF0002
 )
 
 func TokenTypeString(i peruse.TokenType) string {

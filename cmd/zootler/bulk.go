@@ -8,7 +8,6 @@ import (
 	"sudonters/zootler/internal"
 	"sudonters/zootler/internal/rules/ast"
 	"sudonters/zootler/internal/rules/parser"
-	"sudonters/zootler/internal/rules/visitor"
 )
 
 type AstEdge struct {
@@ -28,16 +27,16 @@ type fileloc struct {
 
 type AstAllRuleEdges struct {
 	AllEdgeRulesFrom
-	Aster *ast.AstGenerator
 }
 
 func (a AstAllRuleEdges) Iter(yield func(AstEdge) bool) {
+	var aster ast.Ast
 	for edge := range a.AllEdgeRulesFrom.Iter {
 		pt, ptErr := parser.Parse(edge.Rule)
 		if ptErr != nil {
 			panic(ptErr)
 		}
-		ast, err := visitor.Transform(a.Aster, pt)
+		ast, err := parser.Transform(&aster, pt)
 		if err != nil {
 			panic(err)
 		}
@@ -97,47 +96,5 @@ func all_rules_from(locs []fileloc) iter.Seq[RuleEdge] {
 				}
 			}
 		}
-	}
-}
-
-func load_json_macros(path string) (ast.MacroDecls, map[string]parser.Expression) {
-	helpers, err := internal.ReadJsonFileStringMap(path)
-	if err != nil {
-		panic(err)
-	}
-
-	macros := ast.NewMacros(len(helpers))
-	macroBodies := make(map[string]parser.Expression, len(helpers))
-
-	for decl, body := range helpers {
-		decl := parser.MustParse(decl)
-		switch decl.Type() {
-		case parser.ExprCall:
-			decl := parser.MustAssertAs[*parser.Call](decl)
-			macro := ast.DeclareFromParseTree(macros, decl)
-
-			macroBodies[macro.Name] = parser.MustParse(body)
-			break
-		case parser.ExprIdentifier:
-			ident := parser.MustAssertAs[*parser.Identifier](decl)
-			macro := macros.Declare(ident.Value, nil)
-			macroBodies[macro.Name] = parser.MustParse(body)
-			break
-		default:
-			panic("macro decl wasn't call-ish or ident-ish")
-		}
-	}
-
-	return macros, macroBodies
-}
-
-func initialize_script_macros(gen *ast.AstGenerator, decls ast.MacroDecls, bodies map[string]parser.Expression) {
-	for which, body := range bodies {
-		gen.ClearStacks()
-		ast, astErr := visitor.Transform(gen, body)
-		if astErr != nil {
-			panic(astErr)
-		}
-		decls.Initialize(which, ast)
 	}
 }

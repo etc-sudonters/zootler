@@ -84,7 +84,7 @@ func Unify[A Expression, B Expression, C any](pt Expression, a func(A) (C, error
 	case B:
 		return b(pt)
 	default:
-		return mirrors.Empty[C](), slipup.Createf("could not cast %+v to %s or", pt, mirrors.T[A]().Name(), mirrors.T[B]().Name())
+		return mirrors.Empty[C](), slipup.Createf("could not cast %+v to %s or %s", pt, mirrors.T[A]().Name(), mirrors.T[B]().Name())
 	}
 }
 

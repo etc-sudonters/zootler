@@ -2,6 +2,16 @@ github.com/etc-sudonters/substrate v0.0.0-20240808010954-faca5686d0e4 h1:H/gxcjX
 github.com/etc-sudonters/substrate v0.0.0-20240808010954-faca5686d0e4/go.mod h1:fIQBB70tduyrZsUd4sab35FiYjSLB+cvHu0TVEYlfk4=
 github.com/etc-sudonters/substrate v0.0.0-20240822010006-0b2552e3f858 h1:ysVcJnQi91aegjKOQMXEBGXw7ZtU36cni+iGWd86Tcs=
 github.com/etc-sudonters/substrate v0.0.0-20240822010006-0b2552e3f858/go.mod h1:zCoHoCnCxOmbYUNN/dT/aCOEsPw6MA1uGv80XKf6Jr8=
+github.com/etc-sudonters/substrate v0.0.0-20240905011329-597ece73959c h1:3fIXG1EjnJJidk1+prhamtzPcZLjoE/+RSV8hdfkx94=
+github.com/etc-sudonters/substrate v0.0.0-20240905011329-597ece73959c/go.mod h1:zCoHoCnCxOmbYUNN/dT/aCOEsPw6MA1uGv80XKf6Jr8=
+github.com/etc-sudonters/substrate v0.0.0-20240905224435-57d5c716019c h1:AS8nEDuUMyctJXjFiU95GM5tn+a+Kh1R8ARrZkS4qQY=
+github.com/etc-sudonters/substrate v0.0.0-20240905224435-57d5c716019c/go.mod h1:zCoHoCnCxOmbYUNN/dT/aCOEsPw6MA1uGv80XKf6Jr8=
+github.com/etc-sudonters/substrate v0.0.0-20240905224616-a9612b092669 h1:s5qGBkYhL9Mt1gVbvtnpYwTLh6ustFz8r2u5nklf508=
+github.com/etc-sudonters/substrate v0.0.0-20240905224616-a9612b092669/go.mod h1:zCoHoCnCxOmbYUNN/dT/aCOEsPw6MA1uGv80XKf6Jr8=
+github.com/etc-sudonters/substrate v0.0.0-20240905224748-e71ffb4ec7a5 h1:Ix1XhAyUXjyu0jg1npVCa1StLRQiVABe1b0k8wk84L0=
+github.com/etc-sudonters/substrate v0.0.0-20240905224748-e71ffb4ec7a5/go.mod h1:zCoHoCnCxOmbYUNN/dT/aCOEsPw6MA1uGv80XKf6Jr8=
+github.com/etc-sudonters/substrate v0.0.0-20240906224308-eadb50a747e5 h1:ms6RmDJVOXut9drMLIuG43viO1RH1An/fpYrhC1+sLE=
+github.com/etc-sudonters/substrate v0.0.0-20240906224308-eadb50a747e5/go.mod h1:zCoHoCnCxOmbYUNN/dT/aCOEsPw6MA1uGv80XKf6Jr8=
 golang.org/x/exp v0.0.0-20231006140011-7918f672742d h1:jtJma62tbqLibJ5sFQz8bKtEM8rJBtfilJ2qTU199MI=
 golang.org/x/exp v0.0.0-20231006140011-7918f672742d/go.mod h1:ldy0pHrwJyGW56pPQzzkH36rKxoZW1tw7ZJpeKx+hdo=
 muzzammil.xyz/jsonc v1.0.0 h1:B6kaT3wHueZ87mPz3q1nFuM1BlL32IG0wcq0/uOsQ18=

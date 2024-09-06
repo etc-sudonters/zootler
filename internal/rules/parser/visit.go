@@ -1,27 +1,63 @@
-package visitor
+package parser
 
 import (
 	"errors"
 	"fmt"
-	"sudonters/zootler/internal/rules/parser"
 
 	"github.com/etc-sudonters/substrate/slipup"
 
 	"github.com/etc-sudonters/substrate/stageleft"
 )
 
-type Transformer[T any] interface {
-	TransformBinOp(*parser.BinOp) (T, error)
-	TransformBoolOp(*parser.BoolOp) (T, error)
-	TransformCall(*parser.Call) (T, error)
-	TransformIdentifier(*parser.Identifier) (T, error)
-	TransformSubscript(*parser.Subscript) (T, error)
-	TransformTuple(*parser.Tuple) (T, error)
-	TransformUnary(*parser.UnaryOp) (T, error)
-	TransformLiteral(*parser.Literal) (T, error)
+type Visitor interface {
+	VisitBinOp(*BinOp) error
+	VisitBoolOp(*BoolOp) error
+	VisitCall(*Call) error
+	VisitIdentifier(*Identifier) error
+	VisitSubscript(*Subscript) error
+	VisitTuple(*Tuple) error
+	VisitUnary(*UnaryOp) error
+	VisitLiteral(*Literal) error
 }
 
-func TransformAll[T any](trans Transformer[T], nodes []parser.Expression) ([]T, error) {
+func Visit(v Visitor, node Expression) error {
+	switch node := node.(type) {
+	case *BinOp:
+		return v.VisitBinOp(node)
+	case *BoolOp:
+		return v.VisitBoolOp(node)
+	case *Call:
+		return v.VisitCall(node)
+	case *Identifier:
+		return v.VisitIdentifier(node)
+	case *Literal:
+		return v.VisitLiteral(node)
+	case *Subscript:
+		return v.VisitSubscript(node)
+	case *Tuple:
+		return v.VisitTuple(node)
+	case *UnaryOp:
+		return v.VisitUnary(node)
+	default:
+		panic(stageleft.AttachExitCode(
+			fmt.Errorf("unknown node type %T", node),
+			stageleft.ExitCode(90),
+		))
+	}
+}
+
+type Transformer[T any] interface {
+	TransformBinOp(*BinOp) (T, error)
+	TransformBoolOp(*BoolOp) (T, error)
+	TransformCall(*Call) (T, error)
+	TransformIdentifier(*Identifier) (T, error)
+	TransformSubscript(*Subscript) (T, error)
+	TransformTuple(*Tuple) (T, error)
+	TransformUnary(*UnaryOp) (T, error)
+	TransformLiteral(*Literal) (T, error)
+}
+
+func TransformAll[T any](trans Transformer[T], nodes []Expression) ([]T, error) {
 	transed := make([]T, len(nodes))
 	var err error
 
@@ -34,23 +70,23 @@ func TransformAll[T any](trans Transformer[T], nodes []parser.Expression) ([]T, 
 	return transed, err
 }
 
-func Transform[T any](trans Transformer[T], node parser.Expression) (T, error) {
+func Transform[T any](trans Transformer[T], node Expression) (T, error) {
 	switch node := node.(type) {
-	case *parser.BinOp:
+	case *BinOp:
 		return trans.TransformBinOp(node)
-	case *parser.BoolOp:
+	case *BoolOp:
 		return trans.TransformBoolOp(node)
-	case *parser.Call:
+	case *Call:
 		return trans.TransformCall(node)
-	case *parser.Identifier:
+	case *Identifier:
 		return trans.TransformIdentifier(node)
-	case *parser.Literal:
+	case *Literal:
 		return trans.TransformLiteral(node)
-	case *parser.Subscript:
+	case *Subscript:
 		return trans.TransformSubscript(node)
-	case *parser.Tuple:
+	case *Tuple:
 		return trans.TransformTuple(node)
-	case *parser.UnaryOp:
+	case *UnaryOp:
 		return trans.TransformUnary(node)
 	default:
 		panic(stageleft.AttachExitCode(
@@ -60,7 +96,7 @@ func Transform[T any](trans Transformer[T], node parser.Expression) (T, error) {
 	}
 }
 
-func TransformBinOpAst(t Transformer[parser.Expression], op *parser.BinOp) (*parser.BinOp, error) {
+func TransformBinOpAst(t Transformer[Expression], op *BinOp) (*BinOp, error) {
 	left, leftErr := Transform(t, op.Left)
 	if leftErr != nil {
 		return nil, slipup.Describef(leftErr, "while transforming left hand side %+v", op)
@@ -69,7 +105,7 @@ func TransformBinOpAst(t Transformer[parser.Expression], op *parser.BinOp) (*par
 	if rightErr != nil {
 		return nil, slipup.Describef(rightErr, "while transforming right hand side %+v", op)
 	}
-	op = &parser.BinOp{
+	op = &BinOp{
 		Left:  left,
 		Op:    op.Op,
 		Right: right,
@@ -77,7 +113,7 @@ func TransformBinOpAst(t Transformer[parser.Expression], op *parser.BinOp) (*par
 	return op, nil
 }
 
-func TransformBoolOpAst(t Transformer[parser.Expression], op *parser.BoolOp) (*parser.BoolOp, error) {
+func TransformBoolOpAst(t Transformer[Expression], op *BoolOp) (*BoolOp, error) {
 	left, leftErr := Transform(t, op.Left)
 	if leftErr != nil {
 		return nil, slipup.Describef(leftErr, "while transforming left hand side %+v", op)
@@ -86,7 +122,7 @@ func TransformBoolOpAst(t Transformer[parser.Expression], op *parser.BoolOp) (*p
 	if rightErr != nil {
 		return nil, slipup.Describef(rightErr, "while transforming right hand side %+v", op)
 	}
-	op = &parser.BoolOp{
+	op = &BoolOp{
 		Left:  left,
 		Op:    op.Op,
 		Right: right,
@@ -94,16 +130,16 @@ func TransformBoolOpAst(t Transformer[parser.Expression], op *parser.BoolOp) (*p
 	return op, nil
 }
 
-func TransformCallAst(t Transformer[parser.Expression], call *parser.Call) (*parser.Call, error) {
+func TransformCallAst(t Transformer[Expression], call *Call) (*Call, error) {
 	callee, calleeErr := Transform(t, call.Callee)
 	if calleeErr != nil {
 		return nil, slipup.Describef(calleeErr, "while parsing callee %+v", callee)
 	}
 
 	args := call.Args
-	call = &parser.Call{
+	call = &Call{
 		Callee: callee,
-		Args:   make([]parser.Expression, len(args), len(args)),
+		Args:   make([]Expression, len(args), len(args)),
 	}
 
 	for i, a := range args {
@@ -116,15 +152,15 @@ func TransformCallAst(t Transformer[parser.Expression], call *parser.Call) (*par
 	return call, nil
 }
 
-func TransformIdentifierAst(t Transformer[parser.Expression], ident *parser.Identifier) (*parser.Identifier, error) {
+func TransformIdentifierAst(t Transformer[Expression], ident *Identifier) (*Identifier, error) {
 	return ident, nil
 }
 
-func TransformLiteral(t Transformer[parser.Expression], literal *parser.Literal) (*parser.Literal, error) {
+func TransformLiteral(t Transformer[Expression], literal *Literal) (*Literal, error) {
 	return literal, nil
 }
 
-func TransformSubscriptAst(t Transformer[parser.Expression], subscript *parser.Subscript) (*parser.Subscript, error) {
+func TransformSubscriptAst(t Transformer[Expression], subscript *Subscript) (*Subscript, error) {
 	target, targetErr := Transform(t, subscript.Target)
 	if targetErr != nil {
 		return nil, slipup.Describef(targetErr, "while transforming target %+v", subscript)
@@ -133,17 +169,17 @@ func TransformSubscriptAst(t Transformer[parser.Expression], subscript *parser.S
 	if indexErr != nil {
 		return nil, slipup.Describef(indexErr, "while transforming index %+v", subscript)
 	}
-	subscript = &parser.Subscript{
+	subscript = &Subscript{
 		Target: target,
 		Index:  index,
 	}
 	return subscript, nil
 }
 
-func TransformTupleAst(t Transformer[parser.Expression], tuple *parser.Tuple) (*parser.Tuple, error) {
+func TransformTupleAst(t Transformer[Expression], tuple *Tuple) (*Tuple, error) {
 	elems := tuple.Elems
-	tuple = &parser.Tuple{
-		Elems: make([]parser.Expression, len(elems), len(elems)),
+	tuple = &Tuple{
+		Elems: make([]Expression, len(elems), len(elems)),
 	}
 	for i, elm := range tuple.Elems {
 		elem, elemErr := Transform(t, elm)
@@ -155,12 +191,12 @@ func TransformTupleAst(t Transformer[parser.Expression], tuple *parser.Tuple) (*
 	return tuple, nil
 }
 
-func TransformUnaryAst(t Transformer[parser.Expression], unary *parser.UnaryOp) (*parser.UnaryOp, error) {
+func TransformUnaryAst(t Transformer[Expression], unary *UnaryOp) (*UnaryOp, error) {
 	operand, operandErr := Transform(t, unary.Target)
 	if operandErr != nil {
 		return nil, slipup.Describef(operandErr, "while transforming operand %+v", unary)
 	}
-	unary = &parser.UnaryOp{
+	unary = &UnaryOp{
 		Target: operand,
 		Op:     unary.Op,
 	}

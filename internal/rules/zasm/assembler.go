@@ -9,8 +9,6 @@ import (
 	"github.com/etc-sudonters/substrate/slipup"
 )
 
-var disser ZasmDisassembler
-
 func Scratch() Block {
 	return Block{
 		Label: "$<>SCRATCH",
@@ -187,8 +185,6 @@ func (a *Assembler) BooleanOp(node *ast.BooleanOp) (Instructions, error) {
 
 		if lhs == nil {
 			a.debug("no output lhs")
-		} else {
-			a.debug(disser.Disassemble(lhs))
 		}
 
 		if lhs.MatchOne(INSTR_LOAD_BOOL) {
@@ -228,8 +224,6 @@ func (a *Assembler) BooleanOp(node *ast.BooleanOp) (Instructions, error) {
 
 		if rhs == nil {
 			a.debug("no output rhs")
-		} else {
-			a.debug(disser.Disassemble(rhs))
 		}
 
 		if rhs.MatchOne(INSTR_LOAD_BOOL) {
@@ -303,9 +297,6 @@ func (a *Assembler) Call(node *ast.Call) (Instructions, error) {
 		defer stopScope()
 		a.debug("expanding macro %+v", node)
 		expansion, err := a.Macros.Expand(node, scope)
-		if err == nil {
-			a.debug("expanded\n%s", disser.Disassemble(expansion))
-		}
 		return expansion, err
 	}
 

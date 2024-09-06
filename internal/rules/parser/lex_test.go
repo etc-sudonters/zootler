@@ -153,15 +153,11 @@ func toksAreEqual(expected, actual []peruse.Token, t *testing.T) {
 		t.Logf("expected:\t%d\nactual:\t%d\n", len(expected), len(actual))
 	}
 
-	z := reiterate.ZipTwo(expected, actual)
-
-	matchingPair := func(a, b peruse.Token) interface{} { return fungible(a, b) }
-
-	for i := 0; z.Next(); i++ {
-		p := z.Current()
-		if !(p.Reduce(matchingPair)).(bool) {
+	for i := range len(actual) {
+		if !fungible(actual[i], expected[i]) {
 			t.Fail()
-			t.Logf("mismatch at index %d\nexpected:\t%+v\nactual:\t%+v", i, p.A, p.B)
+			t.Logf("mismatch at index %d\nexpected:\t%+v\nactual:\t%+v", i, expected[i], actual[i])
+
 		}
 	}
 }

@@ -1,5 +1,7 @@
 package defaults
 
+/*
+
 import (
 	"math"
 	"sudonters/zootler/settings"
@@ -689,3 +691,4 @@ var item_table = map[string]any{
 	"Shadow Medallion": rawtoken{"DungeonReward", PriorityAdvancement, GI_MISSING, map[string]any{"medallion": true, "addr2_data": 0x41, "bit_mask": 0x00000010, "item_id": 0x6A, "actor_type": 0x0D, "object_id": 0x00BA}},
 	"Light Medallion":  rawtoken{"DungeonReward", PriorityAdvancement, GI_MISSING, map[string]any{"medallion": true, "addr2_data": 0x40, "bit_mask": 0x00000020, "item_id": 0x6B, "actor_type": 0x0E, "object_id": 0x00BA}},
 }
+*/

@@ -1,12 +1,11 @@
 package main
 
 import (
+	"github.com/etc-sudonters/substrate/dontio"
 	"iter"
 	"sudonters/zootler/icearrow/zasm"
 	"sudonters/zootler/internal/app"
 	"sudonters/zootler/internal/rules/ast"
-
-	"github.com/etc-sudonters/substrate/dontio"
 )
 
 type IceArrowRuntime struct{}
@@ -17,10 +16,8 @@ type IceArrowEdge struct {
 }
 
 func (iar *IceArrowRuntime) Setup(z *app.Zootlr) error {
-	macros := app.GetResource[ast.MacroDecls](z)
 	ass := zasm.Assembler{
-		Data:   zasm.NewDataBuilder(),
-		Macros: &xpander{macros: macros.Res},
+		Data: zasm.NewDataBuilder(),
 	}
 
 	for edge := range iar.assembleAllEdge(&ass, app.GetResource[AstAllRuleEdges](z).Res.Iter) {
