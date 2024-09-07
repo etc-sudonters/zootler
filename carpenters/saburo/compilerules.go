@@ -1,7 +1,6 @@
 package saburo
 
 import (
-	"iter"
 	"sudonters/zootler/icearrow/ast"
 	parsing "sudonters/zootler/icearrow/parser"
 	"sudonters/zootler/icearrow/zasm"
@@ -22,15 +21,18 @@ type RuleCompilation struct {
 }
 
 func (rc RuleCompilation) Setup(z *app.Zootlr) error {
-	return rc.assembleAllRules(z)
+	macros := parsing.DefaultCoven()
+	rc.loadMacros(parsing.InitiateCoven(&macros))
+	parser := rc.createParser(macros)
+	return rc.assembleAllRules(z, parser)
 }
 
-func (rc RuleCompilation) assembleAllRules(z *app.Zootlr) error {
-	parser := parsing.NewBetterRulesParser()
+func (rc RuleCompilation) assembleAllRules(z *app.Zootlr, rp parsing.RulesParser) error {
 	assembler := rc.createAssembler()
+	edges := app.GetResource[entities.Edges](z)
 
-	for edge := range rc.edges(z) {
-		pt, ptErr := parser.ParseString(string(edge.GetRawRule()))
+	for edge := range edges.Res.All {
+		pt, ptErr := rp.ParseString(string(edge.GetRawRule()))
 		paniconerr(ptErr)
 		ast, astErr := parsing.Transform(&ast.Ast{}, pt)
 		paniconerr(astErr)
@@ -46,8 +48,8 @@ func (rc RuleCompilation) assembleAllRules(z *app.Zootlr) error {
 	return nil
 }
 
-func (rc RuleCompilation) createParser() parsing.RulesParser {
-	return parsing.NewBetterRulesParser()
+func (rc RuleCompilation) createParser(mc parsing.MacroCoven) parsing.RulesParser {
+	return parsing.NewRulesParser(mc)
 }
 
 func (rc RuleCompilation) createAssembler() zasm.Assembler {
@@ -56,13 +58,6 @@ func (rc RuleCompilation) createAssembler() zasm.Assembler {
 	}
 }
 
-func (rc RuleCompilation) edges(z *app.Zootlr) iter.Seq[entities.Edge] {
-	edges := app.GetResource[entities.Edges](z)
-	return func(yield func(entities.Edge) bool) {
-		for edge := range edges.Res.All {
-			if !yield(edge) {
-				return
-			}
-		}
-	}
+func (rc RuleCompilation) loadMacros(mb parsing.MacroBuilder) error {
+	return LoadScriptedMacros(mb, rc.ScriptPath)
 }

@@ -36,8 +36,8 @@ const (
 	TokenUnaryNot
 	TokenContains
 
-	TOK_MACRO_ARG_1 = 0xFFFF0001
-	TOK_MACRO_ARG_2 = 0xFFFF0002
+	TOK_MACRO_ARG_0 = 0xFFFA0000
+	TOK_MACRO_ARG_1 = 0xFFFA0001
 )
 
 func TokenTypeString(i peruse.TokenType) string {

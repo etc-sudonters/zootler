@@ -5,12 +5,13 @@ import (
 	"github.com/etc-sudonters/substrate/skelly/stack"
 )
 
-func NewBetterRulesParser() RulesParser {
+func NewRulesParser(macros MacroCoven) RulesParser {
 	var r RulesParser
 	r.annointedGrammar = annointGrammar(&r)
 	r.tokenStreams = &TokenStreamStack{}
 	r.tokenStreams.toks = make(stack.S[peruse.TokenStream], 0, 8)
 	r.parser = peruse.NewParser(&r.annointedGrammar, r.tokenStreams)
+	r.macros = macros
 	return r
 }
 
