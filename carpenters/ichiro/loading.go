@@ -18,17 +18,17 @@ func (dl *DataLoader) Setup(z *app.Zootlr) error {
 		return slipup.Createf("while creating data table")
 	}
 
-	tokens, tokenMapErr := entities.TokenMap(z.Engine())
+	tokens, tokenMapErr := entities.TokenMap(z.Table())
 	if tokenMapErr != nil {
 		return slipup.Describe(tokenMapErr, "while creating token map")
 	}
 
-	locations, locationMapErr := entities.LocationMap(z.Engine())
+	locations, locationMapErr := entities.LocationMap(z.Table())
 	if locationMapErr != nil {
 		return slipup.Describe(locationMapErr, "while creating location map")
 	}
 
-	edges, edgeMapErr := entities.EdgeMap(z.Engine())
+	edges, edgeMapErr := entities.EdgeMap(z.Table())
 	if edgeMapErr != nil {
 		return slipup.Describe(edgeMapErr, "while creating edge map")
 	}
@@ -47,8 +47,8 @@ func (dl *DataLoader) Setup(z *app.Zootlr) error {
 		return slipup.Describe(locationLoadErr, "while loading item data")
 	}
 
-	app.AddResource[entities.Map[entities.Token]](tokens)
-	app.AddResource[entities.Map[entities.Location]](locations)
-	app.AddResource[entities.Map[entities.Edge]](edges)
+	z.AddResource(tokens)
+	z.AddResource(locations)
+	z.AddResource(edges)
 	return nil
 }

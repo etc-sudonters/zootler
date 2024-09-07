@@ -5,13 +5,17 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"reflect"
 	"runtime"
 	"runtime/debug"
 	"sudonters/zootler/carpenters"
 	"sudonters/zootler/carpenters/ichiro"
+	"sudonters/zootler/carpenters/jiro"
 	"sudonters/zootler/internal/app"
+	"sudonters/zootler/internal/components"
 
 	"github.com/etc-sudonters/substrate/dontio"
+	"github.com/etc-sudonters/substrate/mirrors"
 	"github.com/etc-sudonters/substrate/stageleft"
 )
 
@@ -87,11 +91,19 @@ func main() {
 					Scheme: ichiro.BaseDDL(),
 				},
 				DataPath: opts.dataDir,
-			}}),
-		app.AddResource(AstAllRuleEdges{
+			},
+			Jiro: jiro.WorldGraph{LogicDir: opts.logicDir},
+		}),
+		app.SetupResource(AstAllRuleEdges{
 			AllEdgeRulesFrom: AllEdgeRulesFrom{Path: opts.logicDir},
 		}),
 		app.Setup(&IceArrowRuntime{}),
+		app.Setup(InspectTable{Columns: []reflect.Type{
+			mirrors.T[components.Bottle](),
+			mirrors.T[components.CollectableGameToken](),
+			mirrors.T[components.Location](),
+			mirrors.T[components.ForestTemple](),
+		}}),
 	)
 
 	if appCreateErr != nil {

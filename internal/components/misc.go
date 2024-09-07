@@ -1,6 +1,7 @@
 package components
 
 import (
+	"sudonters/zootler/internal/entity"
 	"sudonters/zootler/internal/rules/runtime"
 )
 
@@ -12,9 +13,11 @@ type HintRegion struct {
 
 type Edge struct{}
 
-type RawLogic struct {
-	Rule string
+type Connection struct {
+	Origin, Dest entity.Model
 }
+
+type RawLogic string
 
 type Helper struct{}
 
@@ -27,3 +30,4 @@ type CheckEdge struct{}
 type EventEdge struct{}
 type TimePasses struct{}
 type SavewarpName string
+type Scene string

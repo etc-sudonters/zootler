@@ -78,7 +78,7 @@ func (z *Zootlr) Run(cmd AppCmd) error {
 	return cmd(z)
 }
 
-func (z *Zootlr) Engine() query.Engine {
+func (z *Zootlr) Table() query.Engine {
 	return z.storage
 }
 
@@ -98,7 +98,12 @@ func (z *Zootlr) Error(err error) {
 }
 
 func (z *Zootlr) AddResource(t any) {
-	z.resources[reflect.TypeOf(t)] = t
+	z.AddResourceAs(t, reflect.TypeOf(t))
+}
+
+func (z *Zootlr) AddResourceAs(t any, typ reflect.Type) {
+	z.resources[typ] = t
+
 }
 
 type SetupFunc func(*Zootlr) error
@@ -109,9 +114,13 @@ func Setup(sc SetupApp) SetupFunc {
 	}
 }
 
-func AddResource[T any](res T) SetupFunc {
+func AddResource[T any](z *Zootlr, res T) {
+	z.AddResourceAs(res, mirrors.T[T]())
+}
+
+func SetupResource[T any](res T) SetupFunc {
 	return func(z *Zootlr) error {
-		z.resources[mirrors.TypeOf[T]()] = res
+		AddResource(z, res)
 		return nil
 	}
 }

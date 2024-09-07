@@ -8,6 +8,18 @@ import (
 	"sudonters/zootler/internal/table"
 )
 
+type Tokens struct {
+	*genericmap[Token]
+}
+
+type Edges struct {
+	*genericmap[Edge]
+}
+
+type Locations struct {
+	*genericmap[Location]
+}
+
 type Map[T Entity] interface {
 	Entity(components.Name) (T, error)
 }
@@ -58,8 +70,8 @@ func (e *genericmap[T]) init(f func(query.Engine, query.Query)) error {
 	return nil
 }
 
-func LocationMap(eng query.Engine) (*genericmap[Location], error) {
-	return newmap(
+func LocationMap(eng query.Engine) (Locations, error) {
+	locs, err := newmap(
 		eng,
 		func(eng query.Engine, q query.Query) {
 			q.Exists(query.MustAsColumnId[components.Location](eng))
@@ -73,10 +85,12 @@ func LocationMap(eng query.Engine) (*genericmap[Location], error) {
 		},
 		components.Location{},
 	)
+
+	return Locations{locs}, err
 }
 
-func TokenMap(eng query.Engine) (*genericmap[Token], error) {
-	return newmap(
+func TokenMap(eng query.Engine) (Tokens, error) {
+	toks, err := newmap(
 		eng,
 		func(eng query.Engine, q query.Query) {
 			q.Exists(query.MustAsColumnId[components.CollectableGameToken](eng))
@@ -90,10 +104,11 @@ func TokenMap(eng query.Engine) (*genericmap[Token], error) {
 		},
 		components.CollectableGameToken{},
 	)
+	return Tokens{toks}, err
 }
 
-func EdgeMap(eng query.Engine) (*genericmap[Edge], error) {
-	return newmap(
+func EdgeMap(eng query.Engine) (Edges, error) {
+	edges, err := newmap(
 		eng,
 		func(eng query.Engine, q query.Query) {
 			q.Exists(query.MustAsColumnId[components.Edge](eng))
@@ -107,6 +122,8 @@ func EdgeMap(eng query.Engine) (*genericmap[Edge], error) {
 		},
 		components.Edge{},
 	)
+
+	return Edges{edges}, err
 }
 
 func newmap[T Entity](

@@ -27,7 +27,7 @@ func (tbl *TableLoader) Setup(z *app.Zootlr) error {
 
 func (tbl *TableLoader) runDDL(z *app.Zootlr) error {
 	dontio.WriteLineOut(z.Ctx(), "running DDL")
-	storage := z.Engine()
+	storage := z.Table()
 	for _, ddl := range tbl.Scheme {
 		if _, err := storage.CreateColumn(ddl()); err != nil {
 			return err
@@ -73,6 +73,8 @@ func BaseDDL() []DDL {
 		columns.HashMapColumn[components.DefaultItem],
 		columns.HashMapColumn[components.DefaultItemName],
 		columns.HashMapColumn[components.Collected],
+		columns.HashMapColumn[components.Scene],
+		columns.HashMapColumn[components.Connection],
 
 		// bit columns only track singletons
 		columns.BitColumnOf[components.ExitEdge],

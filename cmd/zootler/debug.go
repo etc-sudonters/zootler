@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"sudonters/zootler/internal/app"
 	"sudonters/zootler/internal/query"
 	"sudonters/zootler/internal/table"
+
 	"github.com/etc-sudonters/substrate/dontio"
 	"github.com/etc-sudonters/substrate/slipup"
 )
@@ -32,7 +34,9 @@ type InspectTable struct {
 	Columns []reflect.Type
 }
 
-func (i InspectTable) Setup(ctx context.Context, storage query.Engine) error {
+func (i InspectTable) Setup(z *app.Zootlr) error {
+	storage := z.Table()
+	ctx := z.Ctx()
 	tbl, extractTblErr := query.ExtractTable(storage)
 	if extractTblErr != nil {
 		return extractTblErr
