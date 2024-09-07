@@ -1,7 +1,6 @@
 package components
 
 import (
-	"sudonters/zootler/internal/entity"
 	"sudonters/zootler/internal/rules/runtime"
 )
 
@@ -11,10 +10,7 @@ type HintRegion struct {
 	Name, Alt string
 }
 
-type Edge struct {
-	Origin entity.Model
-	Dest   entity.Model
-}
+type Edge struct{}
 
 type RawLogic struct {
 	Rule string

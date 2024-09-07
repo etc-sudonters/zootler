@@ -6,12 +6,18 @@ import (
 	"sudonters/zootler/carpenters/saburo"
 	"sudonters/zootler/carpenters/shiro"
 	"sudonters/zootler/internal/app"
+
+	"github.com/etc-sudonters/substrate/slipup"
 )
 
-type Bootstrapper struct{}
+type Bootstrapper struct {
+	Ichiro ichiro.DataLoader
+}
 
-func (b *Bootstrapper) Setup(_ *app.Zootlr) error {
-	ichiro.LoadDataTables()
+func (b *Bootstrapper) Setup(z *app.Zootlr) error {
+	if err := b.Ichiro.Setup(z); err != nil {
+		return slipup.Describe(err, "while loading data tables")
+	}
 	jiro.LoadWorldGraph()
 	saburo.CompileAllRules()
 	shiro.CreateWorldTemplate()

@@ -61,6 +61,14 @@ type ValueTuple struct {
 	Values Values
 }
 
+func FromColumnMap[T any](cm ColumnMap) (T, bool) {
+	t, exists := cm[mirrors.T[T]()]
+	if !exists {
+		return mirrors.Empty[T](), false
+	}
+	return t.(T), true
+}
+
 func (v *ValueTuple) ColumnMap() ColumnMap {
 	m := make(ColumnMap, len(v.Values))
 

@@ -5,10 +5,10 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"path"
 	"runtime"
 	"runtime/debug"
 	"sudonters/zootler/carpenters"
+	"sudonters/zootler/carpenters/ichiro"
 	"sudonters/zootler/internal/app"
 
 	"github.com/etc-sudonters/substrate/dontio"
@@ -81,20 +81,16 @@ func main() {
 	}
 
 	z, appCreateErr := app.New(ctx,
-		app.Setup(CreateScheme{DDL: MakeDDL()}),
-		app.Setup(DataFileLoader[FileItem]{
-			IncludeMQ: opts.includeMq,
-			Path:      path.Join(opts.dataDir, "items.json"),
-		}),
-		app.Setup(DataFileLoader[FileLocation]{
-			IncludeMQ: opts.includeMq,
-			Path:      path.Join(opts.dataDir, "locations.json"),
-			Add:       new(AttachDefaultItem),
-		}),
+		app.Setup(&carpenters.Mutoh{
+			Ichiro: ichiro.DataLoader{
+				Table: ichiro.TableLoader{
+					Scheme: ichiro.BaseDDL(),
+				},
+				DataPath: opts.dataDir,
+			}}),
 		app.AddResource(AstAllRuleEdges{
 			AllEdgeRulesFrom: AllEdgeRulesFrom{Path: opts.logicDir},
 		}),
-		app.Setup(&carpenters.Mutoh{}),
 		app.Setup(&IceArrowRuntime{}),
 	)
 

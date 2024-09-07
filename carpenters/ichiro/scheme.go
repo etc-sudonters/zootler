@@ -1,90 +1,34 @@
-package main
+package ichiro
 
 import (
-	"context"
-	"github.com/etc-sudonters/substrate/dontio"
-	"github.com/etc-sudonters/substrate/slipup"
-	"strings"
 	"sudonters/zootler/internal"
 	"sudonters/zootler/internal/app"
 	"sudonters/zootler/internal/components"
-	"sudonters/zootler/internal/query"
 	"sudonters/zootler/internal/table"
 	"sudonters/zootler/internal/table/columns"
 	"sudonters/zootler/internal/table/indexes"
+
+	"github.com/etc-sudonters/substrate/dontio"
+	"github.com/etc-sudonters/substrate/slipup"
 )
 
-type IntoComponents interface {
-	GetName() components.Name
-	AddComponents(table.RowId, query.Engine) error
+type DDL func() *table.ColumnBuilder
+
+type TableLoader struct {
+	Scheme []DDL
 }
 
-type AdditionalComponents[T any] interface {
-	Init(context.Context, query.Engine) error
-	Components(context.Context, table.RowId, T, query.Engine) error
-}
-
-type DataFileLoader[T IntoComponents] struct {
-	Path      string
-	IncludeMQ bool
-	Add       AdditionalComponents[T]
-}
-
-func (l DataFileLoader[T]) Setup(z *app.Zootlr) error {
-	ctx := z.Ctx()
-	storage := z.Engine()
-	if l.Add != nil {
-		if initErr := l.Add.Init(ctx, storage); initErr != nil {
-			return slipup.Describef(initErr, "while preparing to read file: '%s'", l.Path)
-		}
+func (tbl *TableLoader) Setup(z *app.Zootlr) error {
+	if err := tbl.runDDL(z); err != nil {
+		return slipup.Describe(err, "while running DDL")
 	}
-
-	dontio.WriteLineOut(ctx, "reading file '%s'", l.Path)
-	ts, err := internal.ReadJsonFileAs[[]T](l.Path)
-	if err != nil {
-		return slipup.Describe(err, l.Path)
-	}
-
-	for _, t := range ts {
-		name := t.GetName()
-		if !l.IncludeMQ && strings.Contains(strings.ToLower(string(name)), "mq") {
-			continue
-		}
-
-		row, insertErr := storage.InsertRow(name)
-		if insertErr != nil {
-			return slipup.Describef(insertErr, "while creating row for %+v", t)
-		}
-
-		if valuesErr := t.AddComponents(row, storage); valuesErr != nil {
-			return slipup.Describef(valuesErr, "while adding core components to %+v", t)
-		}
-
-		if l.Add != nil {
-			if additonalErr := l.Add.Components(ctx, row, t, storage); additonalErr != nil {
-				return slipup.Describef(additonalErr, "while adding additional components to %+v", t)
-			}
-		}
-	}
-
 	return nil
 }
 
-type CreateScheme struct {
-	DDL []DDL
-}
-type DDL func() *table.ColumnBuilder
-
-func indexed(ddl DDL, i table.Index) DDL {
-	return func() *table.ColumnBuilder {
-		return ddl().Index(i)
-	}
-}
-
-func (cs CreateScheme) Setup(z *app.Zootlr) error {
+func (tbl *TableLoader) runDDL(z *app.Zootlr) error {
 	dontio.WriteLineOut(z.Ctx(), "running DDL")
 	storage := z.Engine()
-	for _, ddl := range cs.DDL {
+	for _, ddl := range tbl.Scheme {
 		if _, err := storage.CreateColumn(ddl()); err != nil {
 			return err
 		}
@@ -93,11 +37,13 @@ func (cs CreateScheme) Setup(z *app.Zootlr) error {
 	return nil
 }
 
-func NormalizedNameIndex[T ~string](c T) (internal.NormalizedStr, bool) {
-	return internal.Normalize(string(c)), true
+func indexed(ddl DDL, i table.Index) DDL {
+	return func() *table.ColumnBuilder {
+		return ddl().Index(i)
+	}
 }
 
-func MakeDDL() []DDL {
+func BaseDDL() []DDL {
 	return []DDL{
 		indexed(
 			columns.SliceColumn[components.Name],
@@ -125,6 +71,7 @@ func MakeDDL() []DDL {
 		columns.HashMapColumn[components.Edge],
 		columns.HashMapColumn[components.SavewarpName],
 		columns.HashMapColumn[components.DefaultItem],
+		columns.HashMapColumn[components.DefaultItemName],
 		columns.HashMapColumn[components.Collected],
 
 		// bit columns only track singletons
@@ -243,4 +190,8 @@ func MakeDDL() []DDL {
 		columns.BitColumnOf[components.ZorasFountain],
 		columns.BitColumnOf[components.ZorasRiver],
 	}
+}
+
+func NormalizedNameIndex[T ~string](c T) (internal.NormalizedStr, bool) {
+	return internal.Normalize(string(c)), true
 }
