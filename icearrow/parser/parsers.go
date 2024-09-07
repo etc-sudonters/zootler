@@ -9,7 +9,7 @@ func NewBetterRulesParser() RulesParser {
 	var r RulesParser
 	r.annointedGrammar = annointGrammar(&r)
 	r.tokenStreams = &TokenStreamStack{}
-	r.tokenStreams.toks = make(stack.S[peruse.TokenStream], 8)
+	r.tokenStreams.toks = make(stack.S[peruse.TokenStream], 0, 8)
 	r.parser = peruse.NewParser(&r.annointedGrammar, r.tokenStreams)
 	return r
 }
@@ -21,7 +21,11 @@ type RulesParser struct {
 	macros           MacroCoven
 }
 
-func (r *RulesParser) Parse(stream peruse.TokenStream) (Expression, error) {
+func (r *RulesParser) ParseString(rule string) (Expression, error) {
+	return r.ParseTokens(NewRulesLexer(rule))
+}
+
+func (r *RulesParser) ParseTokens(stream peruse.TokenStream) (Expression, error) {
 	r.PushTokenStream(stream)
 	defer r.PopTokenStream()
 	r.tokenStreams.Lock()

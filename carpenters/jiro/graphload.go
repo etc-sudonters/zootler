@@ -1,63 +1,58 @@
 package jiro
 
 import (
-	"io/fs"
-	"path/filepath"
-	"sudonters/zootler/internal"
-	"sudonters/zootler/internal/app"
+	"sudonters/zootler/internal/components"
 	"sudonters/zootler/internal/entities"
+	"sudonters/zootler/internal/entity"
+	"sudonters/zootler/internal/table"
 
 	"github.com/etc-sudonters/substrate/skelly/graph"
 	"github.com/etc-sudonters/substrate/slipup"
 )
 
-type WorldGraph struct {
-	LogicDir string
+type graphloader struct {
+	locs entities.Locations
+	edge entities.Edges
+	grph graph.Builder
 }
 
-func (wg WorldGraph) Setup(z *app.Zootlr) error {
-	var state loadstate
-	state.locs = app.GetResource[entities.Locations](z).Res
-	state.edge = app.GetResource[entities.Edges](z).Res
-	state.grph = graph.Builder{graph.New()}
-
-	if err := wg.loaddir(&state); err != nil {
-		return slipup.Describef(err, "while loading dir '%s'", wg.LogicDir)
+func (l *graphloader) load(wn worldnode) error {
+	origin, originErr := l.locs.Entity(components.Name(wn.RegionName))
+	paniconerr(originErr)
+	if err := origin.AddComponents(wn.AsComponents()); err != nil {
+		paniconerr(err)
 	}
 
-	z.AddResource(state.grph)
+	for destName, nodeEdge := range wn.Edges {
+		dest, destErr := l.locs.Entity(destName)
+		paniconerr(destErr)
+		_, edgeErr := l.connect(nodeEdge.name, origin, dest, nodeEdge.kind, nodeEdge.rule)
+		paniconerr(edgeErr)
+	}
 
 	return nil
 }
 
-func (wg WorldGraph) loaddir(state *loadstate) error {
-	return filepath.WalkDir(wg.LogicDir, func(path string, entry fs.DirEntry, err error) error {
-		if err != nil {
-			return slipup.Describe(err, "logic directory walk called with err")
-		}
+func (l *graphloader) connect(name components.Name, origin, dest entities.Location, kind edgekind, rule components.RawLogic) (entities.Edge, error) {
+	edge, edgeErr := l.edge.Entity(name)
+	if edgeErr != nil {
+		return entities.Edge{}, slipup.Describef(edgeErr, "edge %s", name)
+	}
+	edge.StashRawRule(rule)
+	comps := table.Values{
+		rule, kind.component(),
+		components.Connection{Origin: entity.Model(origin.Id()), Dest: entity.Model(dest.Id())},
+	}
 
-		info, err := entry.Info()
-		if err != nil || info.Mode() != (^fs.ModeType)&info.Mode() {
-			// either we couldn't get the info, which doesn't bode well
-			// or it's some kind of not file thing which we also don't want
-			return nil
-		}
+	if err := edge.AddComponents(comps); err != nil {
+		return edge, slipup.Describef(err, "while adding components to '%s'", name)
+	}
 
-		if ext := filepath.Ext(path); ext != ".json" {
-			return nil
-		}
+	return edge, nil
+}
 
-		nodes, readErr := internal.ReadJsonFileAs[[]worldnode](path)
-		if readErr != nil {
-			return slipup.Describef(readErr, "while reading file '%s'", path)
-		}
-
-		for _, node := range nodes {
-			if err := state.load(node); err != nil {
-				return slipup.Describef(err, "while handling node '%s' in file '%s'", node.RegionName, path)
-			}
-		}
-
-		return nil
-	})
+func paniconerr(e error) {
+	if e != nil {
+		panic(e)
+	}
 }

@@ -14,7 +14,7 @@ type ComponentLoader interface {
 	AsComponents() table.Values
 }
 
-func LoadDataFile[C ComponentLoader, E entities.Entity](path string, entities entities.Map[E]) error {
+func LoadDataFile[C ComponentLoader, E entities.Entity, M entities.Map[E]](path string, entities M) error {
 	loaders, err := internal.ReadJsonFileAs[[]C](path)
 	if err != nil {
 		return slipup.Describef(err, "while loading components from '%s'", path)

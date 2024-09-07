@@ -5,17 +5,16 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"reflect"
+	"path"
 	"runtime"
 	"runtime/debug"
 	"sudonters/zootler/carpenters"
 	"sudonters/zootler/carpenters/ichiro"
 	"sudonters/zootler/carpenters/jiro"
+	"sudonters/zootler/carpenters/saburo"
 	"sudonters/zootler/internal/app"
-	"sudonters/zootler/internal/components"
 
 	"github.com/etc-sudonters/substrate/dontio"
-	"github.com/etc-sudonters/substrate/mirrors"
 	"github.com/etc-sudonters/substrate/stageleft"
 )
 
@@ -93,17 +92,10 @@ func main() {
 				DataPath: opts.dataDir,
 			},
 			Jiro: jiro.WorldGraph{LogicDir: opts.logicDir},
+			Saburo: saburo.RuleCompilation{
+				ScriptPath: path.Join(opts.logicDir, "..", "helpers.json"),
+			},
 		}),
-		app.SetupResource(AstAllRuleEdges{
-			AllEdgeRulesFrom: AllEdgeRulesFrom{Path: opts.logicDir},
-		}),
-		app.Setup(&IceArrowRuntime{}),
-		app.Setup(InspectTable{Columns: []reflect.Type{
-			mirrors.T[components.Bottle](),
-			mirrors.T[components.CollectableGameToken](),
-			mirrors.T[components.Location](),
-			mirrors.T[components.ForestTemple](),
-		}}),
 	)
 
 	if appCreateErr != nil {

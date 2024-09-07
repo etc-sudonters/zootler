@@ -1,11 +1,12 @@
 package entities
 
 import (
-	"github.com/etc-sudonters/substrate/slipup"
 	"sudonters/zootler/internal"
 	"sudonters/zootler/internal/components"
 	"sudonters/zootler/internal/query"
 	"sudonters/zootler/internal/table"
+
+	"github.com/etc-sudonters/substrate/slipup"
 )
 
 type Tokens struct {
@@ -22,6 +23,7 @@ type Locations struct {
 
 type Map[T Entity] interface {
 	Entity(components.Name) (T, error)
+	All(func(T) bool)
 }
 
 type genericmap[T Entity] struct {
@@ -29,6 +31,10 @@ type genericmap[T Entity] struct {
 	eng   query.Engine
 	def   table.Values
 	fact  func(table.RowId, components.Name, table.Values) T
+}
+
+func (e *genericmap[T]) CacheLen() int {
+	return len(e.cache)
 }
 
 func (e *genericmap[T]) Entity(name components.Name) (T, error) {
@@ -51,6 +57,14 @@ func (e *genericmap[T]) Entity(name components.Name) (T, error) {
 	t := e.fact(ent, name, e.def)
 	e.cache[normaled] = t
 	return t, nil
+}
+
+func (e *genericmap[T]) All(yield func(T) bool) {
+	for _, t := range e.cache {
+		if !yield(t) {
+			return
+		}
+	}
 }
 
 func (e *genericmap[T]) init(f func(query.Engine, query.Query)) error {
@@ -118,6 +132,7 @@ func EdgeMap(eng query.Engine) (Edges, error) {
 			t.rid = id
 			t.name = name
 			t.eng = eng
+			t.stash = make(map[string]any, 8)
 			return t
 		},
 		components.Edge{},

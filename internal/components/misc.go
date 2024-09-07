@@ -2,7 +2,6 @@ package components
 
 import (
 	"sudonters/zootler/internal/entity"
-	"sudonters/zootler/internal/rules/runtime"
 )
 
 type BossRoom struct{}
@@ -20,10 +19,6 @@ type Connection struct {
 type RawLogic string
 
 type Helper struct{}
-
-type CompiledRule struct {
-	Bytecode runtime.Chunk
-}
 
 type ExitEdge struct{}
 type CheckEdge struct{}

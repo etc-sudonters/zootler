@@ -33,7 +33,7 @@ func (dl *DataLoader) Setup(z *app.Zootlr) error {
 		return slipup.Describe(edgeMapErr, "while creating edge map")
 	}
 
-	if itemLoadErr := LoadDataFile[ItemComponents](
+	if itemLoadErr := LoadDataFile[TokenComponents](
 		path.Join(dl.DataPath, "items.json"),
 		tokens,
 	); itemLoadErr != nil {

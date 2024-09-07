@@ -3,7 +3,7 @@ package ast
 import (
 	"errors"
 	"github.com/etc-sudonters/substrate/slipup"
-	"sudonters/zootler/internal/rules/parser"
+	"sudonters/zootler/icearrow/parser"
 )
 
 type Ast struct{}

@@ -24,6 +24,19 @@ type Location struct {
 
 type Edge struct {
 	componenthaver
+	stash map[string]any
+}
+
+func (e *Edge) StashRawRule(rule components.RawLogic) {
+	if _, exists := e.stash["rawrule"]; exists {
+		return
+	}
+	e.stash["rawrule"] = rule
+}
+
+func (e Edge) GetRawRule() components.RawLogic {
+	rule := e.stash["rawrule"]
+	return rule.(components.RawLogic)
 }
 
 type componenthaver struct {

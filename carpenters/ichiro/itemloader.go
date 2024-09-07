@@ -7,7 +7,7 @@ import (
 	"github.com/etc-sudonters/substrate/slipup"
 )
 
-type ItemComponents struct {
+type TokenComponents struct {
 	Name        string                 `json:"name"`
 	Type        string                 `json:"type"`
 	Advancement bool                   `json:"advancement"`
@@ -15,11 +15,11 @@ type ItemComponents struct {
 	Special     map[string]interface{} `json:"special"`
 }
 
-func (i ItemComponents) EntityName() components.Name {
+func (i TokenComponents) EntityName() components.Name {
 	return components.Name(i.Name)
 }
 
-func (i ItemComponents) AsComponents() table.Values {
+func (i TokenComponents) AsComponents() table.Values {
 	vt := table.Values{i.kind(), components.CollectableGameToken{}}
 	if i.Advancement {
 		vt = append(vt, components.Advancement{})
@@ -30,7 +30,7 @@ func (i ItemComponents) AsComponents() table.Values {
 	return i.special(vt)
 }
 
-func (i ItemComponents) kind() table.Value {
+func (i TokenComponents) kind() table.Value {
 	switch i.Type {
 	case "BossKey":
 		return components.BossKey{}
@@ -69,7 +69,7 @@ func (i ItemComponents) kind() table.Value {
 	}
 }
 
-func (i ItemComponents) special(vt table.Values) table.Values {
+func (i TokenComponents) special(vt table.Values) table.Values {
 	if price, ok := i.Special["price"]; ok {
 		if price, ok := price.(float64); ok {
 			vt = append(vt, components.Price(price))

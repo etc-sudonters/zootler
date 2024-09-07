@@ -1,7 +1,7 @@
 package zasm
 
 import (
-	"sudonters/zootler/internal/rules/ast"
+	"sudonters/zootler/icearrow/ast"
 
 	"github.com/etc-sudonters/substrate/slipup"
 )

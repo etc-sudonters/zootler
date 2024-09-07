@@ -73,7 +73,7 @@ func (c CopyPasteExpander) FullyExpand(ctx *ExpansionContext) (Expression, error
 		body = buildReplacementBody(ctx)
 	}
 	stream := TokenSlice{tok: body}
-	return ctx.Parser.Parse(&stream)
+	return ctx.Parser.ParseTokens(&stream)
 }
 
 type TokenSlice struct {

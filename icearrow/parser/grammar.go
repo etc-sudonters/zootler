@@ -3,6 +3,7 @@ package parser
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/etc-sudonters/substrate/peruse"
 )
@@ -36,6 +37,32 @@ func NewRulesGrammar() peruse.Grammar[Expression] {
 	g.Infix(PARENS, parseCall, TokenOpenParen)
 
 	return g
+}
+
+func BoolOpFromTok(t peruse.Token) BoolOpKind {
+	switch s := strings.ToLower(t.Literal); s {
+	case string(BoolOpAnd):
+		return BoolOpAnd
+	case string(BoolOpOr):
+		return BoolOpOr
+	default:
+		panic(fmt.Errorf("invalid boolop %q", t))
+	}
+}
+
+func BinOpFromTok(t peruse.Token) BinOpKind {
+	switch t.Literal {
+	case string(BinOpLt):
+		return BinOpLt
+	case string(BinOpEq):
+		return BinOpEq
+	case string(BinOpNotEq):
+		return BinOpNotEq
+	case string(BinOpContains):
+		return BinOpContains
+	default:
+		panic(fmt.Errorf("invalid binop %q", t))
+	}
 }
 
 func parseParenExpr(p *peruse.Parser[Expression]) (Expression, error) {

@@ -59,7 +59,6 @@ func BaseDDL() []DDL {
 			}),
 		),
 
-		columns.HashMapColumn[components.CompiledRule],
 		columns.HashMapColumn[components.Count],
 		columns.HashMapColumn[components.Price],
 		columns.HashMapColumn[components.ShopObject],
