@@ -59,7 +59,7 @@ func (mb MacroBuilder) AddBuiltInMacro(name string, params []string, expander Ma
 	return nil
 }
 
-func (mb MacroBuilder) macroBodyTokens(body string, params []string) []Token {
+func (mb MacroBuilder) macroBodyTokens(body string, params []string) []peruse.Token {
 	tokens := slices.Collect(peruse.AllTokens(NewRulesLexer(body)))
 	if len(params) == 0 {
 		return tokens
@@ -139,7 +139,7 @@ func (mc *MacroCoven) CreateContext(name string) (*ExpansionContext, func()) {
 func (mc *MacroCoven) Expander(m Macro) MacroExpander {
 	xpander := mc.expanders[m.Name]
 	if xpander == nil {
-		if len(m.Body) != 0 || mc.defaultXpander == nil {
+		if len(m.Body) == 0 || mc.defaultXpander == nil {
 			panic(slipup.Createf("no expander found for macro '%s'", m.Name))
 		}
 		xpander = mc.defaultXpander
@@ -151,7 +151,6 @@ func (mc *MacroCoven) Expander(m Macro) MacroExpander {
 type ExpansionContext struct {
 	Args      []MacroArg
 	Expanding Macro
-	Parser    *RulesParser
 }
 
 type MacroArg struct {
@@ -162,15 +161,18 @@ type MacroArg struct {
 type CopyPasteExpander struct{}
 
 func (c CopyPasteExpander) FullyExpand(ctx *ExpansionContext) (Expression, error) {
-	var body []Token
+	var body []peruse.Token
 	switch len(ctx.Args) {
 	case 0:
 		body = ctx.Expanding.Body
 	default:
 		body = buildReplacementBody(ctx)
 	}
+	var parser interface {
+		ParseTokens(*TokenSlice) (Expression, error)
+	}
 	stream := TokenSlice{tok: body}
-	return ctx.Parser.ParseTokens(&stream)
+	return parser.ParseTokens(&stream)
 }
 
 type TokenSlice struct {
@@ -188,8 +190,8 @@ func (t *TokenSlice) NextToken() peruse.Token {
 	return tok
 }
 
-func buildReplacementBody(ctx *ExpansionContext) []Token {
-	body := []Token{}
+func buildReplacementBody(ctx *ExpansionContext) []peruse.Token {
+	body := []peruse.Token{}
 	for _, tok := range ctx.Expanding.Body {
 		if tok.Type != TOK_MACRO_ARG_0 && tok.Type != TOK_MACRO_ARG_1 {
 			body = append(body, tok)

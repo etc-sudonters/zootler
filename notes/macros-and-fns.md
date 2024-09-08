@@ -84,10 +84,10 @@ properly nested parse trees. Parsing a string rule creates a
 `peruse.Parser[T]`[^fn5]. The resulting parse tree has enough fidelity to
 source that it could be written directly back into its originating source.[^fn6]
 
-The parse tree is then lowered into AST. The AST has fewer nodes, and ergo
-fewer features. Mostly these concern the several ways settings and token
+The parse tree is then lowered into AST. The AST has fewer nodes types, and
+ergo fewer features. Mostly these concern the several ways settings and token
 quantities can be queried by the rules. The AST lower will attempt to eliminate
-constant operations such as compares to self and redundant arms for `and`/`or`. 
+constant operations such as compares to self and redundant arms for `and`/`or`.
 Since we eliminate string literal aliases for tokens in this pass, the lowering
 also begins the process of interning strings, names and constants. 
 
@@ -109,27 +109,27 @@ This AST is then written to an assembly consisting of:
 4. Instruction table
 
 The constants table holds actual values as 64bit packed quiet NANs.[^fn8] The
-strings table holds all the string data for the assembly in a single []uint8
-and provides 3 byte offset+length handles. The names table also these 3byte
+strings table holds all the string data for the assembly in a single `[]uint8`
+and provides 3 byte offset+length handles. The names table also these 3 byte
 pointers into the strings but this string is then used to query the run time.
-The instruction table stores rules in a single []uint32 and provides string
+The instruction table stores rules in a single `[]uint32` and provides string
 aliases to actual Go slices of its contents. Instructions are 32bit linear
-"assembly" -- zasm -- with 8bit operations and 24bit arbitrary payloads[^fn7]. 
+assembly -- "zasm" -- with 8bit operations and 24bit arbitrary payloads[^fn7]. 
 
-This assembly isn't intended to be executed directly. Instead the assembly is
-meant to be a cache of the mostly compiled rules. The last mile happens when
-the assembly and specific settings are combined by the compiler to generate the
+This assembly isn't intended to be executed directly. Instead the is is meant
+to be a cache of the mostly compiled rules. The last mile happens when the
+assembly and specific settings are combined by the compiler to generate the
 final tables and op codes for the run time VM. The compiler outputs 8bit
 instructions with variable length encoding -- VLE -- to facilitate very common
 operations like checking token quantities. Instead of being encoding as:
 
-1. OP_LOAD_IDENT
-2. OP_LOAD_CONST
-3. OP_CALL_2 [u16lo, u16hi]
+1. `OP_LOAD_IDENT`
+2. `OP_LOAD_CONST`
+3. `OP_CALL_2 [u16lo, u16hi]`
 
 The compiler emits: `OP_CHK_QTY [u16lo, u16hi, u8]` which is actually a 1:1
-translation of what the assembler emits in 1 instruction, just unpacked into
-4 uint8s.
+translation of what the assembler emits in 1 instruction, just converted into
+`[4]uint8`.
 
 ### Macros
 
@@ -168,7 +168,7 @@ destructed and the macro is marked eligible for expansion again.
 [ln2]: https://rustc-dev-guide.rust-lang.org/overview.html
 [ln3]: https://rustc-dev-guide.rust-lang.org/macro-expansion.html
 [ln4]: https://gcc.gnu.org/onlinedocs/cpp/Macros.html
----
+
 [^fn1]: as far as I can tell, I'm not really a C person
 
 [^fn2]: chanting "macro rules" as my car spins out on a banana peel and off a

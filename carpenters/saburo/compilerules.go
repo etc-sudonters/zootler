@@ -10,12 +10,6 @@ import (
 	"github.com/etc-sudonters/substrate/dontio"
 )
 
-func paniconerr(e error) {
-	if e != nil {
-		panic(e)
-	}
-}
-
 type RuleCompilation struct {
 	ScriptPath string
 }
@@ -23,21 +17,29 @@ type RuleCompilation struct {
 func (rc RuleCompilation) Setup(z *app.Zootlr) error {
 	macros := parsing.DefaultCoven()
 	rc.loadMacros(parsing.InitiateCoven(&macros))
-	parser := rc.createParser(macros)
+	parser := parsing.NewParserStack(macros)
 	return rc.assembleAllRules(z, parser)
 }
 
-func (rc RuleCompilation) assembleAllRules(z *app.Zootlr, rp parsing.RulesParser) error {
+func (rc RuleCompilation) assembleAllRules(z *app.Zootlr, rp *parsing.ParserStack) error {
 	assembler := rc.createAssembler()
 	edges := app.GetResource[entities.Edges](z)
 
 	for edge := range edges.Res.All {
 		pt, ptErr := rp.ParseString(string(edge.GetRawRule()))
-		paniconerr(ptErr)
+		if ptErr != nil {
+			return ptErr
+
+		}
 		ast, astErr := parsing.Transform(&ast.Ast{}, pt)
-		paniconerr(astErr)
+		if astErr != nil {
+			return astErr
+
+		}
 		asm, asmErr := assembler.Assemble(ast)
-		paniconerr(asmErr)
+		if asmErr != nil {
+			return asmErr
+		}
 
 		dis := zasm.Disassemble(asm.I)
 		dontio.WriteLineOut(z.Ctx(), string(edge.Name()))
@@ -46,10 +48,6 @@ func (rc RuleCompilation) assembleAllRules(z *app.Zootlr, rp parsing.RulesParser
 	}
 
 	return nil
-}
-
-func (rc RuleCompilation) createParser(mc parsing.MacroCoven) parsing.RulesParser {
-	return parsing.NewRulesParser(mc)
 }
 
 func (rc RuleCompilation) createAssembler() zasm.Assembler {
