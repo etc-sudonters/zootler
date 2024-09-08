@@ -1,6 +1,8 @@
 package saburo
 
 import (
+	"slices"
+	"strings"
 	"sudonters/zootler/icearrow/ast"
 	parsing "sudonters/zootler/icearrow/parser"
 	"sudonters/zootler/icearrow/zasm"
@@ -8,6 +10,7 @@ import (
 	"sudonters/zootler/internal/entities"
 
 	"github.com/etc-sudonters/substrate/dontio"
+	"github.com/etc-sudonters/substrate/slipup"
 )
 
 type RuleCompilation struct {
@@ -17,7 +20,7 @@ type RuleCompilation struct {
 func (rc RuleCompilation) Setup(z *app.Zootlr) error {
 	macros := parsing.DefaultCoven()
 	rc.loadMacros(parsing.InitiateCoven(&macros))
-	parser := parsing.NewParserStack(macros)
+	parser := parsing.NewParserStack(macros, parsing.MACROS_DISABLE)
 	return rc.assembleAllRules(z, parser)
 }
 
@@ -25,20 +28,31 @@ func (rc RuleCompilation) assembleAllRules(z *app.Zootlr, rp *parsing.ParserStac
 	assembler := rc.createAssembler()
 	edges := app.GetResource[entities.Edges](z)
 
-	for edge := range edges.Res.All {
+	collected := slices.Collect(edges.Res.All)
+	slices.SortFunc(collected, func(a, b entities.Edge) int {
+		return strings.Compare(string(a.Name()), string(b.Name()))
+	})
+
+	var edge entities.Edge
+
+	whileHandlingRule := func(err error, action string) error {
+		return slipup.Describef(err, "while %s rule %q", action, edge.GetRawRule())
+	}
+
+	for _, edge = range collected {
 		pt, ptErr := rp.ParseString(string(edge.GetRawRule()))
 		if ptErr != nil {
-			return ptErr
+			return whileHandlingRule(ptErr, "parsing")
 
 		}
 		ast, astErr := parsing.Transform(&ast.Ast{}, pt)
 		if astErr != nil {
-			return astErr
+			return whileHandlingRule(astErr, "lowering tree")
 
 		}
 		asm, asmErr := assembler.Assemble(ast)
 		if asmErr != nil {
-			return asmErr
+			return whileHandlingRule(asmErr, "assembling")
 		}
 
 		dis := zasm.Disassemble(asm.I)

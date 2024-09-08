@@ -191,7 +191,21 @@ func (a *Assembler) tryFastCall(call *ast.Call) (Instructions, bool) {
 		return IW().Write(EncodeOpAndU24(OP_CHK_SET, uint32(setting))).I, true
 	case OP_CHK_SET2:
 		name1 := ast.MustAssertAs[*ast.Identifier](call.Args[0]).Name
-		name2 := ast.MustAssertAs[*ast.Identifier](call.Args[1]).Name
+		var name2 string
+		switch arg := call.Args[1].(type) {
+		case *ast.Identifier:
+			name2 = arg.Name
+			break
+			// TODO: back this out after AST drops string literal aliases
+		case *ast.Literal:
+			if arg.Kind != ast.AST_LIT_STR {
+				panic("expected literal string")
+			}
+			name2 = arg.Value.(string)
+		default:
+			panic("expected literal string or identifier")
+
+		}
 		blk := uint32(a.Data.Names.Intern(name1))
 		sub := uint32(a.Data.Names.Intern(name2))
 		const u12Mask uint32 = 0x00000FFF

@@ -80,6 +80,10 @@ func TokenTypeString(i peruse.TokenType) string {
 		return "<UNARY>"
 	case TokenContains:
 		return "<IN>"
+	case TOK_MACRO_ARG_0:
+		return "<TOK_MACRO_ARG_0>"
+	case TOK_MACRO_ARG_1:
+		return "<TOK_MACRO_ARG_1>"
 	default:
 		return "<UNKNOWN>"
 	}

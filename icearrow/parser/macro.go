@@ -121,10 +121,11 @@ func (mc MacroCoven) IsExpandableMacro(name string) bool {
 	return mc.eligibility[name]
 }
 
-func (mc *MacroCoven) CreateContext(name string) (*ExpansionContext, func()) {
+func (mc *MacroCoven) CreateContext(name string, ps *ParserStack) (*ExpansionContext, func()) {
 	var ctx ExpansionContext
 	mc.eligibility[name] = false
 	ctx.Expanding = mc.allMacros[name]
+	ctx.Parser = ps
 	mc.scopes.Push(ctx)
 	stop := func() {
 		mc.scopes.Pop()
@@ -133,6 +134,7 @@ func (mc *MacroCoven) CreateContext(name string) (*ExpansionContext, func()) {
 
 	// borrow through top to enforce stack's ownership
 	top, _ := mc.scopes.Top()
+	top.collectMacroArgs()
 	return top, stop
 }
 
@@ -151,28 +153,12 @@ func (mc *MacroCoven) Expander(m Macro) MacroExpander {
 type ExpansionContext struct {
 	Args      []MacroArg
 	Expanding Macro
+	Parser    *ParserStack
 }
 
 type MacroArg struct {
 	Tokens []peruse.Token
 	AST    Expression
-}
-
-type CopyPasteExpander struct{}
-
-func (c CopyPasteExpander) FullyExpand(ctx *ExpansionContext) (Expression, error) {
-	var body []peruse.Token
-	switch len(ctx.Args) {
-	case 0:
-		body = ctx.Expanding.Body
-	default:
-		body = buildReplacementBody(ctx)
-	}
-	var parser interface {
-		ParseTokens(*TokenSlice) (Expression, error)
-	}
-	stream := TokenSlice{tok: body}
-	return parser.ParseTokens(&stream)
 }
 
 type TokenSlice struct {
@@ -188,6 +174,43 @@ func (t *TokenSlice) NextToken() peruse.Token {
 	tok := t.tok[t.idx]
 	t.idx += 1
 	return tok
+}
+
+func (xpandCtx *ExpansionContext) collectMacroArgs() error {
+	want := len(xpandCtx.Expanding.Params)
+	if want == 0 {
+		return nil
+	}
+	parser := xpandCtx.Parser
+	if parser.expect(TokenCloseParen) {
+		return slipup.Createf("macro %q wants %d args but was provided none", xpandCtx.Expanding.Name, want)
+	}
+
+	xpandCtx.Args = make([]MacroArg, 0, 2)
+	for {
+		parser.consume() // ( or ,
+		finish, bufferErr := parser.BufferTokens(16)
+		if bufferErr != nil {
+			panic(bufferErr)
+		}
+		arg, argErr := parser.parseAt(LOWEST)
+		if argErr != nil {
+			panic(argErr)
+		}
+		tokens := finish()
+		xpandCtx.Args = append(xpandCtx.Args, MacroArg{
+			Tokens: tokens,
+			AST:    arg,
+		})
+		if !parser.expect(TokenComma) {
+			break
+		}
+	}
+	if !parser.expect(TokenCloseParen) {
+		panic("expected close paren at end of macro invocation")
+	}
+
+	return nil
 }
 
 func buildReplacementBody(ctx *ExpansionContext) []peruse.Token {
@@ -221,4 +244,18 @@ func quickanddirtyDeclParse(decl string) (string, []string) {
 	splitDecl := strings.Split(decl, "(")
 	args := strings.Split(splitDecl[1], ",")
 	return splitDecl[0], args
+}
+
+type CopyPasteExpander struct{}
+
+func (c CopyPasteExpander) FullyExpand(ctx *ExpansionContext) (Expression, error) {
+	var body []peruse.Token
+	switch len(ctx.Args) {
+	case 0:
+		body = ctx.Expanding.Body
+	default:
+		body = buildReplacementBody(ctx)
+	}
+	stream := TokenSlice{tok: body}
+	return ctx.Parser.ParseTokens(&stream)
 }
