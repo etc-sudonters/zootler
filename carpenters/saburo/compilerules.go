@@ -4,12 +4,14 @@ import (
 	"slices"
 	"strings"
 	"sudonters/zootler/icearrow/ast"
+	"sudonters/zootler/icearrow/macros"
 	parsing "sudonters/zootler/icearrow/parser"
 	"sudonters/zootler/icearrow/zasm"
 	"sudonters/zootler/internal/app"
 	"sudonters/zootler/internal/entities"
 
 	"github.com/etc-sudonters/substrate/dontio"
+	"github.com/etc-sudonters/substrate/peruse"
 	"github.com/etc-sudonters/substrate/slipup"
 )
 
@@ -18,13 +20,6 @@ type RuleCompilation struct {
 }
 
 func (rc RuleCompilation) Setup(z *app.Zootlr) error {
-	macros := parsing.DefaultCoven()
-	rc.loadMacros(parsing.InitiateCoven(&macros))
-	parser := parsing.NewParserStack(macros, parsing.MACROS_DISABLE)
-	return rc.assembleAllRules(z, parser)
-}
-
-func (rc RuleCompilation) assembleAllRules(z *app.Zootlr, rp *parsing.ParserStack) error {
 	assembler := rc.createAssembler()
 	edges := app.GetResource[entities.Edges](z)
 
@@ -39,8 +34,13 @@ func (rc RuleCompilation) assembleAllRules(z *app.Zootlr, rp *parsing.ParserStac
 		return slipup.Describef(err, "while %s rule %q", action, edge.GetRawRule())
 	}
 
+	xpndr := macros.NewMacroExpansions()
+	grammar := parsing.NewRulesGrammar()
+
 	for _, edge = range collected {
-		pt, ptErr := rp.ParseString(string(edge.GetRawRule()))
+		tokens := parsing.NewRulesLexer(string(edge.GetRawRule()))
+		parser := peruse.NewParser(&grammar, macros.ExpandWith(&xpndr, tokens))
+		pt, ptErr := parser.ParseAt(parsing.LOWEST)
 		if ptErr != nil {
 			return whileHandlingRule(ptErr, "parsing")
 
@@ -68,8 +68,4 @@ func (rc RuleCompilation) createAssembler() zasm.Assembler {
 	return zasm.Assembler{
 		Data: zasm.NewDataBuilder(),
 	}
-}
-
-func (rc RuleCompilation) loadMacros(mb parsing.MacroBuilder) error {
-	return LoadScriptedMacros(mb, rc.ScriptPath)
 }
