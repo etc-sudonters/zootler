@@ -135,3 +135,10 @@ func (n *Empty) String() string {
 	Visit(&r, n)
 	return r.String()
 }
+
+func LiteralBool(b bool) *Literal {
+	l := new(Literal)
+	l.Kind = AST_LIT_BOOL
+	l.Value = b
+	return l
+}

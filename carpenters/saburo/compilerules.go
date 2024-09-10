@@ -35,15 +35,12 @@ func (rc RuleCompilation) Setup(z *app.Zootlr) error {
 	whileHandlingRule := func(err error, action string) error {
 		return slipup.Describef(err, "while %s rule %q", action, edge.GetRawRule())
 	}
-	xpndr := macros.NewMacroExpansions()
-	loadAllMacros(&xpndr, rc.ScriptPath)
 	grammar := parsing.NewRulesGrammar()
 
 	for _, edge = range collected {
 		dontio.WriteLineOut(z.Ctx(), string(edge.Name()))
 		dontio.WriteLineOut(z.Ctx(), string(edge.GetRawRule()))
-		tokens := macros.ExpandWith(&xpndr, parsing.NewRulesLexer(string(edge.GetRawRule())))
-		parser := peruse.NewParser(&grammar, tokens)
+		parser := peruse.NewParser(&grammar, parsing.NewRulesLexer(string(edge.GetRawRule())))
 		pt, ptErr := parser.ParseAt(parsing.LOWEST)
 		if ptErr != nil {
 			return whileHandlingRule(ptErr, "parsing")

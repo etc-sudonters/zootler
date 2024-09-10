@@ -2,8 +2,10 @@ package ast
 
 import (
 	"errors"
-	"github.com/etc-sudonters/substrate/slipup"
 	"sudonters/zootler/icearrow/parser"
+	"sudonters/zootler/internal"
+
+	"github.com/etc-sudonters/substrate/slipup"
 )
 
 type Ast struct{}
@@ -17,8 +19,16 @@ func (a *Ast) TransformBinOp(pt *parser.BinOp) (Node, error) {
 		return a.rewriteToCall("load_setting_2", pt.Right, pt.Left) // setting in block
 	}
 
-	lhs, lhsErr := parser.Transform(a, pt.Left)
-	rhs, rhsErr := parser.Transform(a, pt.Right)
+	newNode, didEliminate, eliminationErr := a.eliminateConstCompare(pt)
+	if eliminationErr != nil {
+		return nil, eliminationErr
+	}
+	if didEliminate {
+		return newNode, nil
+	}
+
+	lhs, lhsErr := a.Lower(pt.Left)
+	rhs, rhsErr := a.Lower(pt.Right)
 
 	if joined := errors.Join(lhsErr, rhsErr); joined != nil {
 		panic(joined)
@@ -37,8 +47,17 @@ func (a *Ast) TransformBinOp(pt *parser.BinOp) (Node, error) {
 }
 
 func (a *Ast) TransformBoolOp(pt *parser.BoolOp) (Node, error) {
-	lhs, lhsErr := parser.Transform(a, pt.Left)
-	rhs, rhsErr := parser.Transform(a, pt.Right)
+
+	lhs, lhsErr := a.Lower(pt.Left)
+	rhs, rhsErr := a.Lower(pt.Right)
+
+	newNode, didEliminate, eliminationErr := a.eliminateConstBranch(lhs, rhs, pt.Op)
+	if eliminationErr != nil {
+		return nil, eliminationErr
+	}
+	if didEliminate {
+		return newNode, nil
+	}
 
 	if joined := errors.Join(lhsErr, rhsErr); joined != nil {
 		panic(joined)
@@ -82,7 +101,7 @@ func (a *Ast) TransformTuple(pt *parser.Tuple) (Node, error) {
 }
 
 func (a *Ast) TransformUnary(pt *parser.UnaryOp) (Node, error) {
-	target, err := parser.Transform(a, pt.Target)
+	target, err := a.Lower(pt.Target)
 	if err != nil {
 		return nil, err
 	}
@@ -90,8 +109,7 @@ func (a *Ast) TransformUnary(pt *parser.UnaryOp) (Node, error) {
 	if target.Type() == AST_NODE_LITERAL {
 		target := target.(*Literal)
 		if target.Kind == AST_LIT_BOOL {
-			target.Value = !(target.Value.(bool))
-			return target, nil
+			return LiteralBool(!(target.Value.(bool))), nil
 		}
 	}
 
@@ -128,4 +146,90 @@ func (a *Ast) rewriteToCall(name string, inputs ...parser.Expression) (*Call, er
 	call.Callee = name
 	call.Args = args
 	return &call, nil
+}
+
+func (a *Ast) eliminateConstCompare(pt *parser.BinOp) (Node, bool, error) {
+	if pt.Op != parser.BinOpEq && pt.Op != parser.BinOpNotEq {
+		return nil, false, nil
+	}
+	// accomodate macro expansion that explodes things like Longshot into a has call
+	lhs, lhsNotIdent := extractIdent(pt.Left)
+	rhs, rhsNotIdent := extractIdent(pt.Right)
+
+	if lhsNotIdent != nil || rhsNotIdent != nil {
+		return nil, false, nil
+	}
+
+	sameIdent := internal.Normalize(lhs) == internal.Normalize(rhs)
+	if !sameIdent {
+		return nil, false, nil
+	}
+
+	node := Literal{
+		Value: sameIdent && pt.Op == parser.BinOpEq,
+		Kind:  AST_LIT_BOOL,
+	}
+	return &node, true, nil
+}
+
+func (a *Ast) eliminateConstBranch(lhs, rhs Node, op parser.BoolOpKind) (Node, bool, error) {
+	getBoolLiteralFrom := func(node Node) (bool, bool) {
+		lit, isNotLit := node.(*Literal)
+		if !isNotLit {
+			return false, false
+		}
+
+		b, isB := lit.Value.(bool)
+		return b, isB
+	}
+
+	if leftHandLiteral, lhsIsBool := getBoolLiteralFrom(lhs); lhsIsBool {
+		if op == parser.BoolOpAnd && leftHandLiteral {
+			return rhs, true, nil
+		}
+		if op == parser.BoolOpAnd && !leftHandLiteral {
+			return LiteralBool(false), true, nil
+		}
+		if op == parser.BoolOpOr && leftHandLiteral {
+			return LiteralBool(true), true, nil
+		}
+		if op == parser.BoolOpOr && !leftHandLiteral {
+			return rhs, true, nil
+		}
+	}
+
+	if rightHandLiteral, rhsIsBool := getBoolLiteralFrom(rhs); rhsIsBool {
+		if op == parser.BoolOpAnd && rightHandLiteral {
+			return lhs, true, nil
+		}
+		if op == parser.BoolOpAnd && !rightHandLiteral {
+			return LiteralBool(false), true, nil
+		}
+		if op == parser.BoolOpOr && rightHandLiteral {
+			return LiteralBool(true), true, nil
+		}
+		if op == parser.BoolOpOr && !rightHandLiteral {
+			return lhs, true, nil
+		}
+	}
+
+	return nil, false, nil
+}
+
+func extractIdent(pt parser.Expression) (string, error) {
+	switch pt := pt.(type) {
+	case *parser.Identifier:
+		return pt.Value, nil
+	case *parser.Tuple:
+		return extractIdent(pt.Elems[0])
+	case *parser.Call:
+		return extractIdent(pt.Callee)
+	case *parser.Literal:
+		if pt.Kind != parser.LiteralStr {
+			return "", errors.New("not a string literal")
+		}
+		return pt.Value.(string), nil
+	default:
+		return "", errors.New("no identifier to extract")
+	}
 }
