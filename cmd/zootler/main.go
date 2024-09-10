@@ -62,6 +62,8 @@ func main() {
 		if r := recover(); r != nil {
 			if err, ok := r.(error); ok {
 				std.WriteLineErr("%s", err)
+			} else if str, ok := r.(string); ok {
+				std.WriteLineErr("%s", str)
 			}
 			_, _ = std.Err.Write(debug.Stack())
 			if appExitCode != stageleft.ExitSuccess {

@@ -1,5 +1,7 @@
 package intern
 
+import "github.com/etc-sudonters/substrate/slipup"
+
 func NewStrHeaper() StrHeaper {
 	var h StrHeaper
 	h.heap = make(StrHeap, 0, 2048)
@@ -32,8 +34,12 @@ func encodeStrFromIntPair(offset, length int) Str {
 	off16 := uint16(offset)
 	len8 := uint8(length)
 
-	if int(off16) != offset || int(len8) != length {
-		panic("string heap too big")
+	if int(off16) != offset {
+		panic(slipup.Createf("string heap would become too large: %d", offset+length))
+	}
+
+	if int(len8) != length {
+		panic(slipup.Createf("string too long: %d", length))
 	}
 
 	s[0] = uint8(off16 & 0x00FF)

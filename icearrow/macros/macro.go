@@ -47,10 +47,12 @@ func (m Macro) untombstoneBody(arguments []ExpandedArg) []peruse.Token {
 	for _, tok := range m.body {
 		switch tok.Type {
 		case TOK_MACRO_ARG_0:
-			body = slices.Concat(body, arguments[0][:])
+			arg := arguments[0]
+			body = slices.Concat(body, arg)
 			break
 		case TOK_MACRO_ARG_1:
-			body = slices.Concat(body, arguments[1][:])
+			arg := arguments[1]
+			body = slices.Concat(body, arg)
 			break
 		default:
 			body = append(body, tok)
@@ -161,18 +163,22 @@ func (e *Expansions) tryExpand(tok peruse.Token, stream peruse.TokenStream, body
 
 func (e *ExpansionContext) collectArguments(stream peruse.TokenStream) {
 	e.Args = make([]ExpandedArg, len(e.Expanding.params))
-	p := miniparse{stream, peruse.Token{Type: parser.TokenOpenParen}}
-	for _, arg := range e.Args {
+	p := &miniparse{stream, stream.NextToken()}
+	if !p.expect(parser.TokenOpenParen) {
+		panic("expected open paren after func-macro name")
+	}
+	for i, arg := range e.Args {
 		p.consume()
 		for !p.expect(parser.TokenComma) && !p.expect(parser.TokenCloseParen) {
 			arg = append(arg, p.cur)
+			p.consume()
 		}
+		e.Args[i] = arg
 	}
 
 	if !p.expect(parser.TokenCloseParen) {
 		panic("expected to find TokenCloseParen at end of macro invocation")
 	}
-	p.consume()
 }
 
 type miniparse struct {
@@ -180,12 +186,18 @@ type miniparse struct {
 	cur    peruse.Token
 }
 
-func (m miniparse) expect(tt peruse.TokenType) bool {
+func (m *miniparse) expect(tt peruse.TokenType) bool {
 	return m.cur.Is(tt)
 }
 
-func (m miniparse) consume() {
+func (m *miniparse) consume() {
 	m.cur = m.tokens.NextToken()
+}
+
+func StreamTokenSlice(tokens []peruse.Token) *tokenslicestreamer {
+	return &tokenslicestreamer{
+		tokens: tokens,
+	}
 }
 
 type tokenslicestreamer struct {
