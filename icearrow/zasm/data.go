@@ -20,14 +20,14 @@ type Data struct {
 }
 
 type DataBuilder struct {
-	Strs   intern.StrHeaper
+	Strs   intern.HashIntern[string]
 	Consts intern.HashIntern[PackedValue]
 	Names  intern.HashInternF[string, string]
 }
 
 func NewDataBuilder() DataBuilder {
 	var db DataBuilder
-	db.Strs = intern.NewStrHeaper()
+	db.Strs = intern.NewInterner[string]()
 	db.Consts = intern.NewInterner[PackedValue]()
 	db.Names = intern.NewInternerF(
 		func(s string) string { return string(internal.Normalize(s)) },

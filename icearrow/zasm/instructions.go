@@ -155,8 +155,8 @@ func (iw *InstructionWriter) WriteLoadIdent(h intern.Handle[string]) *Instructio
 	return iw.Write(EncodeOpAndU24(OP_LOAD_IDENT, AssertU24(h)))
 }
 
-func (iw *InstructionWriter) WriteLoadStr(s intern.Str) *InstructionWriter {
-	return iw.Write(Encode(OP_LOAD_STR, s.Bytes()))
+func (iw *InstructionWriter) WriteLoadStr(s intern.Handle[string]) *InstructionWriter {
+	return iw.Write(EncodeOpAndU24(OP_LOAD_STR, AssertU24(s)))
 }
 
 func (iw *InstructionWriter) WriteLoadBool(b bool) *InstructionWriter {
