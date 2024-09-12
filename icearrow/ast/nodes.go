@@ -28,7 +28,6 @@ type BooleanOp struct {
 type Call struct {
 	Callee string
 	Args   []Node
-	Macro  bool
 }
 
 type Identifier struct {
@@ -66,10 +65,15 @@ const (
 	AST_BOOL_OR               = 5
 	AST_BOOL_NEGATE           = 6
 
-	AST_IDENT_UNK AstIdentifierKind = 0
-	AST_IDENT_TOK                   = 2
-	AST_IDENT_SET                   = 4
-	AST_IDENT_TRK                   = 5
+	AST_IDENT_UNK AstIdentifierKind = 0x00
+	AST_IDENT_EXP                   = 0x01
+	AST_IDENT_TOK                   = 0x02
+	AST_IDENT_VAR                   = 0x03
+	AST_IDENT_SET                   = 0x04
+	AST_IDENT_TRK                   = 0x05
+	AST_IDENT_BIF                   = 0x06
+	AST_IDENT_EVT                   = 0x07
+	AST_IDENT_UNP                   = 0xFF
 
 	AST_NODE_EMPTY AstNodeType = iota
 	AST_NODE_CMP
@@ -78,9 +82,9 @@ const (
 	AST_NODE_IDENT
 	AST_NODE_LITERAL
 
-	AST_LIT_NUM  AstLiteralKind = 1
-	AST_LIT_BOOL                = 2
-	AST_LIT_STR                 = 3
+	AST_LIT_NUM  AstLiteralKind = 0x01
+	AST_LIT_BOOL                = 0x02
+	AST_LIT_STR                 = 0x03
 )
 
 /*
@@ -140,5 +144,12 @@ func LiteralBool(b bool) *Literal {
 	l := new(Literal)
 	l.Kind = AST_LIT_BOOL
 	l.Value = b
+	return l
+}
+
+func LiteralNumber(f64 float64) *Literal {
+	l := new(Literal)
+	l.Kind = AST_LIT_NUM
+	l.Value = f64
 	return l
 }

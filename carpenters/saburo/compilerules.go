@@ -3,9 +3,9 @@ package saburo
 import (
 	"slices"
 	"strings"
+	"sudonters/zootler/icearrow/analysis"
 	"sudonters/zootler/icearrow/ast"
 	"sudonters/zootler/icearrow/debug"
-	"sudonters/zootler/icearrow/macros"
 	parsing "sudonters/zootler/icearrow/parser"
 	"sudonters/zootler/icearrow/zasm"
 	"sudonters/zootler/internal"
@@ -36,27 +36,37 @@ func (rc RuleCompilation) Setup(z *app.Zootlr) error {
 		return slipup.Describef(err, "while %s rule %q", action, edge.GetRawRule())
 	}
 	grammar := parsing.NewRulesGrammar()
+	analysisCtx := analysis.NewAnalysis()
+	loadExpansions(&analysisCtx, rc.ScriptPath)
+	loadIdentifierTypes(&analysisCtx, app.GetResource[entities.Tokens](z).Res)
 
 	for _, edge = range collected {
 		dontio.WriteLineOut(z.Ctx(), string(edge.Name()))
 		dontio.WriteLineOut(z.Ctx(), string(edge.GetRawRule()))
-		parser := peruse.NewParser(&grammar, parsing.NewRulesLexer(string(edge.GetRawRule())))
+		parser := peruse.NewParser(grammar, parsing.NewRulesLexer(string(edge.GetRawRule())))
 		pt, ptErr := parser.ParseAt(parsing.LOWEST)
 		if ptErr != nil {
 			return whileHandlingRule(ptErr, "parsing")
 		}
-		ast, astErr := parsing.Transform(&ast.Ast{}, pt)
+		astNodes, astErr := parsing.Transform(&ast.Ast{}, pt)
 		if astErr != nil {
 			return whileHandlingRule(astErr, "lowering tree")
 		}
-		dontio.WriteLineOut(z.Ctx(), debug.AstSexpr(ast))
-		asm, asmErr := assembler.Assemble(ast)
+		astNodes, astErr = analysis.Analyze(astNodes, &analysisCtx)
+		if astErr != nil {
+			return whileHandlingRule(astErr, "lowering tree")
+		}
+		dontio.WriteLineOut(z.Ctx(), debug.AstSexpr(astNodes))
+		asm, asmErr := assembler.Assemble(astNodes)
 		if asmErr != nil {
 			return whileHandlingRule(asmErr, "assembling")
 		}
+		dontio.WriteLineOut(z.Ctx(), "Disassembly:")
 		dis := zasm.Disassemble(asm.I)
 		dontio.WriteLineOut(z.Ctx(), dis)
 	}
+
+	dontio.WriteLineOut(z.Ctx(), "Unpromoted Names: %+v", analysisCtx.Unpromoted())
 
 	return nil
 }
@@ -67,20 +77,65 @@ func (rc RuleCompilation) createAssembler() zasm.Assembler {
 	}
 }
 
-func macro(rule string) []peruse.Token {
-	return slices.Collect(peruse.AllTokens(parsing.NewRulesLexer(rule)))
+func loadExpansions(ctx *analysis.AnalysisContext, path string) {
+	contents, err := internal.ReadJsonFileStringMap(path)
+	if err != nil {
+		panic(err)
+	}
+	grammar := parsing.NewRulesGrammar()
+	for decl, body := range contents {
+		name, params := decl, []string(nil)
+		if strings.Contains(name, "(") {
+			name, params = parseDecl(name)
+		}
+		parser := peruse.NewParser(grammar, parsing.NewRulesLexer(body))
+		pt, _ := parser.ParseAt(parsing.LOWEST)
+		ast, _ := parsing.Transform(&ast.Ast{}, pt)
+		ctx.AddExpansion(name, params, ast)
+	}
 }
 
-func loadAllMacros(xpndrs *macros.Expansions, path string) error {
-	all, fileErr := internal.ReadJsonFileStringMap(path)
-	if fileErr != nil {
-		return fileErr
+func loadIdentifierTypes(ac *analysis.AnalysisContext, tokens entities.Tokens) {
+	for token := range tokens.All {
+		ac.NameToken(string(token.Name()))
 	}
 
-	for decl, body := range all {
-		if err := macros.CreateScriptedMacro(xpndrs, decl, body); err != nil {
-			return slipup.Describef(err, "while loading macro %s", decl)
-		}
+	settings := []string{
+		"adult_trade_shuffle", "big_poe_count", "bridge", "bridge_hearts",
+		"bridge_medallions", "bridge_rewards", "bridge_stones",
+		"bridge_tokens", "chicken_count", "complete_mask_quest",
+		"damage_multiplier", "deadly_bonks", "disable_trade_revert",
+		"dungeon_shortcuts", "entrance_shuffle", "fix_broken_drops",
+		"free_bombchu_drops", "free_scarecrow", "ganon_bosskey_hearts",
+		"ganon_bosskey_medallions", "ganon_bosskey_rewards",
+		"ganon_bosskey_stones", "ganon_bosskey_tokens", "gerudo_fortress",
+		"had_night_start", "lacs_condition", "lacs_hearts", "lacs_medallions",
+		"lacs_rewards", "lacs_stones", "lacs_tokens", "open_door_of_time",
+		"open_forest", "open_kakariko", "plant_beans",
+		"selected_adult_trade_item", "shuffle_dungeon_entrances",
+		"shuffle_empty_pots", "shuffle_expensive_merchants",
+		"shuffle_ganon_bosskey", "shuffle_individual_ocarina_notes",
+		"shuffle_interior_entrances", "shuffle_overworld_entrances",
+		"shuffle_pots", "shuffle_scrubs", "shuffle_silver_rupees",
+		"shuffle_tcgkeys", "skip_child_zelda", "skip_reward_from_rauru",
+		"skipped_trials", "starting_age", "triforce_goal_per_world",
+		"warp_songs", "zora_fountain",
 	}
-	return nil
+
+	for _, setting := range settings {
+		ac.NameSetting(setting)
+	}
+
+	builtIns := []string{
+		"has_bottle", "at_dampe_time", "at_night", "at_day", "at", "here",
+	}
+	for _, builtIn := range builtIns {
+		ac.NameBuiltIn(builtIn)
+	}
+}
+
+func parseDecl(raw string) (string, []string) {
+	parts := strings.Split(strings.TrimSuffix(raw, ")"), "(")
+	args := strings.Split(parts[1], ",")
+	return parts[0], args
 }

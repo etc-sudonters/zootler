@@ -58,16 +58,32 @@ func Visit(guest Visitor, ast Node) error {
 	}
 }
 
-func AssertIs[T Node](node Node) (T, bool) {
+func AssertAs[T Node](node Node) (T, bool) {
 	t, ok := node.(T)
 	return t, ok
 }
 
 func MustAssertAs[T Node](node Node) T {
-	t, ok := AssertIs[T](node)
+	t, ok := AssertAs[T](node)
 	if !ok {
 		panic(slipup.Createf("could not assert node as %T: %+v", t, node))
 	}
 
 	return t
+}
+
+func Unify[A Node, B Node, U any](
+	node Node,
+	mapA func(A) (U, error),
+	mapB func(B) (U, error),
+) (U, error) {
+	switch node := node.(type) {
+	case A:
+		return mapA(node)
+	case B:
+		return mapB(node)
+	default:
+		var u U
+		return u, slipup.Createf("could not cast")
+	}
 }

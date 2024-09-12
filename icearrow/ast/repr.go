@@ -5,6 +5,12 @@ import (
 	"strings"
 )
 
+func Display(node Node) string {
+	var repr AstRender
+	Visit(&repr, node)
+	return repr.String()
+}
+
 type AstRender struct {
 	s strings.Builder
 }
@@ -37,6 +43,7 @@ func (r *AstRender) Comparison(ast *Comparison) error {
 	}
 
 	Visit(r, ast.LHS)
+	r.s.WriteRune(' ')
 	Visit(r, ast.RHS)
 	return r.end()
 }
@@ -63,34 +70,36 @@ func (r *AstRender) BooleanOp(ast *BooleanOp) error {
 
 func (r *AstRender) Call(ast *Call) error {
 	r.start()
-
-	if ast.Macro {
-		fmt.Fprintf(&r.s, "{MACRO %s}", ast.Callee)
-	} else {
-		fmt.Fprintf(&r.s, "%s", ast.Callee)
-	}
-
+	fmt.Fprintf(&r.s, "%s", ast.Callee)
 	for _, arg := range ast.Args {
 		r.s.WriteRune(' ')
 		Visit(r, arg)
 	}
-
 	return r.end()
 }
 
 func (r *AstRender) Identifier(ast *Identifier) error {
 	switch ast.Kind {
-	case AST_IDENT_UNK:
+	case AST_IDENT_UNK, AST_IDENT_UNP:
 		fmt.Fprintf(&r.s, "UNK{%s}", ast.Name)
+		break
+	case AST_IDENT_EXP:
+		fmt.Fprintf(&r.s, "FUNC{%s}", ast.Name)
+		break
+	case AST_IDENT_TOK, AST_IDENT_EVT:
+		fmt.Fprintf(&r.s, "TOK{%s}", ast.Name)
+		break
+	case AST_IDENT_VAR:
+		fmt.Fprintf(&r.s, "VAR{%s}", ast.Name)
 		break
 	case AST_IDENT_SET:
 		fmt.Fprintf(&r.s, "SET{%s}", ast.Name)
 		break
-	case AST_IDENT_TOK:
-		fmt.Fprintf(&r.s, "TOK{%s}", ast.Name)
-		break
 	case AST_IDENT_TRK:
 		fmt.Fprintf(&r.s, "TRK{%s}", ast.Name)
+		break
+	case AST_IDENT_BIF:
+		fmt.Fprintf(&r.s, "BIF{%s}", ast.Name)
 		break
 	default:
 		panic("unreachable")

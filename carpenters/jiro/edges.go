@@ -19,15 +19,18 @@ const (
 	exity
 )
 
-func (e edgekind) component() table.Value {
+func (e edgekind) ascomponents() table.Values {
+	var vt table.Values
 	switch e {
 	case check:
-		return components.CheckEdge{}
+		vt = append(vt, components.CheckEdge{})
 	case event:
-		return components.EventEdge{}
+		vt = append(vt, components.EventEdge{}, components.CollectableGameToken{})
 	case exity:
-		return components.ExitEdge{}
+		vt = append(vt, components.ExitEdge{})
 	default:
 		panic("unknown edge kind")
 	}
+
+	return vt
 }

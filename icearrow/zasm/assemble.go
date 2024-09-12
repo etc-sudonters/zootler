@@ -1,6 +1,7 @@
 package zasm
 
 import (
+	"errors"
 	"sudonters/zootler/icearrow/ast"
 
 	"github.com/etc-sudonters/substrate/slipup"
@@ -45,12 +46,14 @@ func (a *Assembler) Assemble(tree ast.Node) (Assembly, error) {
 }
 
 func (a *Assembler) Comparison(node *ast.Comparison) (Instructions, error) {
-	if instructions, didEliminate := a.eliminateConstCompareAst(node); didEliminate {
-		return instructions, nil
+	lhs, lhErr := ast.Transform(a, node.LHS)
+	rhs, rhErr := ast.Transform(a, node.RHS)
+	if joined := errors.Join(lhErr, rhErr); joined != nil {
+		panic(joined)
 	}
-
-	lhs, _ := ast.Transform(a, node.LHS)
-	rhs, _ := ast.Transform(a, node.RHS)
+	if lhs == nil || rhs == nil {
+		panic(slipup.Createf("expected both arms to exist"))
+	}
 
 	return IntoIW(lhs).Union(rhs).WriteOp(ToZasmOp(node.Op)).I, nil
 }
@@ -60,9 +63,14 @@ func (a *Assembler) BooleanOp(node *ast.BooleanOp) (Instructions, error) {
 		return a.negate(node.LHS)
 	}
 
-	lhs, _ := ast.Transform(a, node.LHS)
-	rhs, _ := ast.Transform(a, node.RHS)
-
+	lhs, lhErr := ast.Transform(a, node.LHS)
+	rhs, rhErr := ast.Transform(a, node.RHS)
+	if joined := errors.Join(lhErr, rhErr); joined != nil {
+		panic(joined)
+	}
+	if lhs == nil || rhs == nil {
+		panic(slipup.Createf("expected both arms to exist"))
+	}
 	return IntoIW(lhs).Union(rhs).WriteOp(ToZasmOp(node.Op)).I, nil
 }
 
@@ -119,33 +127,6 @@ func (a *Assembler) slowCall(node *ast.Call) (Instructions, error) {
 	iw := IntoIW(a.callArgs(node.Args))
 	name := a.Data.Names.Intern(node.Callee)
 	return iw.WriteCall(name, len(node.Args)).I, nil
-}
-
-func (a *Assembler) eliminateConstCompareAst(node *ast.Comparison) (Instructions, bool) {
-	name := func(node ast.Node) (string, bool) {
-		switch node := node.(type) {
-		case *ast.Identifier:
-			return node.Name, true
-		case *ast.Call:
-			return node.Callee, true
-		default:
-			return "", false
-		}
-	}
-
-	lhs, ok := name(node.LHS)
-	if !ok {
-		return nil, false
-	}
-	rhs, ok := name(node.RHS)
-	if !ok {
-		return nil, false
-	}
-
-	if lhs == rhs {
-		return IW().WriteLoadBool(node.Op == ast.AST_CMP_EQ).I, true
-	}
-	return nil, false
 }
 
 func (a *Assembler) tryFastCall(call *ast.Call) (Instructions, bool) {

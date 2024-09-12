@@ -1,6 +1,7 @@
 package jiro
 
 import (
+	"slices"
 	"sudonters/zootler/internal/components"
 	"sudonters/zootler/internal/entities"
 	"sudonters/zootler/internal/entity"
@@ -39,10 +40,13 @@ func (l *graphloader) connect(name components.Name, origin, dest entities.Locati
 		return entities.Edge{}, slipup.Describef(edgeErr, "edge %s", name)
 	}
 	edge.StashRawRule(rule)
-	comps := table.Values{
-		rule, kind.component(),
-		components.Connection{Origin: entity.Model(origin.Id()), Dest: entity.Model(dest.Id())},
-	}
+	comps := slices.Concat(kind.ascomponents(), table.Values{
+		rule,
+		components.Connection{
+			Origin: entity.Model(origin.Id()),
+			Dest:   entity.Model(dest.Id()),
+		},
+	})
 
 	if err := edge.AddComponents(comps); err != nil {
 		return edge, slipup.Describef(err, "while adding components to '%s'", name)
