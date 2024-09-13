@@ -50,13 +50,13 @@ func (w *diswriter) write(d [4]uint8) {
 		fmt.Fprint(w, "clt")
 		return
 	case OP_BOOL_AND:
-		fmt.Fprint(w, "stb")
+		fmt.Fprint(w, "and")
 		return
 	case OP_BOOL_OR:
-		fmt.Fprint(w, "ste")
+		fmt.Fprint(w, "orr")
 		return
 	case OP_BOOL_NEGATE:
-		fmt.Fprint(w, "sbo")
+		fmt.Fprint(w, "neg")
 		return
 	case OP_CALL_0:
 		fmt.Fprintf(w, "cl0 #idents[0x%08X]", DecodeU24(payload))

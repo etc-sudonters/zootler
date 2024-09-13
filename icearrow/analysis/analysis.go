@@ -31,6 +31,7 @@ func NewAnalysis() AnalysisContext {
 }
 
 func Analyze(node ast.Node, ctx *AnalysisContext) (ast.Node, error) {
+	ctx.expandTokenLike = false
 	report := analyze(node, ctx)
 	if report.expansions {
 		node, _ = expand(node, ctx)
@@ -39,6 +40,9 @@ func Analyze(node ast.Node, ctx *AnalysisContext) (ast.Node, error) {
 	node, _ = constCompares(node, ctx)
 	node, _ = constBranches(node)
 	if report.expansions {
+		// run compares before and after identifier expansion
+		// some symbols -- Progressive_Hookshot -- are expandable but
+		// occasionally used as symbols
 		ctx.expandTokenLike = true
 		defer func() { ctx.expandTokenLike = false }()
 		node, _ = expand(node, ctx)

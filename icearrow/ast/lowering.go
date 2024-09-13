@@ -152,7 +152,6 @@ func (a *Ast) eliminateConstCompare(pt *parser.BinOp) (Node, bool, error) {
 	if pt.Op != parser.BinOpEq && pt.Op != parser.BinOpNotEq {
 		return nil, false, nil
 	}
-	// accomodate macro expansion that explodes things like Longshot into a has call
 	lhs, lhsNotIdent := extractIdent(pt.Left)
 	rhs, rhsNotIdent := extractIdent(pt.Right)
 

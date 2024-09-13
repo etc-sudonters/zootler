@@ -7,16 +7,20 @@ import (
 	"github.com/etc-sudonters/substrate/slipup"
 )
 
-type ZasmMacroExpander interface {
-	ExpandMacro(*Assembler, *ast.Call) Instructions
-}
-
 type Assembler struct {
 	Data DataBuilder
 }
 
 type Assembly struct {
 	I Instructions
+}
+
+func (ass *Assembly) ReadInstructions(yield func(Instruction) bool) {
+	for _, instr := range ass.I {
+		if !yield(instr) {
+			break
+		}
+	}
 }
 
 func ToZasmOp[u ~uint8](op u) Op {

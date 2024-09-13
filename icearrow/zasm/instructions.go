@@ -18,6 +18,10 @@ func (i Instruction) Bytes() [4]uint8 {
 	return b
 }
 
+func (i Instruction) MatchOp(op Op) bool {
+	return Op((i&ONLY_OPER)>>OPER_SHIFT)&op == op
+}
+
 type Op uint8
 
 const (
@@ -25,7 +29,6 @@ const (
 	OP_LOAD_IDENT     = 0x22 // 24bit index to names table
 	OP_LOAD_STR       = 0x23 // 24bit index to str table
 	OP_LOAD_BOOL      = 0x24 // arg1 is 1 for true, 2 for false
-	OP_LOAD_U24       = 0x25 // 24bit unsigned int
 	OP_CMP_EQ         = 0x31 // pop 2 from stack, push eq result to stack
 	OP_CMP_NQ         = 0x32 // pop 2 from stack, push nq result to stack
 	OP_CMP_LT         = 0x33 // pop 2 from stack, push lt result to stack
