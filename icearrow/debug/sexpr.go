@@ -150,7 +150,25 @@ func (a *astsexpr) Call(node *ast.Call) error {
 	return nil
 }
 func (a *astsexpr) Identifier(node *ast.Identifier) error {
-	a.sb.WriteString(node.Name)
+	switch node.Kind {
+	case ast.AST_IDENT_EXP, ast.AST_IDENT_BIF:
+		fmt.Fprintf(&a.sb, "<>%s", node.Name)
+		break
+	case ast.AST_IDENT_TOK, ast.AST_IDENT_EVT:
+		fmt.Fprintf(&a.sb, "@%s", node.Name)
+		break
+	case ast.AST_IDENT_SET, ast.AST_IDENT_TRK:
+		fmt.Fprintf(&a.sb, "&%s", node.Name)
+		break
+	case ast.AST_IDENT_VAR:
+		fmt.Fprintf(&a.sb, "$%s", node.Name)
+		break
+	case ast.AST_IDENT_UNK, ast.AST_IDENT_UNP:
+		fallthrough
+	default:
+		fmt.Fprintf(&a.sb, "??%s", node.Name)
+		break
+	}
 	return nil
 }
 func (a *astsexpr) Literal(node *ast.Literal) error {

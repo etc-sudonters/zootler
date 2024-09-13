@@ -174,6 +174,7 @@ from io import StringIO
 import dis
 from random import shuffle
 # disable all the rom stuff
+settings = Settings({})
 settings.create_uncompressed_rom = settings.create_compressed_rom = settings.create_wad_file = False
 settings.patch_without_output = settings.create_patch_file = False
 # otherwise randomizer get mads
@@ -182,7 +183,7 @@ resolve_settings(settings)
 worlds = build_world_graphs(settings)
 world = worlds[0]
 # pretty cool this works
-shuffle(locations := w.get_locations())
+shuffle(locations := world.get_locations())
 
 get_location = iter(locations).__next__
 

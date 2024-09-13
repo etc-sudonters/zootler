@@ -87,3 +87,22 @@ func Unify[A Node, B Node, U any](
 		return u, slipup.Createf("could not cast")
 	}
 }
+
+func Unify3[A Node, B Node, C Node, U any](
+	node Node,
+	mapA func(A) (U, error),
+	mapB func(B) (U, error),
+	mapC func(C) (U, error),
+) (U, error) {
+	switch node := node.(type) {
+	case A:
+		return mapA(node)
+	case B:
+		return mapB(node)
+	case C:
+		return mapC(node)
+	default:
+		var u U
+		return u, slipup.Createf("could not cast")
+	}
+}

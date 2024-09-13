@@ -7,20 +7,19 @@ import (
 func analyze(node ast.Node, ctx *AnalysisContext) report {
 	var a analyzer
 	a.canExpand = true
-	a.canPromote = true
 	a.ctx = ctx
 	ast.Visit(&a, node)
 	return a.report
 }
 
 type report struct {
-	expansions, promotions, compares, branches bool
+	expansions, compares, branches bool
 }
 
 type analyzer struct {
-	canExpand, canPromote bool
-	report                report
-	ctx                   *AnalysisContext
+	canExpand bool
+	report    report
+	ctx       *AnalysisContext
 }
 
 func (a *analyzer) Comparison(node *ast.Comparison) error {
@@ -48,10 +47,13 @@ func (a *analyzer) BooleanOp(node *ast.BooleanOp) error {
 func (a *analyzer) Call(node *ast.Call) error {
 	isExpandable := a.ctx.isExpandable(node.Callee)
 	a.report.expansions = a.report.expansions || isExpandable
+	a.canExpand = false
+	defer func() { a.canExpand = true }()
 	return nil
 }
 
 func (a *analyzer) Identifier(node *ast.Identifier) error {
+	a.ctx.tagIdentifier(node)
 	isExpandable := a.canExpand && a.ctx.isExpandable(node.Name)
 	a.report.expansions = a.report.expansions || isExpandable
 	return nil
