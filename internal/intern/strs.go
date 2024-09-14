@@ -2,30 +2,30 @@ package intern
 
 import "github.com/etc-sudonters/substrate/slipup"
 
-func NewStrHeaper() StrHeaper {
-	var h StrHeaper
-	h.heap = make(StrHeap, 0, 2048)
+func NewStrPiler() StrPiler {
+	var h StrPiler
+	h.pile = make(StrPile, 0, 2048)
 	h.strs = make(map[string]Str, 32)
 	return h
 }
 
-type StrHeaper struct {
-	heap StrHeap
+type StrPiler struct {
+	pile StrPile
 	strs map[string]Str
 }
 
-func (h *StrHeaper) Heap() StrHeap {
-	return h.heap
+func (h *StrPiler) Pile() StrPile {
+	return h.pile
 }
 
-func (h *StrHeaper) Intern(interning string) Str {
+func (h *StrPiler) Intern(interning string) Str {
 	if s, interned := h.strs[interning]; interned {
 		return s
 	}
 
 	bytes := []uint8(interning)
-	str := encodeStrFromIntPair(len(h.heap), len(bytes))
-	h.heap = append(h.heap, bytes...)
+	str := encodeStrFromIntPair(len(h.pile), len(bytes))
+	h.pile = append(h.pile, bytes...)
 	return str
 }
 
@@ -35,7 +35,7 @@ func encodeStrFromIntPair(offset, length int) Str {
 	len8 := uint8(length)
 
 	if int(off16) != offset {
-		panic(slipup.Createf("string heap would become too large: %d", offset+length))
+		panic(slipup.Createf("string pile would become too large: %d", offset+length))
 	}
 
 	if int(len8) != length {
@@ -48,10 +48,10 @@ func encodeStrFromIntPair(offset, length int) Str {
 	return s
 }
 
-type StrHeap []uint8
+type StrPile []uint8
 
-func (heap StrHeap) Retrieve(str Str) string {
-	bytes := heap[str.Offset() : str.Offset()+str.Len()]
+func (pile StrPile) Retrieve(str Str) string {
+	bytes := pile[str.Offset() : str.Offset()+str.Len()]
 	s := string(bytes)
 	return s
 }

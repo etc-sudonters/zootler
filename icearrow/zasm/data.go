@@ -14,7 +14,7 @@ type Packable interface {
 }
 
 type Data struct {
-	Strs   []uint8
+	Strs   []string
 	Consts []PackedValue
 	Names  []string
 }
@@ -23,6 +23,15 @@ type DataBuilder struct {
 	Strs   intern.HashIntern[string]
 	Consts intern.HashIntern[PackedValue]
 	Names  intern.HashInternF[string, string]
+}
+
+func CreateDataTables(db DataBuilder) Data {
+	var d Data
+	d.Strs = db.Strs.IntoTable()
+	d.Consts = db.Consts.IntoTable()
+	d.Names = db.Names.IntoTable()
+	return d
+
 }
 
 func NewDataBuilder() DataBuilder {

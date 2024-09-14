@@ -24,7 +24,6 @@ type RuleCompilation struct {
 func (rc RuleCompilation) Setup(z *app.Zootlr) error {
 	assembler := rc.createAssembler()
 	edges := app.GetResource[entities.Edges](z)
-
 	collected := slices.Collect(edges.Res.All)
 	slices.SortFunc(collected, func(a, b entities.Edge) int {
 		return strings.Compare(string(a.Name()), string(b.Name()))
@@ -36,11 +35,16 @@ func (rc RuleCompilation) Setup(z *app.Zootlr) error {
 		return slipup.Describef(err, "while %s rule %q", action, edge.GetRawRule())
 	}
 	grammar := parsing.NewRulesGrammar()
-	analysisCtx := analysis.NewAnalysis()
+	analysisCtx := analysis.NewAnalysis(edges.Res)
 	loadExpansions(&analysisCtx, rc.ScriptPath)
 	loadIdentifierTypes(&analysisCtx, app.GetResource[entities.Tokens](z).Res)
-
+	assemblies := zasm.Assembly{}
 	for _, edge = range collected {
+		origin, dest := edge.Retrieve("origin").(string), edge.Retrieve("dest").(string)
+		if dest == "" || origin == "" {
+			panic(slipup.Createf("edge %+v does not have dest/origin", edge))
+		}
+		analysisCtx.SetCurrent(origin)
 		dontio.WriteLineOut(z.Ctx(), string(edge.Name()))
 		dontio.WriteLineOut(z.Ctx(), string(edge.GetRawRule()))
 		parser := peruse.NewParser(grammar, parsing.NewRulesLexer(string(edge.GetRawRule())))
@@ -57,17 +61,17 @@ func (rc RuleCompilation) Setup(z *app.Zootlr) error {
 			return whileHandlingRule(astErr, "lowering tree")
 		}
 		dontio.WriteLineOut(z.Ctx(), debug.AstSexpr(astNodes))
-		asm, asmErr := assembler.Assemble(astNodes)
+		asm, asmErr := assembler.Assemble(string(edge.Name()), astNodes)
 		if asmErr != nil {
 			return whileHandlingRule(asmErr, "assembling")
 		}
-		dontio.WriteLineOut(z.Ctx(), "Disassembly:")
-		dis := zasm.Disassemble(asm.I)
-		dontio.WriteLineOut(z.Ctx(), dis)
+		assemblies.Include(asm)
+		dontio.WriteLineOut(z.Ctx(), zasm.Disassemble(asm.I))
 	}
 
-	dontio.WriteLineOut(z.Ctx(), "Unpromoted Names: %+v", analysisCtx.Unpromoted())
-
+	tbls := assembler.CreateDataTables()
+	assemblies.AttachDataTables(tbls)
+	dontio.WriteLineOut(z.Ctx(), "Strings: %+v", tbls.Strs)
 	return nil
 }
 
@@ -100,7 +104,7 @@ func loadIdentifierTypes(ac *analysis.AnalysisContext, tokens entities.Tokens) {
 		ac.NameToken(string(token.Name()))
 	}
 
-	settings := []string{
+	settingNames := []string{
 		"adult_trade_shuffle", "big_poe_count", "bridge", "bridge_hearts",
 		"bridge_medallions", "bridge_rewards", "bridge_stones",
 		"bridge_tokens", "chicken_count", "complete_mask_quest",
@@ -122,7 +126,7 @@ func loadIdentifierTypes(ac *analysis.AnalysisContext, tokens entities.Tokens) {
 		"warp_songs", "zora_fountain",
 	}
 
-	for _, setting := range settings {
+	for _, setting := range settingNames {
 		ac.NameSetting(setting)
 	}
 

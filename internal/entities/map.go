@@ -10,15 +10,15 @@ import (
 )
 
 type Tokens struct {
-	*genericmap[Token]
+	*EntityMap[Token]
 }
 
 type Edges struct {
-	*genericmap[Edge]
+	*EntityMap[Edge]
 }
 
 type Locations struct {
-	*genericmap[Location]
+	*EntityMap[Location]
 }
 
 type Map[T Entity] interface {
@@ -26,18 +26,18 @@ type Map[T Entity] interface {
 	All(func(T) bool)
 }
 
-type genericmap[T Entity] struct {
+type EntityMap[T Entity] struct {
 	cache map[internal.NormalizedStr]T
 	eng   query.Engine
 	def   table.Values
 	fact  func(table.RowId, components.Name, table.Values) T
 }
 
-func (e *genericmap[T]) CacheLen() int {
+func (e *EntityMap[T]) CacheLen() int {
 	return len(e.cache)
 }
 
-func (e *genericmap[T]) Entity(name components.Name) (T, error) {
+func (e *EntityMap[T]) Entity(name components.Name) (T, error) {
 	normaled := internal.Normalize(name)
 	if ent, exists := e.cache[normaled]; exists {
 		return ent, nil
@@ -59,7 +59,7 @@ func (e *genericmap[T]) Entity(name components.Name) (T, error) {
 	return t, nil
 }
 
-func (e *genericmap[T]) All(yield func(T) bool) {
+func (e *EntityMap[T]) All(yield func(T) bool) {
 	for _, t := range e.cache {
 		if !yield(t) {
 			return
@@ -67,7 +67,7 @@ func (e *genericmap[T]) All(yield func(T) bool) {
 	}
 }
 
-func (e *genericmap[T]) init(f func(query.Engine, query.Query)) error {
+func (e *EntityMap[T]) init(f func(query.Engine, query.Query)) error {
 	q := e.eng.CreateQuery()
 	f(e.eng, q)
 	rows, err := e.eng.Retrieve(q)
@@ -146,8 +146,8 @@ func newmap[T Entity](
 	q func(query.Engine, query.Query),
 	fact func(table.RowId, components.Name, table.Values) T,
 	def ...table.Value,
-) (*genericmap[T], error) {
-	var g genericmap[T]
+) (*EntityMap[T], error) {
+	var g EntityMap[T]
 	g.cache = make(map[internal.NormalizedStr]T, 256)
 	g.def = def
 	g.fact = fact

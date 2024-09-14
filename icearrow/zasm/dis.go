@@ -67,23 +67,6 @@ func (w *diswriter) write(d [4]uint8) {
 	case OP_CALL_2:
 		fmt.Fprintf(w, "cl2 #idents[0x%08X]", DecodeU24(payload))
 		return
-	case OP_CHK_QTY:
-		ident := uint16(payload[1])<<8 | uint16(payload[0])
-		qty := payload[2]
-		fmt.Fprintf(w, "chq #idents[0x%04X] 0x%02X", ident, qty)
-		return
-	case OP_CHK_TRK:
-		fmt.Fprintf(w, "trk #idents[0x%08X]", DecodeU24(payload))
-		return
-	case OP_CHK_SET:
-		fmt.Fprintf(w, "ls1 #idents[0x%08X]", DecodeU24(payload))
-		return
-	case OP_CHK_SET2:
-		u24 := DecodeU24(payload)
-		blk := (u24 & 0x00FFF000) >> 12
-		sub := u24 & 0x00000FFF
-		fmt.Fprintf(w, "ls2 #idents[0x%06X] #idents[0x%06X]", blk, sub)
-		return
 	case 0x0:
 		fmt.Fprint(w, "greg")
 		return

@@ -31,6 +31,8 @@ type (
 
 	Advancement struct{}
 	Priority    struct{}
+
+	AnonymousEvent struct{}
 )
 
 func (c BossKey) String() string              { return "Boss Key" }

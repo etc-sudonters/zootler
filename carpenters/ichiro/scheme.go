@@ -81,6 +81,8 @@ func BaseDDL() []DDL {
 		columns.BitColumnOf[components.EventEdge],
 		columns.BitColumnOf[components.TimePasses],
 		columns.BitColumnOf[components.Helper],
+		columns.BitColumnOf[components.AnonymousEvent],
+
 		columns.BitColumnOf[components.Advancement],
 		columns.BitColumnOf[components.Beehive],
 		columns.BitColumnOf[components.BossHeart],

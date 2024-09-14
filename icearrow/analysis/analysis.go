@@ -2,16 +2,22 @@ package analysis
 
 import (
 	"errors"
+	"fmt"
 	"regexp"
 	"strings"
 	"sudonters/zootler/icearrow/ast"
 	"sudonters/zootler/internal"
+	"sudonters/zootler/internal/components"
+	"sudonters/zootler/internal/entities"
+	"sudonters/zootler/internal/table"
 
 	"github.com/etc-sudonters/substrate/slipup"
 )
 
-func NewAnalysis() AnalysisContext {
+func NewAnalysis(edges entities.Edges) AnalysisContext {
 	var ac AnalysisContext
+	ac.edges = edges
+	ac.lateExpansions = make(map[string][]LateExpansion)
 	ac.expansions = make(map[string]replacement)
 	ac.settingName = make(map[internal.NormalizedStr]struct{})
 	ac.tokenNames = make(map[internal.NormalizedStr]struct{})
@@ -33,6 +39,9 @@ func NewAnalysis() AnalysisContext {
 func Analyze(node ast.Node, ctx *AnalysisContext) (ast.Node, error) {
 	ctx.expandTokenLike = false
 	report := analyze(node, ctx)
+	if report.lateExpansions {
+		node, _ = yankLateExpansions(node, ctx)
+	}
 	if report.expansions {
 		node, _ = expand(node, ctx)
 	}
@@ -52,14 +61,27 @@ func Analyze(node ast.Node, ctx *AnalysisContext) (ast.Node, error) {
 	return node, nil
 }
 
+type LateExpansion struct {
+	Name, Parent string
+	Rule         ast.Node
+	Edge         entities.Edge
+}
+
 type AnalysisContext struct {
+	edges           entities.Edges
+	current         string
 	expansions      map[string]replacement
 	tokenNames      map[internal.NormalizedStr]struct{}
 	settingName     map[internal.NormalizedStr]struct{}
 	varName         map[internal.NormalizedStr]struct{}
 	builtInName     map[internal.NormalizedStr]struct{}
 	unpromoted      map[string]struct{}
+	lateExpansions  map[string][]LateExpansion
 	expandTokenLike bool
+}
+
+func (a *AnalysisContext) SetCurrent(location string) {
+	a.current = location
 }
 
 func (a *AnalysisContext) Unpromoted() []string {
@@ -109,6 +131,64 @@ func (ctx *AnalysisContext) isExpandable(name string) bool {
 	}
 	_, exists := ctx.expansions[name]
 	return exists
+}
+
+func (ctx *AnalysisContext) lateExpander(call *ast.Call) (ast.Node, error) {
+	var target string
+	var rule ast.Node
+
+	switch call.Callee {
+	case "here":
+		target = ctx.current
+		rule = call.Args[0]
+		break
+	case "at":
+		trgt := ast.MustAssertAs[*ast.Literal](call.Args[0])
+		target = trgt.Value.(string)
+		rule = call.Args[1]
+	default:
+		panic(slipup.Createf("unknown late expansions %q", call.Callee))
+	}
+
+	if target == "" {
+		panic(slipup.Createf(
+			"at/here expansion w/o target available:\ncurrent: %q\n%#v",
+			ctx.current, call,
+		))
+	}
+
+	rules := ctx.lateExpansions[target]
+	name := fmt.Sprintf("%s Reachability %d", target, len(rules)+1)
+	edge, err := ctx.edges.Entity(components.Name(name + " edge"))
+	if err != nil {
+		return nil, slipup.Describef(err, "could not create token for subrule %q", name)
+	}
+	addErr := edge.AddComponents(table.Values{components.EventEdge{}, components.AnonymousEvent{}})
+	// this edge and its destination are synthetic and we'll produce them later
+	edge.Stash("origin", target)
+	edge.Stash("dest", name)
+	if addErr != nil {
+		return nil, slipup.Describef(addErr, "could not describe token for subrule %q", name)
+	}
+
+	lateXpsn := LateExpansion{
+		Name:   name,
+		Parent: target,
+		Rule:   rule,
+		Edge:   edge,
+	}
+	rules = append(rules, lateXpsn)
+	ctx.lateExpansions[target] = rules
+	return &ast.Call{
+		Callee: "has",
+		Args: []ast.Node{
+			&ast.Identifier{
+				Name: name,
+				Kind: ast.AST_IDENT_EVT,
+			},
+			&ast.Literal{Value: float64(1), Kind: ast.AST_LIT_NUM},
+		},
+	}, nil
 }
 
 func (ctx *AnalysisContext) tagIdentifier(ident *ast.Identifier) {
@@ -336,6 +416,17 @@ func promotions(node ast.Node, ctx *AnalysisContext) (ast.Node, error) {
 			}, nil
 		}
 		return lit, nil
+	}
+	return ast.Transform(&re, node)
+}
+
+func yankLateExpansions(node ast.Node, ctx *AnalysisContext) (ast.Node, error) {
+	var re rewriter
+	re.call = func(_ *rewriter, call *ast.Call) (ast.Node, error) {
+		if call.Callee != "at" && call.Callee != "here" {
+			return call, nil
+		}
+		return ctx.lateExpander(call)
 	}
 	return ast.Transform(&re, node)
 }

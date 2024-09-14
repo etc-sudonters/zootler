@@ -18,6 +18,15 @@ func (i Instruction) Bytes() [4]uint8 {
 	return b
 }
 
+func (i Instruction) Op() Op {
+	return Op((i & ONLY_OPER) >> OPER_SHIFT)
+}
+
+func (i Instruction) OpAndPayload() (Op, [3]uint8) {
+	bytes := i.Bytes()
+	return Op(bytes[0]), [3]uint8(bytes[1:4])
+}
+
 func (i Instruction) MatchOp(op Op) bool {
 	return Op((i&ONLY_OPER)>>OPER_SHIFT)&op == op
 }
@@ -38,10 +47,6 @@ const (
 	OP_CALL_0         = 0x51 // 24bit index to name table to use as func name
 	OP_CALL_1         = 0x52 // 24bit index... pop 1 from stack as arg
 	OP_CALL_2         = 0x53 // 24bit index... pop 2 from stack as args
-	OP_CHK_QTY        = 0x54 // 16bit token id, 8 bit qty
-	OP_CHK_SET        = 0x55 // 24bit name index
-	OP_CHK_SET2       = 0x56 // 2 12bit name indexes
-	OP_CHK_TRK        = 0x57 // 24bit name index
 
 	OPER_SHIFT uint = 24
 	ARG1_SHIFT      = 16
@@ -81,6 +86,10 @@ func EncodeU16(u uint16) [3]uint8 {
 	payload[1] = uint8((0xFF00 & u) >> 8)
 	payload[2] = 0
 	return payload
+}
+
+func DecodeBool(payload [3]uint8) bool {
+	return payload[0] == 1
 }
 
 func DecodeU16(payload [3]uint8) uint16 {

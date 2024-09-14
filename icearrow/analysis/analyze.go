@@ -13,7 +13,7 @@ func analyze(node ast.Node, ctx *AnalysisContext) report {
 }
 
 type report struct {
-	expansions, compares, branches bool
+	lateExpansions, expansions, compares, branches bool
 }
 
 type analyzer struct {
@@ -45,6 +45,8 @@ func (a *analyzer) BooleanOp(node *ast.BooleanOp) error {
 }
 
 func (a *analyzer) Call(node *ast.Call) error {
+	isLateExpander := node.Callee == "at" || node.Callee == "here"
+	a.report.lateExpansions = a.report.lateExpansions || isLateExpander
 	isExpandable := a.ctx.isExpandable(node.Callee)
 	a.report.expansions = a.report.expansions || isExpandable
 	a.canExpand = false

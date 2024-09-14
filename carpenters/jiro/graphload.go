@@ -39,6 +39,8 @@ func (l *graphloader) connect(name components.Name, origin, dest entities.Locati
 	if edgeErr != nil {
 		return entities.Edge{}, slipup.Describef(edgeErr, "edge %s", name)
 	}
+	edge.Stash("origin", string(origin.Name()))
+	edge.Stash("dest", string(dest.Name()))
 	edge.StashRawRule(rule)
 	comps := slices.Concat(kind.ascomponents(), table.Values{
 		rule,

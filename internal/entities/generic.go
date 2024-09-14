@@ -27,6 +27,14 @@ type Edge struct {
 	stash map[string]any
 }
 
+func (e Edge) Stash(key string, value any) {
+	e.stash[key] = value
+}
+
+func (e Edge) Retrieve(key string) any {
+	return e.stash[key]
+}
+
 func (e *Edge) StashRawRule(rule components.RawLogic) {
 	if _, exists := e.stash["rawrule"]; exists {
 		return

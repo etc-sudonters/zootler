@@ -49,3 +49,13 @@ type HashInternF[T any, U comparable] struct {
 func (c HashInternF[T, U]) Intern(t T) Handle[U] {
 	return c.HashIntern.Intern(c.f(t))
 }
+
+func (c HashIntern[T]) IntoTable() []T {
+	ts := make([]T, len(c.interned))
+
+	for t, idx := range c.interned {
+		ts[idx-1] = t
+	}
+
+	return ts
+}
