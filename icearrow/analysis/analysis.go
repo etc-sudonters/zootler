@@ -491,6 +491,11 @@ func promotions(node ast.Node, ctx *AnalysisContext) (ast.Node, error) {
 
 	re.identifier = func(r *rewriter, ident *ast.Identifier) (ast.Node, error) {
 		switch ident.Kind {
+		case ast.AST_IDENT_BIF:
+			return &ast.Call{
+				Callee: ident.Name,
+				Args:   nil,
+			}, nil
 		case ast.AST_IDENT_TOK, ast.AST_IDENT_EVT:
 			return &ast.Call{
 				Callee: "has",
@@ -499,6 +504,11 @@ func promotions(node ast.Node, ctx *AnalysisContext) (ast.Node, error) {
 		case ast.AST_IDENT_SET:
 			return &ast.Call{
 				Callee: "load_setting",
+				Args:   []ast.Node{ident},
+			}, nil
+		case ast.AST_IDENT_TRK:
+			return &ast.Call{
+				Callee: "is_trick_enabled",
 				Args:   []ast.Node{ident},
 			}, nil
 		}
