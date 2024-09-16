@@ -19,18 +19,16 @@ func NewAnalysis(edges entities.Edges) AnalysisContext {
 	ac.edges = edges
 	ac.lateExpansions = make(map[string][]LateExpansion)
 	ac.expansions = make(map[string]replacement)
-	ac.settingName = make(map[internal.NormalizedStr]struct{})
-	ac.tokenNames = make(map[internal.NormalizedStr]struct{})
-	ac.builtInName = make(map[internal.NormalizedStr]struct{})
-	ac.unpromoted = make(map[string]struct{})
+	ac.names = make(map[internal.NormalizedStr]ast.AstIdentifierKind)
 
-	ac.varName = make(map[internal.NormalizedStr]struct{})
-	varNames := []string{
-		"adult", "age", "both", "child", "either", "fire", "forest", "light",
+	ac.names[internal.NormalizedStr("age")] = ast.AST_IDENT_VAR
+	symbolic := []string{
+		"adult", "both", "child", "either", "fire", "forest", "light",
 		"shadow", "spirit", "water",
 	}
-	for _, name := range varNames {
-		ac.varName[internal.Normalize(name)] = struct{}{}
+
+	for _, symbol := range symbolic {
+		ac.names[internal.Normalize(symbol)] = ast.AST_IDENT_SYM
 	}
 
 	return ac
@@ -68,14 +66,10 @@ type LateExpansion struct {
 }
 
 type AnalysisContext struct {
+	names           map[internal.NormalizedStr]ast.AstIdentifierKind
 	edges           entities.Edges
 	current         string
 	expansions      map[string]replacement
-	tokenNames      map[internal.NormalizedStr]struct{}
-	settingName     map[internal.NormalizedStr]struct{}
-	varName         map[internal.NormalizedStr]struct{}
-	builtInName     map[internal.NormalizedStr]struct{}
-	unpromoted      map[string]struct{}
 	lateExpansions  map[string][]LateExpansion
 	expandTokenLike bool
 }
@@ -84,53 +78,34 @@ func (a *AnalysisContext) SetCurrent(location string) {
 	a.current = location
 }
 
-func (a *AnalysisContext) Unpromoted() []string {
-	names := make([]string, 0, len(a.unpromoted))
-	for k := range a.unpromoted {
-		names = append(names, k)
-	}
-
-	return names
-}
-
 func (ctx *AnalysisContext) NameToken(name string) {
-	ctx.tokenNames[internal.Normalize(name)] = struct{}{}
-}
-
-func (ctx *AnalysisContext) isToken(name string) bool {
-	_, exists := ctx.tokenNames[internal.Normalize(name)]
-	return exists
+	ctx.names[internal.Normalize(name)] = ast.AST_IDENT_TOK
 }
 
 func (ctx *AnalysisContext) NameSetting(name string) {
-	ctx.settingName[internal.Normalize(name)] = struct{}{}
-}
-
-func (ctx *AnalysisContext) isSetting(name string) bool {
-	_, exists := ctx.settingName[internal.Normalize(name)]
-	return exists
+	ctx.names[internal.Normalize(name)] = ast.AST_IDENT_SET
 }
 
 func (ctx *AnalysisContext) NameBuiltIn(name string) {
-	ctx.builtInName[internal.Normalize(name)] = struct{}{}
+	ctx.names[internal.Normalize(name)] = ast.AST_IDENT_BIF
 }
 
-func (ctx *AnalysisContext) isBuiltIn(name string) bool {
-	_, exists := ctx.builtInName[internal.Normalize(name)]
-	return exists
+func (ctx *AnalysisContext) AddExpansion(name string, params []string, body ast.Node) {
+	ctx.expansions[name] = replacement{name, params, body}
 }
 
-func (ctx *AnalysisContext) isVar(name string) bool {
-	_, exists := ctx.varName[internal.Normalize(name)]
-	return exists
-}
-
-func (ctx *AnalysisContext) isExpandable(name string) bool {
-	if ctx.looksLikeToken(name) && !ctx.expandTokenLike {
-		return false
+func (ctx *AnalysisContext) LateExpanders(yield func(string, LateExpansion) bool) {
+	var lateXpns map[string][]LateExpansion
+	for len(ctx.lateExpansions) > 0 {
+		lateXpns, ctx.lateExpansions = ctx.lateExpansions, make(map[string][]LateExpansion)
+		for current, xpns := range lateXpns {
+			for _, xpn := range xpns {
+				if !yield(current, xpn) {
+					return
+				}
+			}
+		}
 	}
-	_, exists := ctx.expansions[name]
-	return exists
 }
 
 func (ctx *AnalysisContext) lateExpander(call *ast.Call) (ast.Node, error) {
@@ -171,13 +146,13 @@ func (ctx *AnalysisContext) lateExpander(call *ast.Call) (ast.Node, error) {
 		return nil, slipup.Describef(addErr, "could not describe token for subrule %q", name)
 	}
 
-	lateXpsn := LateExpansion{
+	lateXpns := LateExpansion{
 		Name:   name,
 		Parent: target,
 		Rule:   rule,
 		Edge:   edge,
 	}
-	rules = append(rules, lateXpsn)
+	rules = append(rules, lateXpns)
 	ctx.lateExpansions[target] = rules
 	return &ast.Call{
 		Callee: "has",
@@ -195,6 +170,8 @@ func (ctx *AnalysisContext) tagIdentifier(ident *ast.Identifier) {
 	name := ident.Name
 	if ident.Kind != ast.AST_IDENT_UNK {
 		return
+	} else if kind, assigned := ctx.names[internal.Normalize(name)]; assigned {
+		ident.Kind = kind
 	} else if strings.HasPrefix(ident.Name, "logic_") {
 		ident.Kind = ast.AST_IDENT_TRK
 	} else if ctx.isToken(name) || ctx.looksLikeToken(name) {
@@ -208,34 +185,56 @@ func (ctx *AnalysisContext) tagIdentifier(ident *ast.Identifier) {
 	} else if ctx.isVar(name) {
 		ident.Kind = ast.AST_IDENT_VAR
 	} else {
-		ident.Kind = ast.AST_IDENT_UNP
-		ctx.unpromoted[name] = struct{}{}
+		panic(slipup.Createf("unknown identifier %q", ident.Name))
 	}
+}
+
+func (ctx *AnalysisContext) isToken(name string) bool {
+	ident, exists := ctx.names[internal.Normalize(name)]
+	return exists && ident == ast.AST_IDENT_TOK
+}
+
+func (ctx *AnalysisContext) isSetting(name string) bool {
+	ident, exists := ctx.names[internal.Normalize(name)]
+	return exists && ident == ast.AST_IDENT_SET
+}
+
+func (ctx *AnalysisContext) isBuiltIn(name string) bool {
+	ident, exists := ctx.names[internal.Normalize(name)]
+	return exists && ident == ast.AST_IDENT_BIF
+}
+
+func (ctx *AnalysisContext) isVar(name string) bool {
+	ident, exists := ctx.names[internal.Normalize(name)]
+	return exists && ident == ast.AST_IDENT_VAR
+}
+
+func (ctx *AnalysisContext) isExpandable(name string) bool {
+	if ctx.looksLikeToken(name) && !ctx.expandTokenLike {
+		return false
+	}
+	_, exists := ctx.expansions[name]
+	return exists
 }
 
 func (_ *AnalysisContext) looksLikeToken(str string) bool {
 	return looksLikeToken.MatchString(str)
 }
 
-func (ctx *AnalysisContext) AddExpansion(name string, params []string, body ast.Node) {
-	ctx.expansions[name] = replacement{name, params, body}
-}
-
 func chaseIdentifier(node ast.Node, ctx *AnalysisContext) (*ast.Identifier, bool) {
 	ident := func(i *ast.Identifier) (*ast.Identifier, error) {
 		return i, nil
 	}
-	literal :=
-		func(l *ast.Literal) (*ast.Identifier, error) {
-			str, isStr := l.Value.(string)
-			if isStr && ctx.looksLikeToken(str) {
-				i := new(ast.Identifier)
-				i.Kind = ast.AST_IDENT_TOK
-				i.Name = str
-				return i, nil
-			}
-			return nil, errors.New("nope")
+	literal := func(l *ast.Literal) (*ast.Identifier, error) {
+		str, isStr := l.Value.(string)
+		if isStr && ctx.looksLikeToken(str) {
+			i := new(ast.Identifier)
+			i.Kind = ast.AST_IDENT_TOK
+			i.Name = str
+			return i, nil
 		}
+		return nil, errors.New("nope")
+	}
 
 	res, err := ast.Unify3(node,
 		ident,
@@ -378,6 +377,13 @@ func expand(node ast.Node, ctx *AnalysisContext) (ast.Node, error) {
 	return Analyze(expansion, ctx)
 }
 
+func writeCompareToSetting(setting *ast.Identifier, comperand ast.Node) (*ast.Call, error) {
+	return &ast.Call{
+		Callee: "compare_to_setting",
+		Args:   []ast.Node{setting, comperand},
+	}, nil
+}
+
 func promotions(node ast.Node, ctx *AnalysisContext) (ast.Node, error) {
 	var re rewriter
 	re.call = func(r *rewriter, c *ast.Call) (ast.Node, error) {
@@ -390,8 +396,99 @@ func promotions(node ast.Node, ctx *AnalysisContext) (ast.Node, error) {
 				}
 			}
 		}
+		if c.Callee == "load_setting_2" {
+			ident, isIdent := ast.AssertAs[*ast.Identifier](c.Args[0])
+			if isIdent {
+				switch ident.Name {
+				case "dungeon_shortcuts":
+					c.Callee = "has_dungeon_shortcuts"
+					c.Args = c.Args[1:]
+					break
+				case "skipped_trials":
+					c.Callee = "is_trial_skipped"
+					c.Args = c.Args[1:]
+					break
+				}
+
+			}
+		}
 		return c, nil
 	}
+
+	isSettingIdent := func(node ast.Node) (*ast.Identifier, bool) {
+		ident, isIdent := ast.AssertAs[*ast.Identifier](node)
+		return ident, isIdent && ident.Kind == ast.AST_IDENT_SET
+	}
+
+	isVarIdent := func(node ast.Node) (*ast.Identifier, bool) {
+		ident, isIdent := ast.AssertAs[*ast.Identifier](node)
+		return ident, isIdent && ident.Kind == ast.AST_IDENT_VAR
+	}
+
+	isSettingLoad := func(node ast.Node) (*ast.Call, bool) {
+		call, isCall := ast.AssertAs[*ast.Call](node)
+		return call, isCall && (call.Callee == "load_setting" || call.Callee == "load_setting_2" || call.Callee == "is_trial_skipped" || call.Callee == "has_dungeon_shortcuts")
+	}
+
+	re.compares = func(r *rewriter, compare *ast.Comparison) (ast.Node, error) {
+		if ident, isIdent := isSettingIdent(compare.LHS); isIdent {
+			return writeCompareToSetting(ident, compare.RHS)
+		}
+		if ident, isIdent := isSettingIdent(compare.RHS); isIdent {
+			return writeCompareToSetting(ident, compare.LHS)
+		}
+
+		if ident, isIdent := isVarIdent(compare.LHS); isIdent {
+			if ident.Name == "age" {
+				return &ast.Call{
+					Callee: "check_age",
+					Args:   []ast.Node{compare.RHS},
+				}, nil
+			}
+		}
+
+		if ident, isIdent := isVarIdent(compare.RHS); isIdent {
+			if ident.Name == "age" {
+				return &ast.Call{
+					Callee: "check_age",
+					Args:   []ast.Node{compare.LHS},
+				}, nil
+			}
+		}
+
+		newOp := new(ast.Comparison)
+		newOp.Op = compare.Op
+		newOp.LHS, _ = ast.Transform(r, compare.LHS)
+		newOp.RHS, _ = ast.Transform(r, compare.RHS)
+		return newOp, nil
+
+	}
+
+	re.booleans = func(r *rewriter, boolop *ast.BooleanOp) (ast.Node, error) {
+		lhs, _ := ast.Transform(r, boolop.LHS)
+		if boolop.Op == ast.AST_BOOL_NEGATE {
+			if setting, isSettingIdent := isSettingIdent(boolop.LHS); isSettingIdent {
+				return &ast.Call{
+					Callee: "invert_load_setting",
+					Args:   []ast.Node{setting},
+				}, nil
+			}
+
+			if call, isCall := isSettingLoad(boolop.LHS); isCall {
+				return &ast.Call{
+					Callee: fmt.Sprintf("invert_%s", call.Callee),
+					Args:   call.Args,
+				}, nil
+			}
+		}
+
+		newOp := new(ast.BooleanOp)
+		newOp.Op = boolop.Op
+		newOp.LHS = lhs
+		newOp.RHS, _ = ast.Transform(r, boolop.RHS)
+		return newOp, nil
+	}
+
 	re.identifier = func(r *rewriter, ident *ast.Identifier) (ast.Node, error) {
 		switch ident.Kind {
 		case ast.AST_IDENT_TOK, ast.AST_IDENT_EVT:

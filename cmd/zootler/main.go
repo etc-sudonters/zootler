@@ -12,6 +12,7 @@ import (
 	"sudonters/zootler/carpenters/ichiro"
 	"sudonters/zootler/carpenters/jiro"
 	"sudonters/zootler/carpenters/saburo"
+	"sudonters/zootler/carpenters/shiro"
 	"sudonters/zootler/internal/app"
 
 	"github.com/etc-sudonters/substrate/dontio"
@@ -94,9 +95,10 @@ func main() {
 				DataPath: opts.dataDir,
 			},
 			Jiro: jiro.WorldGraph{LogicDir: opts.logicDir},
-			Saburo: saburo.RuleCompilation{
+			Saburo: saburo.RuleAssembler{
 				ScriptPath: path.Join(opts.logicDir, "..", "helpers.json"),
 			},
+			Shiro: shiro.WorldCompiler{},
 		}),
 	)
 

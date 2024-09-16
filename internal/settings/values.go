@@ -37,7 +37,7 @@ const (
 	KeyringTrainingGround          = 0b0000000100000000
 	KeyringGanonsCastle            = 0b0000001000000000
 	KeyRingsAll                    = 0b0000001111111111
-	KeyRingsGiveBossKey            = 0b1100000000000000
+	KeyRingsGiveBossKey            = 0b0100000000000000
 )
 
 const (

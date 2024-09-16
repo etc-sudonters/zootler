@@ -14,8 +14,6 @@ const (
 	IA_LOAD_IMMED  = 0x15 // pack next byte as I32 and push to top of stack
 	IA_LOAD_IMMED2 = 0x16 // pack [lo, hi] u16 as I32 and push to top of stack
 	// 0x20 Reductions
-	IA_REDUCE_AND = 0x21 // pop two values and return their AND
-	IA_REDUCE_OR  = 0x22 // pop two values and return their OR
 	IA_REDUCE_ALL = 0x23 // top of stack is pop count
 	IA_REDUCE_ANY = 0x24 // _MUST_ pop count but can short circuit
 	// 0x30 Jumps
@@ -25,9 +23,15 @@ const (
 	// 0x40 Calls
 	IA_CALL_0 = 0x41 // stack: [ symbol ]
 	IA_CALL_1 = 0x42 // stack: [ symbol arg1 ]
-	IA_CALL_2 = 0x42 // stack: [ symbol arg2 arg1 ]
+	IA_CALL_2 = 0x43 // stack: [ symbol arg2 arg1 ]
 	// 0x60 Fast Calls
 	IA_HAS_QTY = 0x69 // next THREE bytes [ lo, hi, qty ] -> [ tok, qty ]
 	IA_HAS_ALL = 0x6A // top of stack is pop count
 	IA_HAS_ANY = 0x6B // _MUST_ pop all but may short circuit
+	// 0xF0 Temporary ops
+	TEMP_IA_INVERT     = 0xF1
+	TEMP_IA_LOAD_STR   = 0xF2
+	TEMP_IA_PRODUCE_EQ = 0xF3
+	TEMP_IA_PRODUCE_NQ = 0xF4
+	TEMP_IA_PRODUCE_LT = 0xF5
 )

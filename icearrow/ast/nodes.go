@@ -73,6 +73,7 @@ const (
 	AST_IDENT_TRK                   = 0x05
 	AST_IDENT_BIF                   = 0x06
 	AST_IDENT_EVT                   = 0x07
+	AST_IDENT_SYM                   = 0x08
 	AST_IDENT_UNP                   = 0xFF
 
 	AST_NODE_EMPTY AstNodeType = iota

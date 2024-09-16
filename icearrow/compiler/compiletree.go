@@ -21,6 +21,8 @@ type ImmediateKind uint8
 type Invocation struct {
 	Id   uint32
 	Args []CompileTree
+	// compiles to LOAD ... ; LOAD IMMEDIATE len(vargs); LOAD IDENT; CALL_V;
+	Vargs []CompileTree
 }
 
 // Transforms non-booleans into booleans via ==, != and <
@@ -55,12 +57,8 @@ const (
 	CT_TYPE_INVERT
 
 	_ LoadKind = iota
-	CT_LOAD_TOK
-	CT_LOAD_LOC
-	CT_LOAD_BOOL
-	CT_LOAD_F64
-	CT_LOAD_I42
-	CT_LOAD_6U8
+	CT_LOAD_CONST
+	CT_LOAD_IDENT
 	CT_LOAD_STR
 
 	_ Producer = iota
@@ -76,6 +74,7 @@ const (
 	CT_IMMED_TRUE
 	CT_IMMED_FALSE
 	CT_IMMED_U8
+	CT_IMMED_U16
 )
 
 func (node Load) CTType() CTType       { return CT_TYPE_SYMBOL }

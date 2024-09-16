@@ -2,9 +2,8 @@ package zasm
 
 import (
 	"errors"
-	"sudonters/zootler/icearrow/ast"
-
 	"github.com/etc-sudonters/substrate/slipup"
+	"sudonters/zootler/icearrow/ast"
 )
 
 type Assembler struct {
@@ -30,6 +29,7 @@ func (a *Assembly) AttachDataTables(data Data) {
 
 type Unit struct {
 	Name string
+	Id   uint16
 	I    Instructions
 }
 

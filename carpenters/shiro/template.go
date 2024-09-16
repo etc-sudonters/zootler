@@ -1,3 +1,0 @@
-package shiro
-
-func CreateWorldTemplate() {}

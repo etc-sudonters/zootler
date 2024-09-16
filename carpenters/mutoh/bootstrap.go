@@ -13,7 +13,8 @@ import (
 type Bootstrapper struct {
 	Ichiro ichiro.DataLoader
 	Jiro   jiro.WorldGraph
-	Saburo saburo.RuleCompilation
+	Saburo saburo.RuleAssembler
+	Shiro  shiro.WorldCompiler
 }
 
 func (b *Bootstrapper) Setup(z *app.Zootlr) error {
@@ -24,9 +25,10 @@ func (b *Bootstrapper) Setup(z *app.Zootlr) error {
 		return slipup.Describe(err, "while loading logic graph")
 	}
 	if err := b.Saburo.Setup(z); err != nil {
-		return slipup.Describe(err, "while compiling logic rules")
+		return slipup.Describe(err, "while assembling logic rules")
 	}
-
-	shiro.CreateWorldTemplate()
+	if err := b.Shiro.Setup(z); err != nil {
+		return slipup.Describe(err, "while compiling world")
+	}
 	return nil
 }

@@ -172,7 +172,14 @@ func (a *astsexpr) Identifier(node *ast.Identifier) error {
 	return nil
 }
 func (a *astsexpr) Literal(node *ast.Literal) error {
-	fmt.Fprintf(&a.sb, "%+v", node.Value)
+	switch node.Kind {
+	case ast.AST_LIT_STR:
+		fmt.Fprintf(&a.sb, "%q", node.Value)
+		break
+	default:
+		fmt.Fprintf(&a.sb, "%+v", node.Value)
+		break
+	}
 	return nil
 }
 func (a *astsexpr) Empty(node *ast.Empty) error {

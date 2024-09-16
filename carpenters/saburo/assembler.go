@@ -1,6 +1,9 @@
 package saburo
 
 import (
+	"github.com/etc-sudonters/substrate/dontio"
+	"github.com/etc-sudonters/substrate/peruse"
+	"github.com/etc-sudonters/substrate/slipup"
 	"slices"
 	"strings"
 	"sudonters/zootler/icearrow/analysis"
@@ -11,17 +14,13 @@ import (
 	"sudonters/zootler/internal"
 	"sudonters/zootler/internal/app"
 	"sudonters/zootler/internal/entities"
-
-	"github.com/etc-sudonters/substrate/dontio"
-	"github.com/etc-sudonters/substrate/peruse"
-	"github.com/etc-sudonters/substrate/slipup"
 )
 
-type RuleCompilation struct {
+type RuleAssembler struct {
 	ScriptPath string
 }
 
-func (rc RuleCompilation) Setup(z *app.Zootlr) error {
+func (rc RuleAssembler) Setup(z *app.Zootlr) error {
 	assembler := rc.createAssembler()
 	edges := app.GetResource[entities.Edges](z)
 	collected := slices.Collect(edges.Res.All)
@@ -67,15 +66,31 @@ func (rc RuleCompilation) Setup(z *app.Zootlr) error {
 		}
 		assemblies.Include(asm)
 		dontio.WriteLineOut(z.Ctx(), zasm.Disassemble(asm.I))
+
+	}
+
+	for current, lateXpn := range (&analysisCtx).LateExpanders {
+		edge = lateXpn.Edge
+		analysisCtx.SetCurrent(current)
+		astNodes, astErr := analysis.Analyze(lateXpn.Rule, &analysisCtx)
+		if astErr != nil {
+			return whileHandlingRule(astErr, "analyzing late expansion")
+		}
+		asm, asmErr := assembler.Assemble(string(edge.Name()), astNodes)
+		if asmErr != nil {
+			return whileHandlingRule(asmErr, "assembling")
+		}
+		assemblies.Include(asm)
 	}
 
 	tbls := assembler.CreateDataTables()
 	assemblies.AttachDataTables(tbls)
 	dontio.WriteLineOut(z.Ctx(), "Strings: %+v", tbls.Strs)
+
 	return nil
 }
 
-func (rc RuleCompilation) createAssembler() zasm.Assembler {
+func (rc RuleAssembler) createAssembler() zasm.Assembler {
 	return zasm.Assembler{
 		Data: zasm.NewDataBuilder(),
 	}
@@ -105,25 +120,50 @@ func loadIdentifierTypes(ac *analysis.AnalysisContext, tokens entities.Tokens) {
 	}
 
 	settingNames := []string{
-		"adult_trade_shuffle", "big_poe_count", "bridge", "bridge_hearts",
-		"bridge_medallions", "bridge_rewards", "bridge_stones",
-		"bridge_tokens", "chicken_count", "complete_mask_quest",
-		"damage_multiplier", "deadly_bonks", "disable_trade_revert",
-		"dungeon_shortcuts", "entrance_shuffle", "fix_broken_drops",
-		"free_bombchu_drops", "free_scarecrow", "ganon_bosskey_hearts",
-		"ganon_bosskey_medallions", "ganon_bosskey_rewards",
-		"ganon_bosskey_stones", "ganon_bosskey_tokens", "gerudo_fortress",
-		"had_night_start", "lacs_condition", "lacs_hearts", "lacs_medallions",
-		"lacs_rewards", "lacs_stones", "lacs_tokens", "open_door_of_time",
-		"open_forest", "open_kakariko", "plant_beans",
-		"selected_adult_trade_item", "shuffle_dungeon_entrances",
-		"shuffle_empty_pots", "shuffle_expensive_merchants",
-		"shuffle_ganon_bosskey", "shuffle_individual_ocarina_notes",
-		"shuffle_interior_entrances", "shuffle_overworld_entrances",
-		"shuffle_pots", "shuffle_scrubs", "shuffle_silver_rupees",
-		"shuffle_tcgkeys", "skip_child_zelda", "skip_reward_from_rauru",
-		"skipped_trials", "starting_age", "triforce_goal_per_world",
-		"warp_songs", "zora_fountain",
+		"adult_trade_shuffle",
+		"big_poe_count",
+		"bridge",
+		"complete_mask_quest",
+		"damage_multiplier",
+		"deadly_bonks",
+		"disable_trade_revert",
+		"dungeon_shortcuts",
+		"entrance_shuffle",
+		"fix_broken_drops",
+		"free_bombchu_drops",
+		"free_scarecrow",
+		"ganon_bosskey_hearts",
+		"ganon_bosskey_medallions",
+		"ganon_bosskey_rewards",
+		"ganon_bosskey_stones",
+		"ganon_bosskey_tokens",
+		"gerudo_fortress",
+		"lacs_condition",
+		"lacs_hearts",
+		"lacs_medallions",
+		"open_door_of_time",
+		"open_forest",
+		"open_kakariko",
+		"plant_beans",
+		"chicken_count",
+		"selected_adult_trade_item",
+		"shuffle_dungeon_entrances",
+		"shuffle_empty_pots",
+		"shuffle_expensive_merchants",
+		"shuffle_ganon_bosskey",
+		"shuffle_individual_ocarina_notes",
+		"shuffle_interior_entrances",
+		"shuffle_overworld_entrances",
+		"shuffle_pots",
+		"shuffle_scrubs",
+		"shuffle_silver_rupees",
+		"shuffle_tcgkeys",
+		"skip_child_zelda",
+		"skip_reward_from_rauru",
+		"skipped_trials",
+		"triforce_goal_per_world",
+		"warp_songs",
+		"zora_fountain",
 	}
 
 	for _, setting := range settingNames {
@@ -131,7 +171,19 @@ func loadIdentifierTypes(ac *analysis.AnalysisContext, tokens entities.Tokens) {
 	}
 
 	builtIns := []string{
-		"has_bottle", "at_dampe_time", "at_night", "at_day", "at", "here",
+		"load_setting",
+		"load_setting_2",
+		"has_dungeon_shortcuts",
+		"is_trial_skipped",
+		"at",
+		"at_dampe_time",
+		"at_day",
+		"at_night",
+		"had_night_start",
+		"has_bottle",
+		"has_hearts",
+		"here",
+		"starting_age",
 	}
 	for _, builtIn := range builtIns {
 		ac.NameBuiltIn(builtIn)
