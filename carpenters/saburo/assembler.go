@@ -1,9 +1,6 @@
 package saburo
 
 import (
-	"github.com/etc-sudonters/substrate/dontio"
-	"github.com/etc-sudonters/substrate/peruse"
-	"github.com/etc-sudonters/substrate/slipup"
 	"slices"
 	"strings"
 	"sudonters/zootler/icearrow/analysis"
@@ -14,6 +11,10 @@ import (
 	"sudonters/zootler/internal"
 	"sudonters/zootler/internal/app"
 	"sudonters/zootler/internal/entities"
+
+	"github.com/etc-sudonters/substrate/dontio"
+	"github.com/etc-sudonters/substrate/peruse"
+	"github.com/etc-sudonters/substrate/slipup"
 )
 
 type RuleAssembler struct {
@@ -86,6 +87,7 @@ func (rc RuleAssembler) Setup(z *app.Zootlr) error {
 	tbls := assembler.CreateDataTables()
 	assemblies.AttachDataTables(tbls)
 	dontio.WriteLineOut(z.Ctx(), "Strings: %+v", tbls.Strs)
+	z.AddResource(assemblies)
 
 	return nil
 }
@@ -120,6 +122,7 @@ func loadIdentifierTypes(ac *analysis.AnalysisContext, tokens entities.Tokens) {
 	}
 
 	settingNames := []string{
+		"logic_rules",
 		"adult_trade_shuffle",
 		"big_poe_count",
 		"bridge",

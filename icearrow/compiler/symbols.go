@@ -1,5 +1,12 @@
 package compiler
 
+import "sudonters/zootler/icearrow/zasm"
+
+func CreateSymbolTable(data *zasm.Data) SymbolTable {
+	var st SymbolTable
+	return st
+}
+
 type SymbolTable struct {
 	byname map[string]int
 	ident  []Symbol

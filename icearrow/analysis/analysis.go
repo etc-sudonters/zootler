@@ -377,11 +377,27 @@ func expand(node ast.Node, ctx *AnalysisContext) (ast.Node, error) {
 	return Analyze(expansion, ctx)
 }
 
-func writeCompareToSetting(setting *ast.Identifier, comperand ast.Node) (*ast.Call, error) {
-	return &ast.Call{
-		Callee: "compare_to_setting",
-		Args:   []ast.Node{setting, comperand},
-	}, nil
+func writeCompareToSetting(setting *ast.Identifier, op ast.AstCompareOp, comperand ast.Node) (*ast.Call, error) {
+	switch op {
+	case ast.AST_CMP_EQ:
+		return &ast.Call{
+			Callee: "compare_eq_setting",
+			Args:   []ast.Node{setting, comperand},
+		}, nil
+	case ast.AST_CMP_NQ:
+		return &ast.Call{
+			Callee: "compare_nq_setting",
+			Args:   []ast.Node{setting, comperand},
+		}, nil
+	case ast.AST_CMP_LT:
+		return &ast.Call{
+			Callee: "compare_lt_setting",
+			Args:   []ast.Node{setting, comperand},
+		}, nil
+	default:
+		panic("unknown comparison operator")
+	}
+
 }
 
 func promotions(node ast.Node, ctx *AnalysisContext) (ast.Node, error) {
@@ -432,10 +448,10 @@ func promotions(node ast.Node, ctx *AnalysisContext) (ast.Node, error) {
 
 	re.compares = func(r *rewriter, compare *ast.Comparison) (ast.Node, error) {
 		if ident, isIdent := isSettingIdent(compare.LHS); isIdent {
-			return writeCompareToSetting(ident, compare.RHS)
+			return writeCompareToSetting(ident, compare.Op, compare.RHS)
 		}
 		if ident, isIdent := isSettingIdent(compare.RHS); isIdent {
-			return writeCompareToSetting(ident, compare.LHS)
+			return writeCompareToSetting(ident, compare.Op, compare.LHS)
 		}
 
 		if ident, isIdent := isVarIdent(compare.LHS); isIdent {

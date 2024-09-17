@@ -9,7 +9,7 @@ import (
 
 // Loads an assembly into a graph structure so we can plug final values such as
 // settings before the final code gen
-func Unassemble(asm zasm.Unit) (CompileTree, error) {
+func Unassemble(asm *zasm.Unit) (CompileTree, error) {
 	var graph CompileTree
 	instructions := stack.From(asm.I)
 	graph, instructions = unassemble(instructions)
@@ -40,22 +40,11 @@ func unassemble(instructions *stack.S[zasm.Instruction]) (CompileTree, *stack.S[
 			kind = CT_IMMED_TRUE
 		}
 		return Immediate{Value: truthy, Kind: kind}, instructions
-		// Productions
-	case zasm.OP_CMP_EQ:
-		return production(CT_PRODUCE_EQ, instructions)
-	case zasm.OP_CMP_NQ:
-		return production(CT_PRODUCE_NQ, instructions)
-	case zasm.OP_CMP_LT:
-		return production(CT_PRODUCE_LT, instructions)
 		// Reductions
 	case zasm.OP_BOOL_AND:
 		return reduction(CT_REDUCE_AND, instructions)
 	case zasm.OP_BOOL_OR:
 		return reduction(CT_REDUCE_OR, instructions)
-	case zasm.OP_BOOL_NEGATE:
-		var target CompileTree
-		target, instructions = unassemble(instructions)
-		return Inversion{target}, instructions
 		// Invocations
 	case zasm.OP_CALL_0:
 		return Invocation{Id: zasm.DecodeU24(payload)}, instructions
@@ -75,13 +64,6 @@ func unassemble(instructions *stack.S[zasm.Instruction]) (CompileTree, *stack.S[
 	default:
 		panic("unknown op")
 	}
-}
-
-func production(kind Producer, instructions *stack.S[zasm.Instruction]) (Production, *stack.S[zasm.Instruction]) {
-	var lhs, rhs CompileTree
-	lhs, instructions = unassemble(instructions)
-	rhs, instructions = unassemble(instructions)
-	return Production{Op: kind, Targets: []CompileTree{lhs, rhs}}, instructions
 }
 
 func reduction(kind Reducer, instructions *stack.S[zasm.Instruction]) (Reduction, *stack.S[zasm.Instruction]) {

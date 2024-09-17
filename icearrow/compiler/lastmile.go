@@ -12,6 +12,8 @@ type CompilerFuncs interface {
 	CompareToSetting(string, CompileTree) bool
 }
 
+type Intrisic func(CompileTree, *SymbolTable) CompileTree
+
 func CompressReductions(ct CompileTree) CompileTree {
 	var walker treewalk
 	walker.reduce = func(tw *treewalk, reduction Reduction) CompileTree {
@@ -113,10 +115,8 @@ func LastMileOptimizations(ct CompileTree, st *SymbolTable) CompileTree {
 
 type treewalk struct {
 	immediate func(*treewalk, Immediate) CompileTree
-	invert    func(*treewalk, Inversion) CompileTree
 	invoke    func(*treewalk, Invocation) CompileTree
 	load      func(*treewalk, Load) CompileTree
-	produce   func(*treewalk, Production) CompileTree
 	reduce    func(*treewalk, Reduction) CompileTree
 }
 
@@ -137,17 +137,6 @@ func walktree(tw *treewalk, ct CompileTree) CompileTree {
 			return tw.invoke(tw, ct)
 		}
 		return ct
-	case Production:
-		if tw.produce != nil {
-			return tw.produce(tw, ct)
-		}
-		var p Production
-		p.Op = ct.Op
-		p.Targets = make([]CompileTree, len(ct.Targets))
-		for i, trg := range ct.Targets {
-			p.Targets[i] = walktree(tw, trg)
-		}
-		return p
 	case Reduction:
 		if tw.reduce != nil {
 			return tw.reduce(tw, ct)
@@ -159,13 +148,6 @@ func walktree(tw *treewalk, ct CompileTree) CompileTree {
 			r.Targets[i] = walktree(tw, trg)
 		}
 		return r
-	case Inversion:
-		if tw.invert != nil {
-			return tw.invert(tw, ct)
-		}
-		var i Inversion
-		i.Target = walktree(tw, ct.Target)
-		return i
 	default:
 		panic("unreachable")
 	}

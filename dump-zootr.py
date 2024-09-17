@@ -35,6 +35,7 @@ def main(args: argparse.Namespace) -> int:
     (output / "logic" / "glitched").mkdir(exist_ok=True)
 
     print(f"Dumping from OOT-Randomizer v{__version__}")
+    dump_to_file("metadata", output / "meta.json", {"version": __version__})
     dump_to_file("items", output / "data" / "items.json",
                  list(ItemInfo.items.values()))
     dump_to_file(

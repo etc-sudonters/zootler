@@ -34,19 +34,15 @@ func (i Instruction) MatchOp(op Op) bool {
 type Op uint8
 
 const (
-	OP_LOAD_CONST  Op = 0x21 // 24bit index to const table, push into stack
-	OP_LOAD_IDENT     = 0x22 // 24bit index to names table
-	OP_LOAD_STR       = 0x23 // 24bit index to str table
-	OP_LOAD_BOOL      = 0x24 // arg1 is 1 for true, 2 for false
-	OP_CMP_EQ         = 0x31 // pop 2 from stack, push eq result to stack
-	OP_CMP_NQ         = 0x32 // pop 2 from stack, push nq result to stack
-	OP_CMP_LT         = 0x33 // pop 2 from stack, push lt result to stack
-	OP_BOOL_AND       = 0x41 // pop 2 from stack, push AND result to stack
-	OP_BOOL_OR        = 0x42 // pop 2 from stack, push OR result to stack
-	OP_BOOL_NEGATE    = 0x43 // pop 1 from stack, push opposite truthy to stack
-	OP_CALL_0         = 0x51 // 24bit index to name table to use as func name
-	OP_CALL_1         = 0x52 // 24bit index... pop 1 from stack as arg
-	OP_CALL_2         = 0x53 // 24bit index... pop 2 from stack as args
+	OP_LOAD_CONST Op = 0x21 // 24bit index to const table, push into stack
+	OP_LOAD_IDENT    = 0x22 // 24bit index to names table
+	OP_LOAD_STR      = 0x23 // 24bit index to str table
+	OP_LOAD_BOOL     = 0x24 // arg1 is 1 for true, 2 for false
+	OP_BOOL_AND      = 0x41 // pop 2 from stack, push AND result to stack
+	OP_BOOL_OR       = 0x42 // pop 2 from stack, push OR result to stack
+	OP_CALL_0        = 0x51 // 24bit index to name table to use as func name
+	OP_CALL_1        = 0x52 // 24bit index... pop 1 from stack as arg
+	OP_CALL_2        = 0x53 // 24bit index... pop 2 from stack as args
 
 	OPER_SHIFT uint = 24
 	ARG1_SHIFT      = 16
@@ -180,28 +176,12 @@ func (iw *InstructionWriter) WriteLoadBool(b bool) *InstructionWriter {
 	return iw.Write(Encode(OP_LOAD_BOOL, [3]uint8{v, 0, 0}))
 }
 
-func (iw *InstructionWriter) WriteEq() *InstructionWriter {
-	return iw.WriteOp(OP_CMP_EQ)
-}
-
-func (iw *InstructionWriter) WriteNq() *InstructionWriter {
-	return iw.WriteOp(OP_CMP_NQ)
-}
-
-func (iw *InstructionWriter) WriteLt() *InstructionWriter {
-	return iw.WriteOp(OP_CMP_LT)
-}
-
 func (iw *InstructionWriter) WriteAnd() *InstructionWriter {
 	return iw.WriteOp(OP_BOOL_AND)
 }
 
 func (iw *InstructionWriter) WriteOr() *InstructionWriter {
 	return iw.WriteOp(OP_BOOL_OR)
-}
-
-func (iw *InstructionWriter) WriteNegate() *InstructionWriter {
-	return iw.WriteOp(OP_BOOL_NEGATE)
 }
 
 func (iw *InstructionWriter) WriteCall(name intern.Handle[string], arity int) *InstructionWriter {

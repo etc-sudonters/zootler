@@ -40,23 +40,11 @@ func (w *diswriter) write(d [4]uint8) {
 	case OP_LOAD_BOOL:
 		fmt.Fprintf(w, "ldi %t", payload[0] == 1)
 		return
-	case OP_CMP_EQ:
-		fmt.Fprint(w, "ceq")
-		return
-	case OP_CMP_NQ:
-		fmt.Fprint(w, "cnq")
-		return
-	case OP_CMP_LT:
-		fmt.Fprint(w, "clt")
-		return
 	case OP_BOOL_AND:
 		fmt.Fprint(w, "and")
 		return
 	case OP_BOOL_OR:
 		fmt.Fprint(w, "orr")
-		return
-	case OP_BOOL_NEGATE:
-		fmt.Fprint(w, "neg")
 		return
 	case OP_CALL_0:
 		fmt.Fprintf(w, "cl0 #idents[0x%08X]", DecodeU24(payload))
