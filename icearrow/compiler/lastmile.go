@@ -1,20 +1,25 @@
 package compiler
 
-import "github.com/etc-sudonters/substrate/skelly/stack"
+import (
+	"sudonters/zootler/icearrow/zasm"
 
-type CompilerFuncs interface {
-	DungeonHasShortcuts(string) bool
-	IsTrialSkipped(string) bool
-	LoadSetting(string) bool
-	LoadSetting2(string, string) bool
-	AtTimeOfDay(string) CompileTree
-	CheckStartCond(string) bool
-	CompareToSetting(string, CompileTree) bool
+	"github.com/etc-sudonters/substrate/skelly/stack"
+)
+
+func LastMileOptimizations(st *SymbolTable, intrinsics *Intrinsics) func(CompileTree) CompileTree {
+	callIntrinsics := CallIntrinsics(intrinsics, st)
+	//	reductions := CompressReductions()
+	//	repeatedHas := CompressRepeatedHas(st)
+
+	return func(ct CompileTree) CompileTree {
+		ct = walktree(&callIntrinsics, ct)
+		// ct = walktree(&reductions, ct)
+		// return walktree(&repeatedHas, ct)
+		return ct
+	}
 }
 
-type Intrisic func(CompileTree, *SymbolTable) CompileTree
-
-func CompressReductions(ct CompileTree) CompileTree {
+func CompressReductions() treewalk {
 	var walker treewalk
 	walker.reduce = func(tw *treewalk, reduction Reduction) CompileTree {
 		reducing := stack.From(reduction.Targets)
@@ -43,22 +48,15 @@ func CompressReductions(ct CompileTree) CompileTree {
 		return building
 	}
 
-	return walktree(&walker, ct)
+	return walker
 }
 
-func CompressRepeatedHas(ct CompileTree, st *SymbolTable) CompileTree {
+func CompressRepeatedHas(st *SymbolTable) treewalk {
 	var walker treewalk
-	hasAllSymbol, hasAllExists := Symbol{}, false //st.SymbolFor("has_all")
-	hasAnySymbol, hasAnyExists := Symbol{}, false //st.SymbolFor("has_any")
-	hasSymbol, hasExists := Symbol{}, true        //st.SymbolFor("has")
-
-	if !hasExists {
-		panic("has symbol is not bound")
-	}
-
-	if !hasAllExists || !hasAnyExists {
-		return ct
-	}
+	has := st.Named("has")
+	hasAll := st.Named("has_all")
+	hasAny := st.Named("has_any")
+	one := st.ConstOf(zasm.Pack[uint8](1))
 
 	walker.reduce = func(tw *treewalk, reduction Reduction) CompileTree {
 		var call Invocation
@@ -68,10 +66,10 @@ func CompressRepeatedHas(ct CompileTree, st *SymbolTable) CompileTree {
 
 		switch node.Op {
 		case CT_REDUCE_AND:
-			call.Id = hasAllSymbol.Id
+			call.Id = hasAll.Id
 			break
 		case CT_REDUCE_OR:
-			call.Id = hasAnySymbol.Id
+			call.Id = hasAny.Id
 			break
 		default:
 			panic("unreachable")
@@ -84,71 +82,23 @@ func CompressRepeatedHas(ct CompileTree, st *SymbolTable) CompileTree {
 				node.Targets = append(node.Targets, walktree(tw, item))
 				break
 			case Invocation:
-				if item.Id != hasSymbol.Id {
+				if item.Id != has.Id {
 					node.Targets = append(node.Targets, item)
 				}
-				call.Vargs = append(call.Vargs, item.Args[0].(Load))
+				qty, isLoad := item.Args[1].(Load)
+				if !isLoad || qty.Kind != CT_LOAD_CONST || qty.Id != one.Id {
+					return node
+				}
+				call.Args = append(call.Args, item.Args[0].(Load))
 				break
 			default:
 				node.Targets = append(node.Targets, item)
 				break
 			}
 		}
-
 		node.Targets = append(node.Targets, call)
 		return node
 
 	}
-	return walktree(&walker, ct)
-}
-
-func InlineSeedSettings(ct CompileTree, st *SymbolTable) CompileTree {
-	return ct
-}
-
-func LastMileOptimizations(ct CompileTree, st *SymbolTable) CompileTree {
-	ct = InlineSeedSettings(ct, st)
-	ct = CompressReductions(ct)
-	ct = CompressRepeatedHas(ct, st)
-	return ct
-}
-
-type treewalk struct {
-	immediate func(*treewalk, Immediate) CompileTree
-	invoke    func(*treewalk, Invocation) CompileTree
-	load      func(*treewalk, Load) CompileTree
-	reduce    func(*treewalk, Reduction) CompileTree
-}
-
-func walktree(tw *treewalk, ct CompileTree) CompileTree {
-	switch ct := ct.(type) {
-	case Load:
-		if tw.load != nil {
-			return tw.load(tw, ct)
-		}
-		return ct
-	case Immediate:
-		if tw.immediate != nil {
-			return tw.immediate(tw, ct)
-		}
-		return ct
-	case Invocation:
-		if tw.invoke != nil {
-			return tw.invoke(tw, ct)
-		}
-		return ct
-	case Reduction:
-		if tw.reduce != nil {
-			return tw.reduce(tw, ct)
-		}
-		var r Reduction
-		r.Op = ct.Op
-		r.Targets = make([]CompileTree, len(ct.Targets))
-		for i, trg := range ct.Targets {
-			r.Targets[i] = walktree(tw, trg)
-		}
-		return r
-	default:
-		panic("unreachable")
-	}
+	return walker
 }

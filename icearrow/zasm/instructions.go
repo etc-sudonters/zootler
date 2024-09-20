@@ -34,10 +34,14 @@ func (i Instruction) MatchOp(op Op) bool {
 type Op uint8
 
 const (
-	OP_LOAD_CONST Op = 0x21 // 24bit index to const table, push into stack
-	OP_LOAD_IDENT    = 0x22 // 24bit index to names table
+	OP_LOAD_CONST Op = 0x22 // 24bit index to const table, push into stack
 	OP_LOAD_STR      = 0x23 // 24bit index to str table
 	OP_LOAD_BOOL     = 0x24 // arg1 is 1 for true, 2 for false
+	OP_LOAD_TOK      = 0x25 // 24bit index to names table
+	OP_LOAD_VAR      = 0x26 // 24bit index to names table
+	OP_LOAD_SYM      = 0x27 // 24bit index to names table
+	OP_LOAD_TRK      = 0x28
+	OP_LOAD_SET      = 0x29
 	OP_BOOL_AND      = 0x41 // pop 2 from stack, push AND result to stack
 	OP_BOOL_OR       = 0x42 // pop 2 from stack, push OR result to stack
 	OP_CALL_0        = 0x51 // 24bit index to name table to use as func name
@@ -159,8 +163,8 @@ func (iw *InstructionWriter) WriteLoadConst(h intern.Handle[PackedValue]) *Instr
 	return iw.Write(EncodeOpAndU24(OP_LOAD_CONST, AssertU24(h)))
 }
 
-func (iw *InstructionWriter) WriteLoadIdent(h intern.Handle[string]) *InstructionWriter {
-	return iw.Write(EncodeOpAndU24(OP_LOAD_IDENT, AssertU24(h)))
+func (iw *InstructionWriter) WriteLoadIdent(kind Op, h intern.Handle[string]) *InstructionWriter {
+	return iw.Write(EncodeOpAndU24(kind, AssertU24(h)))
 }
 
 func (iw *InstructionWriter) WriteLoadStr(s intern.Handle[string]) *InstructionWriter {

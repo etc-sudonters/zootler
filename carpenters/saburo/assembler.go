@@ -5,14 +5,12 @@ import (
 	"strings"
 	"sudonters/zootler/icearrow/analysis"
 	"sudonters/zootler/icearrow/ast"
-	"sudonters/zootler/icearrow/debug"
 	parsing "sudonters/zootler/icearrow/parser"
 	"sudonters/zootler/icearrow/zasm"
 	"sudonters/zootler/internal"
 	"sudonters/zootler/internal/app"
 	"sudonters/zootler/internal/entities"
 
-	"github.com/etc-sudonters/substrate/dontio"
 	"github.com/etc-sudonters/substrate/peruse"
 	"github.com/etc-sudonters/substrate/slipup"
 )
@@ -45,8 +43,6 @@ func (rc RuleAssembler) Setup(z *app.Zootlr) error {
 			panic(slipup.Createf("edge %+v does not have dest/origin", edge))
 		}
 		analysisCtx.SetCurrent(origin)
-		dontio.WriteLineOut(z.Ctx(), string(edge.Name()))
-		dontio.WriteLineOut(z.Ctx(), string(edge.GetRawRule()))
 		parser := peruse.NewParser(grammar, parsing.NewRulesLexer(string(edge.GetRawRule())))
 		pt, ptErr := parser.ParseAt(parsing.LOWEST)
 		if ptErr != nil {
@@ -60,13 +56,11 @@ func (rc RuleAssembler) Setup(z *app.Zootlr) error {
 		if astErr != nil {
 			return whileHandlingRule(astErr, "lowering tree")
 		}
-		dontio.WriteLineOut(z.Ctx(), debug.AstSexpr(astNodes))
 		asm, asmErr := assembler.Assemble(string(edge.Name()), astNodes)
 		if asmErr != nil {
 			return whileHandlingRule(asmErr, "assembling")
 		}
 		assemblies.Include(asm)
-		dontio.WriteLineOut(z.Ctx(), zasm.Disassemble(asm.I))
 
 	}
 
@@ -86,7 +80,6 @@ func (rc RuleAssembler) Setup(z *app.Zootlr) error {
 
 	tbls := assembler.CreateDataTables()
 	assemblies.AttachDataTables(tbls)
-	dontio.WriteLineOut(z.Ctx(), "Strings: %+v", tbls.Strs)
 	z.AddResource(assemblies)
 
 	return nil
@@ -167,6 +160,23 @@ func loadIdentifierTypes(ac *analysis.AnalysisContext, tokens entities.Tokens) {
 		"triforce_goal_per_world",
 		"warp_songs",
 		"zora_fountain",
+
+		"bridge_hearts",
+		"bridge_medallions",
+		"bridge_rewards",
+		"bridge_stones",
+		"bridge_tokens",
+		"ganon_bosskey_tokens_hearts",
+		"ganon_bosskey_tokens_medallions",
+		"ganon_bosskey_tokens_rewards",
+		"ganon_bosskey_tokens_stones",
+		"ganon_bosskey_tokens_tokens",
+		"lacs_hearts",
+		"lacs_medallions",
+		"lacs_rewards",
+		"lacs_stones",
+		"lacs_tokens",
+		"starting_age",
 	}
 
 	for _, setting := range settingNames {
@@ -175,7 +185,6 @@ func loadIdentifierTypes(ac *analysis.AnalysisContext, tokens entities.Tokens) {
 
 	builtIns := []string{
 		"load_setting",
-		"load_setting_2",
 		"has_dungeon_shortcuts",
 		"is_trial_skipped",
 		"at",
@@ -185,8 +194,8 @@ func loadIdentifierTypes(ac *analysis.AnalysisContext, tokens entities.Tokens) {
 		"had_night_start",
 		"has_bottle",
 		"has_hearts",
+		"has_stones",
 		"here",
-		"starting_age",
 	}
 	for _, builtIn := range builtIns {
 		ac.NameBuiltIn(builtIn)

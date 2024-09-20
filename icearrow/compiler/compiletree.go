@@ -21,14 +21,52 @@ type ImmediateKind uint8
 type Invocation struct {
 	Id   uint32
 	Args []CompileTree
-	// compiles to LOAD ... ; LOAD IMMEDIATE len(vargs); LOAD IDENT; CALL_V;
-	Vargs []CompileTree
 }
 
 // Reduces several boolean results to one boolean result via &&, ||
 type Reduction struct {
 	Op      Reducer
 	Targets []CompileTree
+}
+
+type treewalk struct {
+	immediate func(*treewalk, Immediate) CompileTree
+	invoke    func(*treewalk, Invocation) CompileTree
+	load      func(*treewalk, Load) CompileTree
+	reduce    func(*treewalk, Reduction) CompileTree
+}
+
+func walktree(tw *treewalk, ct CompileTree) CompileTree {
+	switch ct := ct.(type) {
+	case Load:
+		if tw.load != nil {
+			return tw.load(tw, ct)
+		}
+		return ct
+	case Immediate:
+		if tw.immediate != nil {
+			return tw.immediate(tw, ct)
+		}
+		return ct
+	case Invocation:
+		if tw.invoke != nil {
+			return tw.invoke(tw, ct)
+		}
+		return ct
+	case Reduction:
+		if tw.reduce != nil {
+			return tw.reduce(tw, ct)
+		}
+		var r Reduction
+		r.Op = ct.Op
+		r.Targets = make([]CompileTree, len(ct.Targets))
+		for i, trg := range ct.Targets {
+			r.Targets[i] = walktree(tw, trg)
+		}
+		return r
+	default:
+		panic("unreachable")
+	}
 }
 
 type Reducer uint8

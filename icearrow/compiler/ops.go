@@ -29,9 +29,5 @@ const (
 	IA_HAS_ALL = 0x6A // top of stack is pop count
 	IA_HAS_ANY = 0x6B // _MUST_ pop all but may short circuit
 	// 0xF0 Temporary ops
-	TEMP_IA_INVERT     = 0xF1
-	TEMP_IA_LOAD_STR   = 0xF2
-	TEMP_IA_PRODUCE_EQ = 0xF3
-	TEMP_IA_PRODUCE_NQ = 0xF4
-	TEMP_IA_PRODUCE_LT = 0xF5
+	TEMP_IA_LOAD_STR = 0xF2
 )

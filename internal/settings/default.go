@@ -13,7 +13,7 @@ func Default() ZootrSettings {
 	s.HintsRevealed = HintsRevealedAlways
 
 	s.KeyShuffle.BossKeys = KeysDungeon
-	s.KeyShuffle.GanonShuffle = GanonBKRemove
+	s.KeyShuffle.GanonBKShuffle = GanonBKRemove
 	s.KeyShuffle.HideoutKeys = KeysRemove
 	s.KeyShuffle.Keyrings = KeyRingsOff
 	s.KeyShuffle.SilverRupeePouches = SilverRupeesOff
@@ -27,7 +27,6 @@ func Default() ZootrSettings {
 	s.Locations.ZoraFountain = ZoraFountainClosed
 	s.Locations.GerudoFortress = GerudoFortressFast
 	s.Locations.Disabled = []string{"Deku Theater Mask of Truth"}
-	s.Locations.SkipChildZelda = true
 
 	s.Dungeons.Trials = TrialsEnabledNone
 	s.Dungeons.Shortcuts = ShortcutsOff
@@ -73,24 +72,24 @@ func Default() ZootrSettings {
 	s.Shuffling.Tokens = ShuffleGoldTokenOff
 	s.Shuffling.WonderItems = false
 
-	s.Tricks.Enabled = map[string]TrickEnabled{
-		"fewer_tunic_requirements":    {},
-		"grottos_without_agony":       {},
-		"child_deadhand":              {},
-		"man_on_roof":                 {},
-		"dc_jump":                     {},
-		"rusted_switches":             {},
-		"windmill_poh":                {},
-		"crater_bean_poh_with_hovers": {},
-		"forest_vines":                {},
-		"lens_botw":                   {},
-		"lens_castle":                 {},
-		"lens_gtg":                    {},
-		"lens_shadow":                 {},
-		"lens_spirit":                 {},
+	s.Tricks.Enabled = map[string]bool{
+		"fewer_tunic_requirements":    true,
+		"grottos_without_agony":       true,
+		"child_deadhand":              true,
+		"man_on_roof":                 true,
+		"dc_jump":                     true,
+		"rusted_switches":             true,
+		"windmill_poh":                true,
+		"crater_bean_poh_with_hovers": true,
+		"forest_vines":                true,
+		"lens_botw":                   true,
+		"lens_castle":                 true,
+		"lens_gtg":                    true,
+		"lens_shadow":                 true,
+		"lens_spirit":                 true,
 	}
 
-	s.Starting.Beans = false
+	s.Starting.PlantBeans = false
 	s.Starting.Hearts = 3
 	s.Starting.RauruReward = true
 	s.Starting.Rupees = 0

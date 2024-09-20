@@ -62,9 +62,10 @@ const (
 	GanonBKOnLacs
 	GanonBKStones
 	GanonBKMedallions
-	GanonBKDungeons
+	GanonBKDungeonRewards
 	GanonBKTokens
 	GanonBKHearts
+	GanonBKTriforcePieces
 )
 
 const (
@@ -160,7 +161,7 @@ func (z OpenZoraFountain) String() string {
 }
 
 const (
-	GerudoFortressNormal GerudoForestCarpenters = iota
+	GerudoFortressNormal GerudoFortress = iota
 	GerudoFortressFast
 	GerudoFortressOpen
 )
@@ -409,19 +410,20 @@ const (
 )
 
 const (
-	AdultTradeShuffle ShuffleTradeAdult = 0b1000000000000000
-
-	AdultTradeStartPocketEgg    = 0b0000000000000001
-	AdultTradeStartPocketCucco  = 0b0000000000000010
-	AdultTradeStartCojiro       = 0b0000000000000100
-	AdultTradeStartOddMushroom  = 0b0000000000001000
-	AdultTradeStartOddPotion    = 0b0000000000010000
-	AdultTradeStartPoachersSaw  = 0b0000000000100000
-	AdultTradeStartBrokenSword  = 0b0000000001000000
-	AdultTradeStartPrescription = 0b0000000010000000
-	AdultTradeStartEyeballFrog  = 0b0000000100000000
-	AdultTradeStartEyedrops     = 0b0000001000000000
-	AdultTradeStartClaimCheck   = 0b0000010000000000
+	AdultTradeShuffle           ShuffleTradeAdult = 0b1000000000000000
+	AdultTradeShuffleDisabled                     = 0
+	AdultTradeShuffleRandom                       = 0b1111111111111111
+	AdultTradeStartPocketEgg                      = 0b0000000000000001
+	AdultTradeStartPocketCucco                    = 0b0000000000000010
+	AdultTradeStartCojiro                         = 0b0000000000000100
+	AdultTradeStartOddMushroom                    = 0b0000000000001000
+	AdultTradeStartOddPotion                      = 0b0000000000010000
+	AdultTradeStartPoachersSaw                    = 0b0000000000100000
+	AdultTradeStartBrokenSword                    = 0b0000000001000000
+	AdultTradeStartPrescription                   = 0b0000000010000000
+	AdultTradeStartEyeballFrog                    = 0b0000000100000000
+	AdultTradeStartEyedrops                       = 0b0000001000000000
+	AdultTradeStartClaimCheck                     = 0b0000010000000000
 )
 
 const (

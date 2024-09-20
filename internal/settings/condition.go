@@ -7,6 +7,10 @@ type quantitycondition struct {
 	q uint16
 }
 
+type qc interface {
+	LacsCondition | BridgeCondition | GanonBKCondition
+}
+
 func (q quantitycondition) Decode() (which Condition, qty uint8) {
 	which = Condition((q.q & 0xFF00) >> 8)
 	qty = uint8(0x00FF & q.q)
@@ -15,6 +19,10 @@ func (q quantitycondition) Decode() (which Condition, qty uint8) {
 
 func encodeqty(which Condition, qty uint8) quantitycondition {
 	return quantitycondition{(uint16(which) << 8) | uint16(qty)}
+}
+
+func Decode[C qc](c C) (which Condition, qty uint8) {
+	return quantitycondition(c).Decode()
 }
 
 type LacsCondition quantitycondition
@@ -42,4 +50,5 @@ const (
 	CondTokens
 	CondHearts
 	CondDefault
+	CondOpen
 )

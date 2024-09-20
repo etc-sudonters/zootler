@@ -1,5 +1,14 @@
 package settings
 
+type flagged interface {
+	~uint8 | ~uint16 | ~uint32 | ~uint64
+}
+
+func Has[F flagged](setting, expecting F) bool {
+	return setting&expecting == expecting
+
+}
+
 type ZootrSettings struct {
 	Seed            uint64
 	Worlds          uint8
@@ -44,7 +53,7 @@ type ReachableLocations uint8
 type OpenForest uint8
 type OpenKak uint8
 type OpenZoraFountain uint8
-type GerudoForestCarpenters uint8
+type GerudoFortress uint8
 
 type TrialsEnabled uint8
 type DungeonShortcuts uint16
@@ -81,8 +90,9 @@ type ShuffleTradeAdult uint16
 type ShuffleTradeChild uint16
 
 type Trades struct {
-	Adult ShuffleTradeAdult
-	Child ShuffleTradeChild
+	Adult         ShuffleTradeAdult
+	Child         ShuffleTradeChild
+	DisableRevert bool
 }
 
 type Damage struct {
@@ -91,20 +101,19 @@ type Damage struct {
 }
 
 type Starting struct {
-	Beans           bool
-	Hearts          uint8
-	RauruReward     bool
-	Rupees          uint16
-	Scarecrow       bool
-	TimeOfDay       StartingTimeOfDay
-	Tokens          []string // ootr uses equip, song and inventory separately
-	WithConsumables bool
+	PlantBeans        bool
+	Hearts            uint8
+	RauruReward       bool
+	Rupees            uint16
+	Scarecrow         bool
+	TimeOfDay         StartingTimeOfDay
+	Tokens            []string // ootr uses equip, song and inventory separately
+	WithConsumables   bool
+	CompleteMaskQuest bool
 }
 
-type TrickEnabled = struct{}
-
 type Tricks struct {
-	Enabled map[string]TrickEnabled
+	Enabled map[string]bool
 
 	ShadowFireArrowEntry uint8
 }
@@ -151,6 +160,22 @@ type SpawnSettings struct {
 	ChildSpawn  Spawn
 }
 
+func (spawn SpawnSettings) Randomized() bool {
+	return spawn.AdultSpawn != SpawnVanilla || spawn.ChildSpawn != SpawnVanilla
+}
+
+func (er EntranceRandomizer) ShufflingAny() bool {
+	return er.Interior != InteriorShuffleOff ||
+		er.DungeonEntrances != DungeonEntranceShuffleOff ||
+		er.Bosses != BossShuffleOff ||
+		er.HideoutEntrances ||
+		er.Grottos ||
+		er.Overworld ||
+		er.RiverExit ||
+		er.OwlDrops ||
+		er.WarpSongs
+}
+
 type EntranceRandomizer struct {
 	Interior         InteriorShuffle
 	DungeonEntrances DungeonEntranceShuffle
@@ -180,9 +205,8 @@ type Locations struct {
 	Kakariko           OpenKak
 	OpenDoorOfTime     bool
 	ZoraFountain       OpenZoraFountain
-	GerudoFortress     GerudoForestCarpenters
+	GerudoFortress     GerudoFortress
 	Disabled           []string
-	SkipChildZelda     bool
 }
 
 type TriforceHunt struct {
@@ -193,7 +217,7 @@ type KeyShuffling struct {
 	BossKeys           KeyShuffle
 	ChestGameKeys      KeyShuffle
 	GanonBKCondition   GanonBKCondition
-	GanonShuffle       GanonBKShuffleKind
+	GanonBKShuffle     GanonBKShuffleKind
 	HideoutKeys        KeyShuffle
 	Keyrings           Keyrings
 	SilverRupeePouches SilverRupeePouches

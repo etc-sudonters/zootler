@@ -2,8 +2,9 @@ package zasm
 
 import (
 	"errors"
-	"github.com/etc-sudonters/substrate/slipup"
 	"sudonters/zootler/icearrow/ast"
+
+	"github.com/etc-sudonters/substrate/slipup"
 )
 
 type Assembler struct {
@@ -88,7 +89,20 @@ func (a *Assembler) Call(node *ast.Call) (Instructions, error) {
 
 func (a *Assembler) Identifier(node *ast.Identifier) (Instructions, error) {
 	name := a.Data.Names.Intern(node.Name)
-	return IW().WriteLoadIdent(name).I, nil
+	op, exists := zasmLoadOps[node.Kind]
+	if !exists {
+		panic(slipup.Createf("unknown identifier kind for %q", node.Name))
+	}
+	return IW().WriteLoadIdent(op, name).I, nil
+}
+
+var zasmLoadOps = map[ast.AstIdentifierKind]Op{
+	ast.AST_IDENT_TOK: OP_LOAD_TOK,
+	ast.AST_IDENT_EVT: OP_LOAD_TOK,
+	ast.AST_IDENT_SYM: OP_LOAD_SYM,
+	ast.AST_IDENT_VAR: OP_LOAD_VAR,
+	ast.AST_IDENT_TRK: OP_LOAD_TRK,
+	ast.AST_IDENT_SET: OP_LOAD_SET,
 }
 
 func (a *Assembler) Literal(node *ast.Literal) (Instructions, error) {

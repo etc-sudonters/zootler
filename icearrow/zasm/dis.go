@@ -31,14 +31,26 @@ func (w *diswriter) write(d [4]uint8) {
 	case OP_LOAD_CONST:
 		fmt.Fprintf(w, "ldc #consts[0x%08X]", DecodeU24(payload))
 		return
-	case OP_LOAD_IDENT:
-		fmt.Fprintf(w, "ldd #idents[0x%08X]", DecodeU24(payload))
-		return
 	case OP_LOAD_STR:
 		fmt.Fprintf(w, "lds #strs[0x%08X]", DecodeU24(payload))
 		return
 	case OP_LOAD_BOOL:
-		fmt.Fprintf(w, "ldi %t", payload[0] == 1)
+		fmt.Fprintf(w, "ldb %t", payload[0] == 1)
+		return
+	case OP_LOAD_SYM:
+		fmt.Fprintf(w, "ldi #idents[0x%08X]", DecodeU24(payload))
+		return
+	case OP_LOAD_TOK:
+		fmt.Fprintf(w, "ldt #idents[0x%08X]", DecodeU24(payload))
+		return
+	case OP_LOAD_VAR:
+		fmt.Fprintf(w, "ldv #idents[0x%08X]", DecodeU24(payload))
+		return
+	case OP_LOAD_TRK:
+		fmt.Fprintf(w, "ldr #idents[0x%08X]", DecodeU24(payload))
+		return
+	case OP_LOAD_SET:
+		fmt.Fprintf(w, "lde #idents[0x%08X]", DecodeU24(payload))
 		return
 	case OP_BOOL_AND:
 		fmt.Fprint(w, "and")

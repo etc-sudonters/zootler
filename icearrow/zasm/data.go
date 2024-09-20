@@ -7,6 +7,10 @@ import (
 
 type PackedValue float64
 
+func (pv PackedValue) Equals(p PackedValue) bool {
+	return p == pv
+}
+
 type Packable interface {
 	~uint32 | ~uint16 | ~uint8 |
 		~int32 | ~int16 | ~int8 |

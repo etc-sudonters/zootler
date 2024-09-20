@@ -51,6 +51,11 @@ func (a *analyzer) Call(node *ast.Call) error {
 	a.report.expansions = a.report.expansions || isExpandable
 	a.canExpand = false
 	defer func() { a.canExpand = true }()
+	for _, arg := range node.Args {
+		if err := ast.Visit(a, arg); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
