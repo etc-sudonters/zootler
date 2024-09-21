@@ -25,9 +25,11 @@ const (
 	IA_CALL_1 = 0x42 // stack: [ symbol arg1 ]
 	IA_CALL_2 = 0x43 // stack: [ symbol arg2 arg1 ]
 	// 0x60 Fast Calls
-	IA_HAS_QTY = 0x69 // next THREE bytes [ lo, hi, qty ] -> [ tok, qty ]
-	IA_HAS_ALL = 0x6A // top of stack is pop count
-	IA_HAS_ANY = 0x6B // _MUST_ pop all but may short circuit
+	IA_HAS_QTY  = 0x69 // next THREE bytes [ lo, hi, qty ] -> [ tok, qty ]
+	IA_HAS_ALL  = 0x6A // top of stack is pop count
+	IA_HAS_ANY  = 0x6B // _MUST_ pop all but may short circuit
+	IA_IS_CHILD = 0x6C
+	IA_IS_ADULT = 0x6D
 	// 0xF0 Temporary ops
 	TEMP_IA_LOAD_STR = 0xF2
 )

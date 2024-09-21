@@ -7,7 +7,7 @@ import (
 	"github.com/etc-sudonters/substrate/slipup"
 )
 
-func ReadTape(tape Tape) string {
+func ReadTape(tape Tape, st *SymbolTable) string {
 	var str strings.Builder
 	tt := tapeTranslator{&str}
 	idx, end := 0, len(tape.ops)
@@ -21,12 +21,20 @@ func ReadTape(tape Tape) string {
 			tt.WriteString("RETURN")
 			break
 		case IA_HAS_QTY:
-			tt.writeInlineByte(tape.ops[idx+1])
-			tt.writeInlineByte(tape.ops[idx+2])
-			tt.writeInlineByte(tape.ops[idx+3])
+			var handle uint32
+			lo := tape.ops[idx+1]
+			hi := tape.ops[idx+2]
+			handle |= (uint32(hi) << 8) | (uint32(lo))
+			token := st.Symbol(handle)
+			qty := tape.ops[idx+3]
+			tt.writeInlineByte(lo)
+			tt.writeInlineByte(hi)
+			tt.writeInlineByte(qty)
 			idx += 3
 			tt.padToGutter(3)
 			tt.WriteString("IA_HAS")
+			tt.WriteString("\t\t\t|")
+			tt.fmt(" %q, %d", token.Name, qty)
 			break
 		case IA_HAS_ALL:
 			tt.padToGutter(0)
@@ -36,31 +44,63 @@ func ReadTape(tape Tape) string {
 			tt.padToGutter(0)
 			tt.WriteString("IA_HAS_ANY")
 			break
+		case IA_IS_CHILD:
+			tt.padToGutter(0)
+			tt.WriteString("IA_IS_CHILD")
+			break
+		case IA_IS_ADULT:
+			tt.padToGutter(0)
+			tt.WriteString("IA_IS_ADULT")
+			break
 		case IA_LOAD_SYMBOL:
-			tt.writeInlineByte(tape.ops[idx+1])
-			tt.writeInlineByte(tape.ops[idx+2])
+			var handle uint32
+			lo := tape.ops[idx+1]
+			hi := tape.ops[idx+2]
+			handle |= (uint32(hi) << 8) | (uint32(lo))
+			ident := st.Symbol(handle)
+			tt.writeInlineByte(lo)
+			tt.writeInlineByte(hi)
 			tt.padToGutter(2)
 			tt.WriteString("LOAD_SYMBOL")
+			tt.WriteString("\t\t|")
+			tt.fmt(" %q", ident.Name)
 			idx += 2
 			break
 		case IA_LOAD_CONST:
-			tt.writeInlineByte(tape.ops[idx+1])
-			tt.writeInlineByte(tape.ops[idx+2])
+			var handle uint32
+			lo := tape.ops[idx+1]
+			hi := tape.ops[idx+2]
+			handle |= (uint32(hi) << 8) | (uint32(lo))
+			sym := st.Const(handle)
+
+			tt.writeInlineByte(lo)
+			tt.writeInlineByte(hi)
 			tt.padToGutter(2)
 			tt.WriteString("LOAD_CONST")
+			tt.WriteString("\t\t|")
+			tt.fmt(" %v", sym.Value)
 			idx += 2
 			break
 		case IA_LOAD_IMMED:
-			tt.writeInlineByte(tape.ops[idx+1])
+			val := tape.ops[idx+1]
+			tt.writeInlineByte(val)
 			tt.padToGutter(1)
 			tt.WriteString("LOAD_U8")
+			tt.WriteString("\t\t\t|")
+			tt.fmt(" %d", val)
 			idx++
 			break
 		case IA_LOAD_IMMED2:
-			tt.writeInlineByte(tape.ops[idx+1])
-			tt.writeInlineByte(tape.ops[idx+2])
+			var val uint32
+			lo := tape.ops[idx+1]
+			hi := tape.ops[idx+2]
+			val |= (uint32(hi) << 8) | (uint32(lo))
+			tt.writeInlineByte(lo)
+			tt.writeInlineByte(hi)
 			tt.padToGutter(1)
-			tt.WriteString("LOAD_U8")
+			tt.WriteString("LOAD_U16")
+			tt.WriteString("\t\t\t|")
+			tt.fmt(" %d", val)
 			idx += 2
 			break
 		case IA_LOAD_FALSE:
@@ -92,10 +132,17 @@ func ReadTape(tape Tape) string {
 			tt.WriteString("CALL_2")
 			break
 		case TEMP_IA_LOAD_STR:
-			tt.writeInlineByte(tape.ops[idx+1])
-			tt.writeInlineByte(tape.ops[idx+2])
+			var handle uint32
+			lo := tape.ops[idx+1]
+			hi := tape.ops[idx+2]
+			handle |= (uint32(hi) << 8) | (uint32(lo))
+			str := st.String(handle)
+			tt.writeInlineByte(lo)
+			tt.writeInlineByte(hi)
 			tt.padToGutter(2)
 			tt.WriteString("LOAD_STRING")
+			tt.WriteString("\t\t|")
+			tt.fmt(" %q", str.Value)
 			idx += 2
 			break
 		default:
@@ -112,6 +159,10 @@ type tapeTranslator struct {
 	*strings.Builder
 }
 
+func (tt tapeTranslator) writeOpName(name string) {
+	tt.WriteString(name)
+}
+
 func (tt tapeTranslator) writeOp(op uint8) {
 	fmt.Fprintf(tt, "0x%02X | ", op)
 }
@@ -124,6 +175,10 @@ func (tt tapeTranslator) padToGutter(inline int) {
 	tt.WriteString(strings.Repeat(" ", 15-(5*inline)))
 	tt.WriteRune('|')
 	tt.WriteRune(' ')
+}
+
+func (tt tapeTranslator) fmt(tpl string, v ...any) {
+	fmt.Fprintf(tt.Builder, tpl, v...)
 }
 
 type Tape struct {

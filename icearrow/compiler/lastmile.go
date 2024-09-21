@@ -1,7 +1,8 @@
 package compiler
 
 import (
-	"sudonters/zootler/icearrow/zasm"
+	"runtime"
+	"slices"
 
 	"github.com/etc-sudonters/substrate/skelly/stack"
 )
@@ -11,8 +12,12 @@ func LastMileOptimizations(st *SymbolTable, intrinsics *Intrinsics) func(Compile
 	reductions := CompressReductions()
 	repeatedHas := CompressRepeatedHas(st)
 
+	runtime.KeepAlive(reductions)
+	runtime.KeepAlive(repeatedHas)
 	return func(ct CompileTree) CompileTree {
 		ct = walktree(&callIntrinsics, ct)
+		ct = walktree(&reductions, ct)
+		ct = walktree(&repeatedHas, ct)
 		ct = walktree(&reductions, ct)
 		ct = walktree(&repeatedHas, ct)
 		return ct
@@ -31,35 +36,35 @@ func CompressReductions() treewalk {
 			item, _ := reducing.Pop()
 			switch item := item.(type) {
 			case Reduction:
-				// either we drag the nested reduction into us, or we walks its
-				// fragment to compact levels within it
 				if item.Op == reduction.Op {
 					for _, t := range item.Targets {
 						reducing.Push(t)
 					}
-					break
+				} else {
+					building.Targets = append(building.Targets, walktree(tw, item))
 				}
-				building.Targets = append(building.Targets, walktree(tw, item))
-				break
+				continue
 			case Immediate:
-				switch item.Kind {
-				case CT_IMMED_FALSE:
-					if reduction.Op == CT_REDUCE_AND {
-						return Immediate{Value: false, Kind: CT_IMMED_FALSE}
-					}
-					break
-				case CT_IMMED_TRUE:
-					if reduction.Op == CT_REDUCE_OR {
-						return Immediate{Value: true, Kind: CT_IMMED_TRUE}
-					}
-					break
-				default:
+				if item.Kind != CT_IMMED_FALSE && item.Kind != CT_IMMED_TRUE {
 					building.Targets = append(building.Targets, item)
-					break
+					continue
 				}
-				break
+
+				if item.Kind == CT_IMMED_FALSE {
+					if building.Op == CT_REDUCE_AND {
+						return item
+					}
+
+					continue
+				}
+
+				if building.Op == CT_REDUCE_OR {
+					return item
+				}
+				continue
 			default:
 				building.Targets = append(building.Targets, item)
+				continue
 			}
 		}
 		return building
@@ -73,54 +78,80 @@ func CompressRepeatedHas(st *SymbolTable) treewalk {
 	has := st.Named("has")
 	hasAll := st.Named("has_all")
 	hasAny := st.Named("has_any")
-	one := st.ConstOf(zasm.Pack[uint8](1))
 
-	if has == nil || hasAll == nil || hasAny == nil || one == nil {
+	if has == nil || hasAll == nil || hasAny == nil {
 		panic("something isn't registered")
 	}
 
-	walker.reduce = func(tw *treewalk, reduction Reduction) CompileTree {
-		var call Invocation
-		var node Reduction
-		node.Op = reduction.Op
-		processing := stack.From(reduction.Targets)
-
-		switch node.Op {
-		case CT_REDUCE_AND:
-			call.Id = hasAll.Id
-			break
-		case CT_REDUCE_OR:
-			call.Id = hasAny.Id
-			break
-		default:
-			panic("unreachable")
+	walker.reduce = func(tw *treewalk, visiting Reduction) CompileTree {
+		var reducer []CompileTree
+		haser := map[uint32][]CompileTree{
+			has.Id:    nil,
+			hasAll.Id: nil,
+			hasAny.Id: nil,
 		}
 
-		for processing.Len() > 0 {
-			item, _ := processing.Pop()
-			switch item := item.(type) {
-			case Reduction:
-				node.Targets = append(node.Targets, walktree(tw, item))
-				break
+		for _, trgt := range visiting.Targets {
+			switch trgt := trgt.(type) {
 			case Invocation:
-				if item.Id != has.Id {
-					node.Targets = append(node.Targets, item)
+				sym := st.Symbol(trgt.Id)
+				collected, exists := haser[sym.Id]
+				if !exists {
+					reducer = append(reducer, trgt)
 					continue
 				}
-				qty, isLoad := item.Args[1].(Load)
-				if !isLoad || qty.Kind != CT_LOAD_CONST || qty.Id != one.Id {
-					return node
+
+				if sym.Id == hasAny.Id || sym.Id == hasAll.Id {
+					haser[sym.Id] = append(collected, trgt.Args...)
+					continue
+				} else if sym.Id == has.Id && trgt.Args[1].(Load).Kind == CT_LOAD_CONST {
+					item := trgt.Args[0].(Load)
+					qty := st.Const(trgt.Args[1].(Load).Id)
+					if qty.Value == 1 {
+						haser[sym.Id] = append(collected, item)
+						continue
+					}
 				}
-				call.Args = append(call.Args, item.Args[0].(Load))
+				reducer = append(reducer, trgt)
 				break
 			default:
-				node.Targets = append(node.Targets, item)
+				reducer = append(reducer, walktree(tw, trgt))
 				break
 			}
 		}
-		node.Targets = append(node.Targets, call)
-		return node
 
+		hasAll := Invocation{
+			Id:   hasAll.Id,
+			Args: haser[hasAll.Id],
+		}
+
+		hasAny := Invocation{
+			Id:   hasAny.Id,
+			Args: haser[hasAny.Id],
+		}
+
+		if visiting.Op == CT_REDUCE_AND {
+			hasAll.Args = slices.Concat(hasAll.Args, haser[has.Id])
+		} else {
+			hasAny.Args = slices.Concat(hasAny.Args, haser[has.Id])
+		}
+
+		if len(hasAny.Args) > 0 {
+			reducer = append(reducer, hasAny)
+		}
+
+		if len(hasAll.Args) > 0 {
+			reducer = append(reducer, hasAll)
+		}
+
+		if len(reducer) == 1 {
+			return reducer[0]
+		}
+
+		return Reduction{
+			Op:      visiting.Op,
+			Targets: reducer,
+		}
 	}
 	return walker
 }

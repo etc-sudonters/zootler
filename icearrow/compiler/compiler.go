@@ -1,5 +1,7 @@
 package compiler
 
+import "github.com/etc-sudonters/substrate/slipup"
+
 type RuleCompiler struct {
 	Symbols *SymbolTable
 	fastOps map[uint32]IceArrowOp
@@ -11,9 +13,10 @@ func (rc *RuleCompiler) init() {
 	}
 
 	fast := map[string]IceArrowOp{
-		"has":     IA_HAS_QTY,
-		"has_all": IA_HAS_ALL,
-		"has_any": IA_HAS_ANY,
+		"has":      IA_HAS_QTY,
+		"has_all":  IA_HAS_ALL,
+		"has_any":  IA_HAS_ANY,
+		"checkage": IA_IS_ADULT,
 	}
 
 	rc.fastOps = make(map[uint32]IceArrowOp, len(fast))
@@ -54,15 +57,31 @@ func (rc *RuleCompiler) Compile(fragment CompileTree) Tape {
 			switch op {
 			case IA_HAS_QTY:
 				handle := encodeU16(uint16(i.Args[0].(Load).Id))
-
 				qLoad := i.Args[1].(Load)
-				if qLoad.Kind != CT_LOAD_CONST {
-					panic("TODO: resolve this setting value")
+				var qty uint8
+				switch qLoad.Kind {
+				case CT_LOAD_CONST:
+					c := rc.Symbols.Const(qLoad.Id)
+					qty = uint8(c.Value)
+					break
+				case CT_LOAD_IDENT:
+					var exists bool
+					ident := rc.Symbols.Symbol(qLoad.Id)
+					qty, exists = map[string]uint8{
+						"lacstokens":           6,
+						"bigpoecount":          1,
+						"bridgetokens":         100,
+						"ganonbosskeytokens":   100,
+						"triforcegoalperworld": 16,
+					}[ident.Name]
+					if !exists {
+						panic(slipup.Createf("trying to resolve setting %q", ident.Name))
+					}
+				default:
+					panic("unreachable")
 				}
 
-				qty := rc.Symbols.Const(qLoad.Id)
-
-				tape.write(op, handle[0], handle[1], uint8(qty.Value))
+				tape.write(op, handle[0], handle[1], qty)
 				break
 			case IA_HAS_ANY, IA_HAS_ALL:
 				for idx := range i.Args {
@@ -71,6 +90,19 @@ func (rc *RuleCompiler) Compile(fragment CompileTree) Tape {
 				tape.writeLoadImmediateU8(uint8(len(i.Args)))
 				tape.write(op)
 				break
+			case IA_IS_ADULT, IA_IS_CHILD:
+				ageHandle := i.Args[0].(Load)
+				age := rc.Symbols.String(ageHandle.Id)
+				switch age.Value {
+				case "child":
+					tape.write(IA_IS_CHILD)
+					break
+				case "adult":
+					tape.write(IA_IS_ADULT)
+					break
+				default:
+					panic(slipup.Createf("unknown age %q", age.Value))
+				}
 			}
 			return i
 		}
