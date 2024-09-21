@@ -2,11 +2,32 @@ package compiler
 
 type RuleCompiler struct {
 	Symbols *SymbolTable
+	fastOps map[uint32]IceArrowOp
 }
 
-func (rc *RuleCompiler) Compile(fragment CompileTree) tape {
+func (rc *RuleCompiler) init() {
+	if rc.fastOps != nil {
+		return
+	}
+
+	fast := map[string]IceArrowOp{
+		"has":     IA_HAS_QTY,
+		"has_all": IA_HAS_ALL,
+		"has_any": IA_HAS_ANY,
+	}
+
+	rc.fastOps = make(map[uint32]IceArrowOp, len(fast))
+	for name, op := range fast {
+		sym := rc.Symbols.Named(name)
+		rc.fastOps[sym.Id] = op
+	}
+}
+
+func (rc *RuleCompiler) Compile(fragment CompileTree) Tape {
 	var tw treewalk
-	tape := new(tape)
+	tape := new(Tape)
+	rc.init()
+
 	tw.immediate = func(t *treewalk, i Immediate) CompileTree {
 		switch i.Kind {
 		case CT_IMMED_FALSE:
@@ -28,6 +49,32 @@ func (rc *RuleCompiler) Compile(fragment CompileTree) tape {
 	}
 
 	tw.invoke = func(t *treewalk, i Invocation) CompileTree {
+		sym := rc.Symbols.Symbol(i.Id)
+		if op, exists := rc.fastOps[sym.Id]; exists {
+			switch op {
+			case IA_HAS_QTY:
+				handle := encodeU16(uint16(i.Args[0].(Load).Id))
+
+				qLoad := i.Args[1].(Load)
+				if qLoad.Kind != CT_LOAD_CONST {
+					panic("TODO: resolve this setting value")
+				}
+
+				qty := rc.Symbols.Const(qLoad.Id)
+
+				tape.write(op, handle[0], handle[1], uint8(qty.Value))
+				break
+			case IA_HAS_ANY, IA_HAS_ALL:
+				for idx := range i.Args {
+					walktree(t, i.Args[idx])
+				}
+				tape.writeLoadImmediateU8(uint8(len(i.Args)))
+				tape.write(op)
+				break
+			}
+			return i
+		}
+
 		for idx := range i.Args {
 			walktree(t, i.Args[idx])
 		}

@@ -1,7 +1,6 @@
 package shiro
 
 import (
-	"runtime"
 	"sudonters/zootler/icearrow/compiler"
 	"sudonters/zootler/icearrow/zasm"
 	"sudonters/zootler/internal/app"
@@ -60,15 +59,33 @@ func (wc *WorldCompiler) Setup(z *app.Zootlr) error {
 	}
 	lastMile := compiler.LastMileOptimizations(&symbols, &intrinsics)
 
+	interesting := map[string]bool{
+		"ZD Shop -> ZD Shop Item 1":                                                            true,
+		"GC Grotto -> GC Deku Scrub Grotto Left":                                               true,
+		"Kak House of Skulltula -> Kak 50 Gold Skulltula Reward":                               true,
+		"Child Spirit Temple Climb -> Spirit Temple Child Climb North Chest":                   true,
+		"Market Mask Shop Storefront -> Mask of Truth Access from Market Mask Shop Storefront": true,
+	}
+
+	tapes := map[string]compiler.Tape{}
+	cts := map[string]compiler.CompileTree{}
 	for unit := range assembly.Units {
-		dontio.WriteLineOut(z.Ctx(), unit.Name)
 		ct, unassembleErr := compiler.Unassemble(unit, &symbols)
 		if unassembleErr != nil {
 			panic(unassembleErr)
 		}
 		ct = lastMile(ct)
 		tape := comp.Compile(ct)
-		runtime.KeepAlive(tape)
+
+		if _, interesting := interesting[unit.Name]; interesting {
+			tapes[unit.Name] = tape
+			cts[unit.Name] = ct
+		}
+	}
+
+	for name, tape := range tapes {
+		dontio.WriteLineOut(z.Ctx(), name)
+		dontio.WriteLineOut(z.Ctx(), compiler.ReadTape(tape))
 	}
 
 	return nil

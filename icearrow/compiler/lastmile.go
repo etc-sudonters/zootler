@@ -8,13 +8,13 @@ import (
 
 func LastMileOptimizations(st *SymbolTable, intrinsics *Intrinsics) func(CompileTree) CompileTree {
 	callIntrinsics := CallIntrinsics(intrinsics, st)
-	//	reductions := CompressReductions()
-	//	repeatedHas := CompressRepeatedHas(st)
+	reductions := CompressReductions()
+	repeatedHas := CompressRepeatedHas(st)
 
 	return func(ct CompileTree) CompileTree {
 		ct = walktree(&callIntrinsics, ct)
-		// ct = walktree(&reductions, ct)
-		// return walktree(&repeatedHas, ct)
+		ct = walktree(&reductions, ct)
+		ct = walktree(&repeatedHas, ct)
 		return ct
 	}
 }
@@ -41,6 +41,23 @@ func CompressReductions() treewalk {
 				}
 				building.Targets = append(building.Targets, walktree(tw, item))
 				break
+			case Immediate:
+				switch item.Kind {
+				case CT_IMMED_FALSE:
+					if reduction.Op == CT_REDUCE_AND {
+						return Immediate{Value: false, Kind: CT_IMMED_FALSE}
+					}
+					break
+				case CT_IMMED_TRUE:
+					if reduction.Op == CT_REDUCE_OR {
+						return Immediate{Value: true, Kind: CT_IMMED_TRUE}
+					}
+					break
+				default:
+					building.Targets = append(building.Targets, item)
+					break
+				}
+				break
 			default:
 				building.Targets = append(building.Targets, item)
 			}
@@ -57,6 +74,10 @@ func CompressRepeatedHas(st *SymbolTable) treewalk {
 	hasAll := st.Named("has_all")
 	hasAny := st.Named("has_any")
 	one := st.ConstOf(zasm.Pack[uint8](1))
+
+	if has == nil || hasAll == nil || hasAny == nil || one == nil {
+		panic("something isn't registered")
+	}
 
 	walker.reduce = func(tw *treewalk, reduction Reduction) CompileTree {
 		var call Invocation
@@ -84,6 +105,7 @@ func CompressRepeatedHas(st *SymbolTable) treewalk {
 			case Invocation:
 				if item.Id != has.Id {
 					node.Targets = append(node.Targets, item)
+					continue
 				}
 				qty, isLoad := item.Args[1].(Load)
 				if !isLoad || qty.Kind != CT_LOAD_CONST || qty.Id != one.Id {
