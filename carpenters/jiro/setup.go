@@ -25,6 +25,11 @@ func (wg WorldGraph) Setup(z *app.Zootlr) error {
 		return slipup.Describef(err, "while loading dir '%s'", wg.LogicDir)
 	}
 
+	if state.root == 0 {
+		return slipup.Createf("did not find root location")
+	}
+
+	z.AddResource(state.root)
 	z.AddResource(state.grph)
 
 	return nil
@@ -57,7 +62,6 @@ func (wg WorldGraph) loaddir(state *graphloader) error {
 				return slipup.Describef(err, "while handling node '%s' in file '%s'", node.RegionName, path)
 			}
 		}
-
 		return nil
 	})
 }

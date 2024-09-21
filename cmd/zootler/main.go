@@ -109,11 +109,9 @@ func main() {
 		return
 	}
 
-	/*
-		if appCmdErr := z.Run(example); appCmdErr != nil {
-			exitWithErr(4, appCmdErr)
-		}
-	*/
+	if appCmdErr := z.Run(ExploreBasicGraph); appCmdErr != nil {
+		exitWithErr(4, appCmdErr)
+	}
 
 	runtime.KeepAlive(z)
 }

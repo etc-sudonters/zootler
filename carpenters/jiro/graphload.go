@@ -6,6 +6,7 @@ import (
 	"sudonters/zootler/internal/entities"
 	"sudonters/zootler/internal/entity"
 	"sudonters/zootler/internal/table"
+	"sudonters/zootler/internal/world"
 
 	"github.com/etc-sudonters/substrate/skelly/graph"
 	"github.com/etc-sudonters/substrate/slipup"
@@ -15,6 +16,7 @@ type graphloader struct {
 	locs entities.Locations
 	edge entities.Edges
 	grph graph.Builder
+	root world.Root
 }
 
 func (l *graphloader) load(wn worldnode) error {
@@ -22,6 +24,10 @@ func (l *graphloader) load(wn worldnode) error {
 	paniconerr(originErr)
 	if err := origin.AddComponents(wn.AsComponents()); err != nil {
 		paniconerr(err)
+	}
+
+	if origin.Name() == "Root" {
+		l.root = world.Root(origin.Id())
 	}
 
 	for destName, nodeEdge := range wn.Edges {
@@ -39,6 +45,8 @@ func (l *graphloader) connect(name components.Name, origin, dest entities.Locati
 	if edgeErr != nil {
 		return entities.Edge{}, slipup.Describef(edgeErr, "edge %s", name)
 	}
+	l.grph.AddEdge(graph.Origination(origin.Id()), graph.Destination(dest.Id()))
+
 	edge.Stash("origin", string(origin.Name()))
 	edge.Stash("dest", string(dest.Name()))
 	edge.StashRawRule(rule)
