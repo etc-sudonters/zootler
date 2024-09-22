@@ -9,9 +9,11 @@ import (
 	"sudonters/zootler/icearrow/zasm"
 	"sudonters/zootler/internal"
 	"sudonters/zootler/internal/app"
+	"sudonters/zootler/internal/components"
 	"sudonters/zootler/internal/entities"
 
 	"github.com/etc-sudonters/substrate/peruse"
+	"github.com/etc-sudonters/substrate/skelly/graph"
 	"github.com/etc-sudonters/substrate/slipup"
 )
 
@@ -21,6 +23,7 @@ type RuleAssembler struct {
 
 func (rc RuleAssembler) Setup(z *app.Zootlr) error {
 	assembler := rc.createAssembler()
+	locations := app.GetResource[entities.Locations](z).Res
 	edges := app.GetResource[entities.Edges](z)
 	collected := slices.Collect(edges.Res.All)
 	slices.SortFunc(collected, func(a, b entities.Edge) int {
@@ -76,6 +79,10 @@ func (rc RuleAssembler) Setup(z *app.Zootlr) error {
 			return whileHandlingRule(asmErr, "assembling")
 		}
 		assemblies.Include(asm)
+		origin, _ := locations.Entity(components.Name(current))
+		dest, _ := locations.Entity(components.Name(edge.Retrieve("dest").(string)))
+		edge.Stash("originId", graph.Origination(origin.Id()))
+		edge.Stash("destId", graph.Destination(dest.Id()))
 	}
 
 	tbls := assembler.CreateDataTables()

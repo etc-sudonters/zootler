@@ -56,6 +56,7 @@ func Analyze(node ast.Node, ctx *AnalysisContext) (ast.Node, error) {
 		node, _ = constCompares(node, ctx)
 		node, _ = constBranches(node)
 	}
+	node, _ = noBareIdents(node)
 	return node, nil
 }
 
@@ -250,6 +251,30 @@ func chaseIdentifier(node ast.Node, ctx *AnalysisContext) (*ast.Identifier, bool
 
 }
 
+func noBareIdents(node ast.Node) (ast.Node, error) {
+	var re rewriter
+
+	// things inside calls shouldn't be re-expanded
+	re.call = func(r *rewriter, c *ast.Call) (ast.Node, error) {
+		return c, nil
+	}
+
+	re.identifier = func(r *rewriter, i *ast.Identifier) (ast.Node, error) {
+		switch i.Kind {
+		case ast.AST_IDENT_TOK:
+			return &ast.Call{
+				Callee: "has",
+				Args:   []ast.Node{i, ast.LiteralNumber(1)},
+			}, nil
+		default:
+			return i, nil
+		}
+	}
+
+	return ast.Transform(&re, node)
+
+}
+
 func constCompares(node ast.Node, ctx *AnalysisContext) (ast.Node, error) {
 	var re rewriter
 	re.compares = func(trans *rewriter, compare *ast.Comparison) (ast.Node, error) {
@@ -373,6 +398,7 @@ func expand(node ast.Node, ctx *AnalysisContext) (ast.Node, error) {
 
 		return copyfragment(expansion.Body)
 	}
+
 	expansion, _ := ast.Transform(&re, node)
 	return Analyze(expansion, ctx)
 }
@@ -530,6 +556,7 @@ func promotions(node ast.Node, ctx *AnalysisContext) (ast.Node, error) {
 		}
 		return ident, nil
 	}
+
 	re.literal = func(_ *rewriter, lit *ast.Literal) (ast.Node, error) {
 		str, isStr := lit.Value.(string)
 		if isStr && ctx.isToken(str) || ctx.looksLikeToken(str) {

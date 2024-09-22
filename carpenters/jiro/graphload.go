@@ -48,7 +48,9 @@ func (l *graphloader) connect(name components.Name, origin, dest entities.Locati
 	l.grph.AddEdge(graph.Origination(origin.Id()), graph.Destination(dest.Id()))
 
 	edge.Stash("origin", string(origin.Name()))
+	edge.Stash("originId", graph.Origination(origin.Id()))
 	edge.Stash("dest", string(dest.Name()))
+	edge.Stash("destId", graph.Destination(dest.Id()))
 	edge.StashRawRule(rule)
 	comps := slices.Concat(kind.ascomponents(), table.Values{
 		rule,

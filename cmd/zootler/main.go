@@ -108,7 +108,7 @@ func main() {
 		return
 	}
 
-	if appCmdErr := z.Run(RunVM); appCmdErr != nil {
+	if appCmdErr := z.Run(ExploreBasicGraph); appCmdErr != nil {
 		exitWithErr(4, appCmdErr)
 	}
 

@@ -11,6 +11,7 @@ func LastMileOptimizations(st *SymbolTable, intrinsics *Intrinsics) func(Compile
 	reductions := CompressReductions()
 	repeatedHas := CompressRepeatedHas(st)
 	unwrap := unwrap(st)
+	noBareIdents := noBareIdents(st)
 
 	return func(ct CompileTree) CompileTree {
 		ct = walktree(&callIntrinsics, ct)
@@ -20,6 +21,7 @@ func LastMileOptimizations(st *SymbolTable, intrinsics *Intrinsics) func(Compile
 		ct = walktree(&reductions, ct)
 		ct = walktree(&repeatedHas, ct)
 		ct = walktree(&unwrap, ct)
+		ct = walktree(&noBareIdents, ct)
 		return ct
 	}
 }
@@ -234,5 +236,10 @@ func unwrap(st *SymbolTable) treewalk {
 
 		return invoke
 	}
+	return walker
+}
+
+func noBareIdents(st *SymbolTable) treewalk {
+	var walker treewalk
 	return walker
 }

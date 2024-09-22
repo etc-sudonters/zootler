@@ -1,60 +1,86 @@
 package main
 
 import (
+	"sudonters/zootler/carpenters/shiro"
+	"sudonters/zootler/icearrow/compiler"
+	"sudonters/zootler/icearrow/runtime"
 	"sudonters/zootler/internal/app"
 	"sudonters/zootler/internal/entities"
 	"sudonters/zootler/internal/world"
 
 	"github.com/etc-sudonters/substrate/dontio"
-	"github.com/etc-sudonters/substrate/skelly/bitset"
 	"github.com/etc-sudonters/substrate/skelly/graph"
-	"github.com/etc-sudonters/substrate/skelly/stack"
 	"github.com/etc-sudonters/substrate/slipup"
 )
 
 func ExploreBasicGraph(z *app.Zootlr) error {
-	worldGraph := app.GetResource[graph.Builder](z).Res.G
-	locations := app.GetResource[entities.Locations](z)
 	root := app.GetResource[world.Root](z).Res
-
-	graphLocations := map[graph.Node]entities.Location{}
-	for loc := range locations.Res.All {
-		graphLocations[graph.Node(loc.Id())] = loc
+	prog := app.GetResource[shiro.CompiledWorldRules](z)
+	world, err := BuildWorldGraph(z)
+	if err != nil {
+		return err
 	}
-	exploration := stack.Make[graph.Node](0, 32)
-	exploration.Push(graph.Node(root))
-	visited := bitset.New(bitset.Buckets(uint64(worldGraph.NodeCount())))
+	exploration := world.BFS(root)
+	vmState := FakeVMState{}
+	vm := runtime.VM{}
+	symbols := &prog.Res.Symbols
 
-	for exploration.Len() > 0 {
-		current, _ := exploration.Pop()
-		if !bitset.Set(&visited, current) {
-			continue
-		}
-		currentLoc, exists := graphLocations[current]
-		if !exists {
-			panic(slipup.Createf("did not find origination 0x%04X in location map", current))
-		}
-
-		if currentLoc.Name() == "Farores Wind Warp" {
-			continue
-		}
-
-		successors, _ := worldGraph.Successors(current)
-		if successors.Len() == 0 {
-			continue
-		}
-
-		dontio.WriteLineOut(z.Ctx(), "From %q can traverse to", currentLoc.Name())
-		for dest := range bitset.Iter64T[graph.Node](successors).All {
-			destLoc, exists := graphLocations[dest]
-			if !exists {
-				panic(slipup.Createf("did not find destination 0x%04X in location map", current))
-			}
-			dontio.WriteLineOut(z.Ctx(), "- %q", destLoc.Name())
-			exploration.Push(dest)
-		}
-		dontio.WriteLineOut(z.Ctx(), "")
+	for traversal := range exploration.Walk {
+		dontio.WriteLineOut(z.Ctx(), "executing %q", traversal.EdgeAttrs.Name())
+		vm.Execute(&traversal.EdgeAttrs.Tape, vmState, symbols)
+		exploration.Accept(traversal.Destination)
 	}
 
 	return nil
 }
+
+type CompiledEdge struct {
+	entities.Edge
+	Tape compiler.Tape
+}
+
+func BuildWorldGraph(z *app.Zootlr) (world.Graph[entities.Location, CompiledEdge], error) {
+	worldgraph := app.GetResource[graph.Builder](z)
+	world := world.NewGraph[entities.Location, CompiledEdge](worldgraph.Res.G)
+	locations := app.GetResource[entities.Locations](z)
+	edges := app.GetResource[entities.Edges](z)
+	rules := app.GetResource[shiro.CompiledWorldRules](z)
+
+	for loc := range locations.Res.All {
+		world.SetNodeAttributes(graph.Node(loc.Id()), loc)
+	}
+
+	for edge := range edges.Res.All {
+		origin, wasOrigin := edge.Retrieve("originId").(graph.Origination)
+		dest, wasDest := edge.Retrieve("destId").(graph.Destination)
+		if !wasOrigin || !wasDest {
+			return world, slipup.Createf(
+				"%q is incomplete: {Origin: %v, Dest: %v}",
+				edge.Name(), origin, dest,
+			)
+		}
+
+		tape, hadTape := rules.Res.Rules[string(edge.Name())]
+		if !hadTape {
+			return world, slipup.Createf("%q does not have a compiled rule", edge.Name())
+		}
+		compiledEdge := CompiledEdge{
+			Edge: edge,
+			Tape: tape,
+		}
+
+		world.SetEdgeAttributes(origin, dest, compiledEdge)
+	}
+
+	return world, nil
+}
+
+type FakeVMState struct{}
+
+func (_ FakeVMState) HasQty(uint32, uint8) bool { return true }
+func (_ FakeVMState) HasAny(...uint32) bool     { return true }
+func (_ FakeVMState) HasAll(...uint32) bool     { return true }
+func (_ FakeVMState) HasBottle() bool           { return true }
+func (_ FakeVMState) IsAdult() bool             { return true }
+func (_ FakeVMState) IsChild() bool             { return true }
+func (_ FakeVMState) AtTod(uint8) bool          { return true }

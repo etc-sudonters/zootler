@@ -144,6 +144,11 @@ func (rc *RuleCompiler) walkerForTape(tape *TapeWriter) treewalk {
 	}
 
 	tw.reduce = func(t *treewalk, r Reduction) CompileTree {
+		if len(r.Targets) == 0 {
+			tape.writeLoadTrue()
+			return r
+		}
+
 		for i := range r.Targets {
 			walktree(t, r.Targets[i])
 		}
