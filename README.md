@@ -7,7 +7,11 @@ find interesting at the moment
 Minimal to no dependencies is a goal. Substrate is an exception because that
 exists primarily as a place for me to put pieces I'm a little _too_ focused on
 AND makes sense as a reusable module. 
- 
+
+## Compiling and Execution
+
+See: [IceArrowVM notes](./notes/icearrow.md)
+
 ## Storage
 
 All of this used to be a big ol `map[reflect.Type]map[int][]interface{}` but
@@ -148,7 +152,7 @@ Behind the scenes:
 
 ## Randomization and Placement
 
-I recommend [Caleb Johnson's RandomizerAlgorithms][^ln1][^fn6] as an example
+I recommend [Caleb Johnson's RandomizerAlgorithms][ln1][^fn6] as an example
 code base and giving the attached paper a read for understanding the different
 placement algorithms.
 
@@ -209,6 +213,8 @@ shouldn't at least).[^fn8]
 
 ---
 
+[ln1]: https://github.com/etc-sudonters/RandomizerAlgorithms
+
 [^fn1]: Note this means the length of the array is _at least_ the highest rowid
     _ever_ tracked by the column
 
@@ -218,7 +224,6 @@ shouldn't at least).[^fn8]
 [^fn3]: OOTR distinguishes between checks and events however I haven't found
     any benefit for this yet.
 
-[^ln1]: https://github.com/etc-sudonters/RandomizerAlgorithms
 
 [^fn5]: There are "no logic" settings that just drop collectibles in locations
     with no assurances that completion is possible. There are still constraints

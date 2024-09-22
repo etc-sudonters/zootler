@@ -21,7 +21,7 @@ type VMState interface {
 }
 
 type Execution struct {
-	Result any
+	Result bool
 	Err    error
 }
 
@@ -179,9 +179,15 @@ func (vm *VM) Execute(tape *compiler.Tape, state VMState, st *compiler.SymbolTab
 	result, err := stk.Pop()
 	if err != nil {
 		err = slipup.Describe(err, "could not set execution result")
+		return Execution{false, err}
 	}
 
-	return Execution{result, err}
+	answer, wasBool := result.Bool()
+	if !wasBool {
+		return Execution{false, slipup.Createf("expected bool result")}
+	}
+
+	return Execution{answer, err}
 }
 
 func (vm *VM) abortOnErr(err error, tpl string, v ...any) {

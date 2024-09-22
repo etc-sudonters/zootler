@@ -27,7 +27,11 @@ func ExploreBasicGraph(z *app.Zootlr) error {
 
 	for traversal := range exploration.Walk {
 		dontio.WriteLineOut(z.Ctx(), "executing %q", traversal.EdgeAttrs.Name())
-		vm.Execute(&traversal.EdgeAttrs.Tape, vmState, symbols)
+		result := vm.Execute(&traversal.EdgeAttrs.Tape, vmState, symbols)
+		if result.Err != nil {
+			dontio.WriteLineOut(z.Ctx(), "failed %s", result.Err)
+		}
+		dontio.WriteLineOut(z.Ctx(), "traversed? %t", result.Result)
 		exploration.Accept(traversal.Destination)
 	}
 
