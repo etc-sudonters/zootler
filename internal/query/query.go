@@ -9,7 +9,9 @@ import (
 	"sudonters/zootler/internal/table"
 	"sudonters/zootler/internal/table/columns"
 
+	"github.com/etc-sudonters/substrate/mirrors"
 	"github.com/etc-sudonters/substrate/skelly/bitset"
+	"github.com/etc-sudonters/substrate/slipup"
 )
 
 var _ Engine = (*engine)(nil)
@@ -33,33 +35,36 @@ func errNotExists(t reflect.Type) error {
 type columnIndex map[reflect.Type]table.ColumnId
 type Entry struct{}
 
+type loads interface {
+	Load(table.ColumnId)
+}
+
+type lookups interface {
+	Lookup(v table.Value)
+}
+
+type queries interface {
+	Exists(table.ColumnId)
+	NotExists(table.ColumnId)
+}
+
 type Query interface {
-	Exists(typ reflect.Type)
-	NotExists(typ reflect.Type)
-	Load(typ reflect.Type)
+	loads
+	queries
 }
 
 type Lookup interface {
-	Lookup(v table.Value)
-	Load(typ reflect.Type)
+	loads
+	lookups
 }
 
 type queryCore struct {
-	errs  []error
-	types columnIndex
-	load  *bitset.Bitset64
+	errs []error
+	load *bitset.Bitset64
 }
 
-func (b *queryCore) Load(typ reflect.Type) {
-	b.set(typ, b.load)
-}
-
-func (b *queryCore) set(typ reflect.Type, s *bitset.Bitset64) {
-	if id, ok := b.types[typ]; ok {
-		s.Set(uint64(id))
-	} else {
-		b.errs = append(b.errs, fmt.Errorf("%s: %w", typ.Name(), ErrColumnNotExist))
-	}
+func (b *queryCore) Load(typ table.ColumnId) {
+	b.load.Set(uint64(typ))
 }
 
 type lookup struct {
@@ -77,17 +82,17 @@ type query struct {
 	notExists *bitset.Bitset64
 }
 
-func (b *query) Load(typ reflect.Type) {
-	b.set(typ, b.exists)
-	b.set(typ, b.load)
+func (b *query) Load(typ table.ColumnId) {
+	b.exists.Set(uint64(typ))
+	b.load.Set(uint64(typ))
 }
 
-func (b *query) Exists(typ reflect.Type) {
-	b.set(typ, b.exists)
+func (b *query) Exists(typ table.ColumnId) {
+	b.exists.Set(uint64(typ))
 }
 
-func (b *query) NotExists(typ reflect.Type) {
-	b.set(typ, b.notExists)
+func (b *query) NotExists(typ table.ColumnId) {
+	b.notExists.Set(uint64(typ))
 }
 
 func makePredicate(b *query) predicate {
@@ -118,8 +123,23 @@ type Engine interface {
 	InsertRow(vs ...table.Value) (table.RowId, error)
 	Retrieve(b Query) (bundle.Interface, error)
 	Lookup(l Lookup) (bundle.Interface, error)
+	GetValues(r table.RowId, cs table.ColumnIds) (table.ValueTuple, error)
 	SetValues(r table.RowId, vs table.Values) error
 	UnsetValues(r table.RowId, cs table.ColumnIds) error
+	ColumnIdFor(reflect.Type) (table.ColumnId, bool)
+}
+
+func MustColumnIdFor(typ reflect.Type, e Engine) table.ColumnId {
+	id, ok := e.ColumnIdFor(typ)
+	if ok {
+		return id
+	}
+
+	panic(slipup.Createf("did not have column for '%s'", typ.Name()))
+}
+
+func MustAsColumnId[T any](e Engine) table.ColumnId {
+	return MustColumnIdFor(mirrors.TypeOf[T](), e)
 }
 
 func ExtractTable(e Engine) (*table.Table, error) {
@@ -148,11 +168,9 @@ type engine struct {
 	tbl         *table.Table
 }
 
-func ColumnIdFor(e Engine, t reflect.Type) (table.ColumnId, bool) {
-	if q, ok := e.(*engine); ok {
-		if id, ok := q.columnIndex[t]; ok {
-			return id, ok
-		}
+func (e *engine) ColumnIdFor(t reflect.Type) (table.ColumnId, bool) {
+	if id, ok := e.columnIndex[t]; ok {
+		return id, ok
 	}
 
 	return table.INVALID_COLUMNID, false
@@ -161,9 +179,8 @@ func ColumnIdFor(e Engine, t reflect.Type) (table.ColumnId, bool) {
 func (e engine) CreateQuery() Query {
 	return &query{
 		queryCore: queryCore{
-			types: e.columnIndex,
-			errs:  nil,
-			load:  &bitset.Bitset64{},
+			errs: nil,
+			load: &bitset.Bitset64{},
 		},
 		exists:    &bitset.Bitset64{},
 		notExists: &bitset.Bitset64{},
@@ -173,9 +190,8 @@ func (e engine) CreateQuery() Query {
 func (e engine) CreateLookup() Lookup {
 	return &lookup{
 		queryCore: queryCore{
-			types: e.columnIndex,
-			errs:  nil,
-			load:  &bitset.Bitset64{},
+			errs: nil,
+			load: &bitset.Bitset64{},
 		},
 		lookups: nil,
 	}
@@ -310,6 +326,20 @@ func (e *engine) SetValues(r table.RowId, vs table.Values) error {
 	}
 
 	return nil
+}
+
+func (e *engine) GetValues(r table.RowId, cs table.ColumnIds) (table.ValueTuple, error) {
+	var vt table.ValueTuple
+	vt.Cols = make(table.ColumnMetas, len(cs))
+	vt.Values = make(table.Values, len(cs))
+	for i, cid := range cs {
+		c := e.tbl.Cols[cid]
+		vt.Cols[i].Id = c.Id()
+		vt.Cols[i].T = c.Type()
+		vt.Values[i] = c.Column().Get(r)
+	}
+
+	return vt, nil
 }
 
 func (e *engine) UnsetValues(r table.RowId, cs table.ColumnIds) error {

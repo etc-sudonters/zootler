@@ -5,9 +5,12 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"sudonters/zootler/internal/app"
 	"sudonters/zootler/internal/query"
-	"sudonters/zootler/internal/slipup"
 	"sudonters/zootler/internal/table"
+
+	"github.com/etc-sudonters/substrate/dontio"
+	"github.com/etc-sudonters/substrate/slipup"
 )
 
 func examineTable(ctx context.Context, storage query.Engine) error {
@@ -16,8 +19,8 @@ func examineTable(ctx context.Context, storage query.Engine) error {
 		return extractTblErr
 	}
 
-	WriteLineOut(ctx, "Number of columns:\t%d", len(tbl.Cols))
-	WriteLineOut(ctx, "Number of rows:\t\t%d", len(tbl.Rows))
+	dontio.WriteLineOut(ctx, "Number of columns:\t%d", len(tbl.Cols))
+	dontio.WriteLineOut(ctx, "Number of rows:\t\t%d", len(tbl.Rows))
 	return nil
 }
 
@@ -31,16 +34,18 @@ type InspectTable struct {
 	Columns []reflect.Type
 }
 
-func (i InspectTable) Setup(ctx context.Context, storage query.Engine) error {
+func (i InspectTable) Setup(z *app.Zootlr) error {
+	storage := z.Table()
+	ctx := z.Ctx()
 	tbl, extractTblErr := query.ExtractTable(storage)
 	if extractTblErr != nil {
 		return extractTblErr
 	}
 
-	WriteLineOut(ctx, "Number of columns:\t%d", len(tbl.Cols))
-	WriteLineOut(ctx, "Number of rows:\t\t%d", len(tbl.Rows))
+	dontio.WriteLineOut(ctx, "Number of columns:\t%d", len(tbl.Cols))
+	dontio.WriteLineOut(ctx, "Number of rows:\t\t%d", len(tbl.Rows))
 	for _, t := range i.Columns {
-		id, ok := query.ColumnIdFor(storage, t)
+		id, ok := storage.ColumnIdFor(t)
 		if !ok {
 			return fmt.Errorf("could not find column for '%s'", t.Name())
 		}
@@ -52,9 +57,9 @@ func (i InspectTable) Setup(ctx context.Context, storage query.Engine) error {
 }
 
 func examineColumn(ctx context.Context, col table.ColumnData) error {
-	WriteLineOut(ctx, "Column:\t\t%s", col.Type().Name())
-	WriteLineOut(ctx, "Id:\t\t%d", col.Id())
-	WriteLineOut(ctx, "Population:\t%d", col.Column().Len())
+	dontio.WriteLineOut(ctx, "Column:\t\t%s", col.Type().Name())
+	dontio.WriteLineOut(ctx, "Id:\t\t%d", col.Id())
+	dontio.WriteLineOut(ctx, "Population:\t%d", col.Column().Len())
 	return nil
 }
 
@@ -67,11 +72,21 @@ func (iq InspectQuery) Setup(ctx context.Context, storage query.Engine) error {
 	q := storage.CreateQuery()
 
 	for i := range iq.Exist {
-		q.Exists(iq.Exist[i])
+		t := iq.Exist[i]
+		colId, exists := storage.ColumnIdFor(t)
+		if !exists {
+			dontio.WriteLineErr(ctx, "Unable to resolve columnId for '%s'", t)
+		}
+		q.Exists(colId)
 	}
 
 	for i := range iq.NotExist {
-		q.NotExists(iq.NotExist[i])
+		t := iq.NotExist[i]
+		colId, exists := storage.ColumnIdFor(t)
+		if !exists {
+			dontio.WriteLineErr(ctx, "Unable to resolve columnId for '%s'", t)
+		}
+		q.NotExists(colId)
 	}
 
 	results, err := storage.Retrieve(q)
@@ -79,10 +94,10 @@ func (iq InspectQuery) Setup(ctx context.Context, storage query.Engine) error {
 		return slipup.Describe(err, "while inspecting query")
 	}
 
-	WriteLineOut(ctx, "Examining query")
-	WriteLineOut(ctx, "Exists:\t\t%s", showNames(iq.Exist))
-	WriteLineOut(ctx, "NotExist:\t%s", showNames(iq.NotExist))
-	WriteLineOut(ctx, "Population:\t%d", results.Len())
+	dontio.WriteLineOut(ctx, "Examining query")
+	dontio.WriteLineOut(ctx, "Exists:\t\t%s", showNames(iq.Exist))
+	dontio.WriteLineOut(ctx, "NotExist:\t%s", showNames(iq.NotExist))
+	dontio.WriteLineOut(ctx, "Population:\t%d", results.Len())
 	return nil
 }
 

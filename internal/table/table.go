@@ -25,6 +25,21 @@ type RowTuple struct {
 	ValueTuple
 }
 
+func (vt *ValueTuple) Init(cs Columns) {
+	vt.Cols = make(ColumnMetas, len(cs))
+	vt.Values = make(Values, len(cs))
+	for i, c := range cs {
+		vt.Cols[i].Id = c.Id()
+		vt.Cols[i].T = c.Type()
+	}
+}
+
+func (vt *ValueTuple) Load(r RowId, cs Columns) {
+	for i, c := range cs {
+		vt.Values[i] = c.Column().Get(r)
+	}
+}
+
 var ColumnNotPresent = errors.New("column not present")
 var CouldNotCastColumn = errors.New("could not cast column")
 
@@ -44,6 +59,14 @@ func Extract[T any](cm ColumnMap) (*T, error) {
 type ValueTuple struct {
 	Cols   ColumnMetas
 	Values Values
+}
+
+func FromColumnMap[T any](cm ColumnMap) (T, bool) {
+	t, exists := cm[mirrors.T[T]()]
+	if !exists {
+		return mirrors.Empty[T](), false
+	}
+	return t.(T), true
 }
 
 func (v *ValueTuple) ColumnMap() ColumnMap {

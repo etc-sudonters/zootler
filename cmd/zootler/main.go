@@ -7,8 +7,13 @@ import (
 	"os"
 	"path"
 	"runtime/debug"
+	"sudonters/zootler/carpenters"
+	"sudonters/zootler/carpenters/ichiro"
+	"sudonters/zootler/carpenters/jiro"
+	"sudonters/zootler/carpenters/saburo"
+	"sudonters/zootler/carpenters/shiro"
 	"sudonters/zootler/internal/app"
-	"sudonters/zootler/internal/rules/runtime"
+	"sudonters/zootler/internal/settings"
 
 	"github.com/etc-sudonters/substrate/dontio"
 	"github.com/etc-sudonters/substrate/stageleft"
@@ -46,12 +51,11 @@ func (opts *cliOptions) init() error {
 func main() {
 	var opts cliOptions
 	var appExitCode stageleft.ExitCode = stageleft.ExitSuccess
-	stdio := dontio.Std{
+	std := dontio.Std{
 		In:  os.Stdin,
 		Out: os.Stdout,
 		Err: os.Stderr,
 	}
-	std := std{&stdio}
 	defer func() {
 		os.Exit(int(appExitCode))
 	}()
@@ -59,6 +63,8 @@ func main() {
 		if r := recover(); r != nil {
 			if err, ok := r.(error); ok {
 				std.WriteLineErr("%s", err)
+			} else if str, ok := r.(string); ok {
+				std.WriteLineErr("%s", str)
 			}
 			_, _ = std.Err.Write(debug.Stack())
 			if appExitCode != stageleft.ExitSuccess {
@@ -73,35 +79,28 @@ func main() {
 	}
 
 	ctx := context.Background()
-	ctx = dontio.AddStdToContext(ctx, &stdio)
+	ctx = dontio.AddStdToContext(ctx, &std)
 
 	if argsErr := (&opts).init(); argsErr != nil {
 		exitWithErr(2, argsErr)
 		return
 	}
 
-	funcs := runtime.NewFuncNamespace()
-	env := runtime.NewEnv()
-	compiler := runtime.CompilerUsing(funcs, env)
-
 	z, appCreateErr := app.New(ctx,
-		app.Setup(CreateScheme{DDL: MakeDDL()}),
-		app.Setup(DataFileLoader[FileItem]{
-			IncludeMQ: opts.includeMq,
-			Path:      path.Join(opts.dataDir, "items.json"),
+		app.SetupResource(settings.ZootrSettings{}),
+		app.Setup(&carpenters.Mutoh{
+			Ichiro: ichiro.DataLoader{
+				Table: ichiro.TableLoader{
+					Scheme: ichiro.BaseDDL(),
+				},
+				DataPath: opts.dataDir,
+			},
+			Jiro: jiro.WorldGraph{LogicDir: opts.logicDir},
+			Saburo: saburo.RuleAssembler{
+				ScriptPath: path.Join(opts.logicDir, "..", "helpers.json"),
+			},
+			Shiro: shiro.WorldCompiler{},
 		}),
-		app.Setup(DataFileLoader[FileLocation]{
-			IncludeMQ: opts.includeMq,
-			Path:      path.Join(opts.dataDir, "locations.json"),
-			Add:       new(AttachDefaultItem),
-		}),
-		app.Setup(WorldFileLoader{
-			IncludeMQ: opts.includeMq,
-			Path:      opts.logicDir,
-			Helpers:   path.Join(path.Dir(opts.logicDir), "helpers.json"),
-			Compiler:  compiler,
-		}),
-		app.Setup(&LogicCompiler{Compiler: compiler}),
 	)
 
 	if appCreateErr != nil {
@@ -109,7 +108,8 @@ func main() {
 		return
 	}
 
-	if appCmdErr := z.Run(example); appCmdErr != nil {
+	if appCmdErr := z.Run(ExploreBasicGraph); appCmdErr != nil {
 		exitWithErr(4, appCmdErr)
 	}
+
 }
