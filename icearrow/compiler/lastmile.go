@@ -5,58 +5,12 @@ import (
 	"slices"
 )
 
-func unalias(st *SymbolTable) treewalk {
-	var walker treewalk
-
-	has := st.Named("has")
-
-	silvers := st.Named("silvergauntlets")
-	golden := st.Named("goldengauntlets")
-	longshot := st.Named("longshot")
-
-	strSym := st.Named("progressivestrengthupgrade")
-	hookSym := st.Named("hookshot")
-
-	two := Immediate{Value: uint8(2), Kind: CT_IMMED_U8}
-	three := Immediate{Value: uint8(3), Kind: CT_IMMED_U8}
-
-	str := Load{Id: strSym.Id + 1, Kind: CT_LOAD_IDENT}
-	hook := Load{Id: hookSym.Id + 1, Kind: CT_LOAD_IDENT}
-
-	walker.invoke = func(_ *treewalk, invoke Invocation) CompileTree {
-		sym := st.Symbol(invoke.Id)
-		if sym.Id == has.Id {
-			arg := st.Symbol(invoke.Args[0].(Load).Id)
-			if arg.Id == silvers.Id {
-				return Invocation{
-					Id:   has.Id + 1,
-					Args: []CompileTree{str, two},
-				}
-			} else if arg.Id == golden.Id {
-				return Invocation{
-					Id:   has.Id + 1,
-					Args: []CompileTree{str, three},
-				}
-			} else if arg.Id == longshot.Id {
-				return Invocation{
-					Id:   has.Id + 1,
-					Args: []CompileTree{hook, two},
-				}
-			}
-
-		}
-
-		return invoke
-	}
-
-	return walker
-}
-
 func LastMileOptimizations(st *SymbolTable, intrinsics *Intrinsics) func(CompileTree) CompileTree {
 	unalias := unalias(st)
 	callIntrinsics := CallIntrinsics(intrinsics, st)
 	reductions := CompressReductions()
 	repeatedHas := CompressRepeatedHas(st)
+	unwrap := unwrap(st)
 
 	return func(ct CompileTree) CompileTree {
 		ct = walktree(&callIntrinsics, ct)
@@ -65,6 +19,7 @@ func LastMileOptimizations(st *SymbolTable, intrinsics *Intrinsics) func(Compile
 		ct = walktree(&repeatedHas, ct)
 		ct = walktree(&reductions, ct)
 		ct = walktree(&repeatedHas, ct)
+		ct = walktree(&unwrap, ct)
 		return ct
 	}
 }
@@ -150,23 +105,25 @@ func CompressRepeatedHas(st *SymbolTable) treewalk {
 					haser[sym.Id] = append(collected, trgt.Args...)
 					continue
 				} else if sym.Id == has.Id {
+					item := trgt.Args[0].(Load)
+					var qty uint8
 					switch arg := trgt.Args[1].(type) {
 					case Load:
 						if arg.Kind == CT_LOAD_CONST {
-							qty := st.Const(arg.Id)
-							if qty.Value == 1 {
-								haser[sym.Id] = append(collected, arg)
-								continue
-							}
+							val := st.Const(arg.Id)
+							qty = uint8(val.Value)
 						}
 						break
 					case Immediate:
-						qty := arg.Value.(uint8)
-						if qty == 1 {
-							haser[sym.Id] = append(collected, arg)
-							continue
-						}
+						qty = arg.Value.(uint8)
 						break
+					default:
+						panic("unreachable")
+					}
+
+					if qty == 1 {
+						haser[has.Id] = append(haser[has.Id], item)
+						continue
 					}
 				}
 				reducer = append(reducer, trgt)
@@ -209,6 +166,73 @@ func CompressRepeatedHas(st *SymbolTable) treewalk {
 			Op:      visiting.Op,
 			Targets: reducer,
 		}
+	}
+	return walker
+}
+
+func unalias(st *SymbolTable) treewalk {
+	var walker treewalk
+
+	has := st.Named("has")
+
+	silvers := st.Named("silvergauntlets")
+	golden := st.Named("goldengauntlets")
+	longshot := st.Named("longshot")
+
+	strSym := st.Named("progressivestrengthupgrade")
+	hookSym := st.Named("hookshot")
+
+	two := Immediate{Value: uint8(2), Kind: CT_IMMED_U8}
+	three := Immediate{Value: uint8(3), Kind: CT_IMMED_U8}
+
+	str := Load{Id: strSym.Id + 1, Kind: CT_LOAD_IDENT}
+	hook := Load{Id: hookSym.Id + 1, Kind: CT_LOAD_IDENT}
+
+	walker.invoke = func(_ *treewalk, invoke Invocation) CompileTree {
+		sym := st.Symbol(invoke.Id)
+		if sym.Id == has.Id {
+			arg := st.Symbol(invoke.Args[0].(Load).Id)
+			if arg.Id == silvers.Id {
+				return Invocation{
+					Id:   has.Id + 1,
+					Args: []CompileTree{str, two},
+				}
+			} else if arg.Id == golden.Id {
+				return Invocation{
+					Id:   has.Id + 1,
+					Args: []CompileTree{str, three},
+				}
+			} else if arg.Id == longshot.Id {
+				return Invocation{
+					Id:   has.Id + 1,
+					Args: []CompileTree{hook, two},
+				}
+			}
+
+		}
+
+		return invoke
+	}
+
+	return walker
+}
+
+func unwrap(st *SymbolTable) treewalk {
+	var walker treewalk
+	has := st.Named("has")
+	hasAll := st.Named("has_all")
+	hasAny := st.Named("has_any")
+
+	walker.invoke = func(t *treewalk, invoke Invocation) CompileTree {
+		sym := st.Symbol(invoke.Id)
+		if (sym.Id == hasAll.Id || sym.Id == hasAny.Id) && len(invoke.Args) == 1 {
+			return Invocation{
+				Id:   has.Id + 1,
+				Args: []CompileTree{invoke.Args[0], Immediate{Value: uint8(1), Kind: CT_IMMED_U8}},
+			}
+		}
+
+		return invoke
 	}
 	return walker
 }
