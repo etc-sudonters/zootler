@@ -27,11 +27,16 @@ func (rc *RuleCompiler) init() {
 	}
 }
 
-func (rc *RuleCompiler) Compile(fragment CompileTree) Tape {
-	var tw treewalk
-	tape := new(Tape)
+func (rc *RuleCompiler) Compile(fragment CompileTree) TapeWriter {
 	rc.init()
+	tape := new(TapeWriter)
+	tw := rc.walkerForTape(tape)
+	walktree(&tw, fragment)
+	return *tape
+}
 
+func (rc *RuleCompiler) walkerForTape(tape *TapeWriter) treewalk {
+	var tw treewalk
 	tw.immediate = func(t *treewalk, i Immediate) CompileTree {
 		switch i.Kind {
 		case CT_IMMED_FALSE:
@@ -134,9 +139,6 @@ func (rc *RuleCompiler) Compile(fragment CompileTree) Tape {
 		case CT_LOAD_IDENT:
 			tape.writeLoadSymbol(uint16(l.Id))
 			break
-		case CT_LOAD_STR:
-			tape.writeLoadString(uint16(l.Id))
-			break
 		}
 		return l
 	}
@@ -159,6 +161,5 @@ func (rc *RuleCompiler) Compile(fragment CompileTree) Tape {
 		return r
 	}
 
-	walktree(&tw, fragment)
-	return *tape
+	return tw
 }

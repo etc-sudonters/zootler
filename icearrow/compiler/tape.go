@@ -7,13 +7,13 @@ import (
 	"github.com/etc-sudonters/substrate/slipup"
 )
 
-func ReadTape(tape Tape, st *SymbolTable) string {
+func ReadTape(tape *Tape, st *SymbolTable) string {
 	var str strings.Builder
 	tt := tapeTranslator{&str}
-	idx, end := 0, len(tape.ops)
+	idx, end := 0, len(tape.Ops)
 
 	for idx < end {
-		op := tape.ops[idx]
+		op := tape.Ops[idx]
 		tt.writeOp(op)
 		switch op {
 		case IA_RETURN:
@@ -22,11 +22,11 @@ func ReadTape(tape Tape, st *SymbolTable) string {
 			break
 		case IA_HAS_QTY:
 			var handle uint32
-			lo := tape.ops[idx+1]
-			hi := tape.ops[idx+2]
+			lo := tape.Ops[idx+1]
+			hi := tape.Ops[idx+2]
 			handle |= (uint32(hi) << 8) | (uint32(lo))
 			token := st.Symbol(handle)
-			qty := tape.ops[idx+3]
+			qty := tape.Ops[idx+3]
 			tt.writeInlineByte(lo)
 			tt.writeInlineByte(hi)
 			tt.writeInlineByte(qty)
@@ -58,8 +58,8 @@ func ReadTape(tape Tape, st *SymbolTable) string {
 			break
 		case IA_LOAD_SYMBOL:
 			var handle uint32
-			lo := tape.ops[idx+1]
-			hi := tape.ops[idx+2]
+			lo := tape.Ops[idx+1]
+			hi := tape.Ops[idx+2]
 			handle |= (uint32(hi) << 8) | (uint32(lo))
 			ident := st.Symbol(handle)
 			tt.writeInlineByte(lo)
@@ -72,8 +72,8 @@ func ReadTape(tape Tape, st *SymbolTable) string {
 			break
 		case IA_LOAD_CONST:
 			var handle uint32
-			lo := tape.ops[idx+1]
-			hi := tape.ops[idx+2]
+			lo := tape.Ops[idx+1]
+			hi := tape.Ops[idx+2]
 			handle |= (uint32(hi) << 8) | (uint32(lo))
 			sym := st.Const(handle)
 
@@ -86,7 +86,7 @@ func ReadTape(tape Tape, st *SymbolTable) string {
 			idx += 2
 			break
 		case IA_LOAD_IMMED:
-			val := tape.ops[idx+1]
+			val := tape.Ops[idx+1]
 			tt.writeInlineByte(val)
 			tt.padToGutter(1)
 			tt.WriteString("LOAD_U8")
@@ -96,8 +96,8 @@ func ReadTape(tape Tape, st *SymbolTable) string {
 			break
 		case IA_LOAD_IMMED2:
 			var val uint32
-			lo := tape.ops[idx+1]
-			hi := tape.ops[idx+2]
+			lo := tape.Ops[idx+1]
+			hi := tape.Ops[idx+2]
 			val |= (uint32(hi) << 8) | (uint32(lo))
 			tt.writeInlineByte(lo)
 			tt.writeInlineByte(hi)
@@ -134,20 +134,6 @@ func ReadTape(tape Tape, st *SymbolTable) string {
 		case IA_CALL_2:
 			tt.padToGutter(0)
 			tt.WriteString("CALL_2")
-			break
-		case TEMP_IA_LOAD_STR:
-			var handle uint32
-			lo := tape.ops[idx+1]
-			hi := tape.ops[idx+2]
-			handle |= (uint32(hi) << 8) | (uint32(lo))
-			str := st.String(handle)
-			tt.writeInlineByte(lo)
-			tt.writeInlineByte(hi)
-			tt.padToGutter(2)
-			tt.WriteString("LOAD_STRING")
-			tt.WriteString("\t\t|")
-			tt.fmt(" %q", str.Value)
-			idx += 2
 			break
 		default:
 			panic(slipup.Createf("unknown op 0x%02X", op))
@@ -186,74 +172,78 @@ func (tt tapeTranslator) fmt(tpl string, v ...any) {
 }
 
 type Tape struct {
-	ops []uint8
+	Ops []uint8
 }
 
-func (t *Tape) write(op IceArrowOp, u8s ...uint8) {
-	tt := t.ops
+func (t Tape) Len() int {
+	return len(t.Ops)
+}
+
+type TapeWriter struct {
+	Tape
+}
+
+func (t *TapeWriter) write(op IceArrowOp, u8s ...uint8) {
+	tt := t.Ops
 	tt = append(tt, uint8(op))
 	tt = append(tt, u8s...)
-	t.ops = tt
+	t.Ops = tt
 }
 
-func (t *Tape) writeReturn() {
+func (t *TapeWriter) writeReturn() {
 	t.write(IA_RETURN)
 }
 
-func (t *Tape) writeLoadConst(handle uint16) {
+func (t *TapeWriter) writeLoadConst(handle uint16) {
 	t.write(IA_LOAD_CONST, encodeU16(handle)...)
 }
 
-func (t *Tape) writeLoadSymbol(handle uint16) {
+func (t *TapeWriter) writeLoadSymbol(handle uint16) {
 	t.write(IA_LOAD_SYMBOL, encodeU16(handle)...)
 }
 
-func (t *Tape) writeLoadString(handle uint16) {
-	t.write(TEMP_IA_LOAD_STR, encodeU16(handle)...)
-}
-
-func (t *Tape) writeLoadTrue() {
+func (t *TapeWriter) writeLoadTrue() {
 	t.write(IA_LOAD_TRUE)
 }
 
-func (t *Tape) writeLoadFalse() {
+func (t *TapeWriter) writeLoadFalse() {
 	t.write(IA_LOAD_FALSE)
 }
 
-func (t *Tape) writeLoadImmediateU8(u8 uint8) {
+func (t *TapeWriter) writeLoadImmediateU8(u8 uint8) {
 	t.write(IA_LOAD_IMMED, u8)
 }
 
-func (t *Tape) writeLoadImmediateU16(u16 uint16) {
+func (t *TapeWriter) writeLoadImmediateU16(u16 uint16) {
 	t.write(IA_LOAD_IMMED, encodeU16(u16)...)
 }
 
-func (t *Tape) writeReduceAll(qty uint8) {
+func (t *TapeWriter) writeReduceAll(qty uint8) {
 	t.writeLoadImmediateU8(qty)
 	t.write(IA_REDUCE_ALL)
 }
 
-func (t *Tape) writeReduceAny(qty uint8) {
+func (t *TapeWriter) writeReduceAny(qty uint8) {
 	t.writeLoadImmediateU8(qty)
 	t.write(IA_REDUCE_ANY)
 }
 
-func (t *Tape) writeJump() {
+func (t *TapeWriter) writeJump() {
 	t.writeLoadImmediateU16(0x00)
 	t.write(IA_JUMP_UNCOND)
 }
 
-func (t *Tape) writeJumpTrue() {
+func (t *TapeWriter) writeJumpTrue() {
 	t.writeLoadImmediateU16(0x00)
 	t.write(IA_JUMP_TRUE)
 }
 
-func (t *Tape) writeJumpFalse() {
+func (t *TapeWriter) writeJumpFalse() {
 	t.writeLoadImmediateU16(0x00)
 	t.write(IA_JUMP_FALSE)
 }
 
-func (t *Tape) writeCall(handle uint16, args uint8) {
+func (t *TapeWriter) writeCall(handle uint16, args uint8) {
 	t.writeLoadSymbol(handle)
 	switch args {
 	case 0:

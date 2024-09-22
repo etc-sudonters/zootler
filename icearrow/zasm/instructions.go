@@ -2,6 +2,7 @@ package zasm
 
 import (
 	"slices"
+	"sudonters/zootler/icearrow/nan"
 	"sudonters/zootler/internal/intern"
 
 	"github.com/etc-sudonters/substrate/slipup"
@@ -159,7 +160,7 @@ func (iw *InstructionWriter) WriteOp(o Op) *InstructionWriter {
 	return iw.Write(EncodeOp(o))
 }
 
-func (iw *InstructionWriter) WriteLoadConst(h intern.Handle[PackedValue]) *InstructionWriter {
+func (iw *InstructionWriter) WriteLoadConst(h intern.Handle[nan.PackedValue]) *InstructionWriter {
 	return iw.Write(EncodeOpAndU24(OP_LOAD_CONST, AssertU24(h)))
 }
 

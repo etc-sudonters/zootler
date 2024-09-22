@@ -31,6 +31,5 @@ const (
 	IA_IS_CHILD   = 0x6C
 	IA_IS_ADULT   = 0x6D
 	IA_HAS_BOTTLE = 0x6E
-	// 0xF0 Temporary ops
-	TEMP_IA_LOAD_STR = 0xF2
+	IA_CHK_TOD    = 0x6F // next byte: 1 for Day, 2 for Night, 3 for Dampe
 )

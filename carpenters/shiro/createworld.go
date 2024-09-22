@@ -6,7 +6,6 @@ import (
 	"sudonters/zootler/internal/app"
 	"sudonters/zootler/internal/settings"
 
-	"github.com/etc-sudonters/substrate/dontio"
 	"github.com/etc-sudonters/substrate/slipup"
 )
 
@@ -61,24 +60,31 @@ func (wc *WorldCompiler) Setup(z *app.Zootlr) error {
 	settings := app.GetResource[settings.ZootrSettings](z)
 
 	assembly := &prog.Res
-	symbols := ReadDataIntoSymbolTable(assembly.Data())
-	settingIntrinsics := intoIntrinsics(&settings.Res)
-	intrinsics := createCompilerPlugin(&symbols, &settingIntrinsics)
-	comp := compiler.RuleCompiler{
-		Symbols: &symbols,
+	compiled := CompiledWorldRules{
+		Rules:   make(map[string]compiler.Tape, assembly.NumberOfUnits()),
+		Symbols: ReadDataIntoSymbolTable(assembly.Data()),
 	}
-	lastMile := compiler.LastMileOptimizations(&symbols, &intrinsics)
+	settingIntrinsics := intoIntrinsics(&settings.Res)
+	intrinsics := createCompilerPlugin(&compiled.Symbols, &settingIntrinsics)
+	comp := compiler.RuleCompiler{
+		Symbols: &compiled.Symbols,
+	}
+	lastMile := compiler.LastMileOptimizations(&compiled.Symbols, &intrinsics)
 
 	for unit := range assembly.Units {
-		dontio.WriteLineOut(z.Ctx(), unit.Name)
-		ct, unassembleErr := compiler.Unassemble(unit, &symbols)
+		ct, unassembleErr := compiler.Unassemble(unit, &compiled.Symbols)
 		if unassembleErr != nil {
 			panic(unassembleErr)
 		}
 		ct = lastMile(ct)
-		tape := comp.Compile(ct)
-		dontio.WriteLineOut(z.Ctx(), compiler.ReadTape(tape, &symbols))
+		tapeWriter := comp.Compile(ct)
+		compiled.Rules[unit.Name] = tapeWriter.Tape
 	}
-
+	app.AddResource(z, compiled)
 	return nil
+}
+
+type CompiledWorldRules struct {
+	Rules   map[string]compiler.Tape
+	Symbols compiler.SymbolTable
 }

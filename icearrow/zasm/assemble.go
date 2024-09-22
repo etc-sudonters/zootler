@@ -3,6 +3,7 @@ package zasm
 import (
 	"errors"
 	"sudonters/zootler/icearrow/ast"
+	"sudonters/zootler/icearrow/nan"
 
 	"github.com/etc-sudonters/substrate/slipup"
 )
@@ -38,6 +39,10 @@ func (a *Assembly) Units(yield func(*Unit) bool) {
 			return
 		}
 	}
+}
+
+func (a *Assembly) NumberOfUnits() int {
+	return len(a.units)
 }
 
 type Unit struct {
@@ -110,7 +115,7 @@ func (a *Assembler) Literal(node *ast.Literal) (Instructions, error) {
 	case bool:
 		return IW().WriteLoadBool(v).I, nil
 	case float64:
-		c := a.Data.Consts.Intern(Pack(v))
+		c := a.Data.Consts.Intern(nan.PackFloat64(v))
 		return IW().WriteLoadConst(c).I, nil
 	case string:
 		str := a.Data.Strs.Intern(v)

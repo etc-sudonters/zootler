@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"runtime"
 	"runtime/debug"
 	"sudonters/zootler/carpenters"
 	"sudonters/zootler/carpenters/ichiro"
@@ -108,10 +107,9 @@ func main() {
 		exitWithErr(3, appCreateErr)
 		return
 	}
-	//
-	//	if appCmdErr := z.Run(ExploreBasicGraph); appCmdErr != nil {
-	//		exitWithErr(4, appCmdErr)
-	//	}
-	//
-	runtime.KeepAlive(z)
+
+	if appCmdErr := z.Run(RunVM); appCmdErr != nil {
+		exitWithErr(4, appCmdErr)
+	}
+
 }

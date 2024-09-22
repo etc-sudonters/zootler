@@ -1,6 +1,7 @@
 package compiler
 
 import (
+	"sudonters/zootler/icearrow/nan"
 	"sudonters/zootler/icearrow/zasm"
 	"sudonters/zootler/internal"
 )
@@ -47,7 +48,7 @@ type SymbolTable struct {
 	strings []String
 }
 
-func (st *SymbolTable) ConstOf(pv zasm.PackedValue) *Const {
+func (st *SymbolTable) ConstOf(pv nan.PackedValue) *Const {
 	for i := range st.consts {
 		sym := &st.consts[i]
 		if sym.Value.Equals(pv) {
@@ -125,7 +126,7 @@ func (s *Symbol) Set(kind SymbolKind) {
 
 type Const struct {
 	Id    uint32
-	Value zasm.PackedValue
+	Value nan.PackedValue
 }
 
 type String struct {
