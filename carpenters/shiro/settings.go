@@ -276,6 +276,11 @@ func (si *intrinsics) CompareLt(ct compiler.Invocation, sym *compiler.Symbol, st
 	}
 }
 
+func (si *intrinsics) InvertHasShortcuts(ct compiler.Invocation, sym *compiler.Symbol, st *compiler.SymbolTable) (bool, bool) {
+	res, exists := si.HasShortcuts(ct, sym, st)
+	return !res, exists
+}
+
 func (si *intrinsics) HasShortcuts(ct compiler.Invocation, sym *compiler.Symbol, st *compiler.SymbolTable) (bool, bool) {
 	arg := ct.Args[0].(compiler.Load)
 	dungeon := st.String(arg.Id)

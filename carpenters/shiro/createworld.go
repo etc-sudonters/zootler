@@ -14,6 +14,11 @@ func ReadDataIntoSymbolTable(data *zasm.Data) compiler.SymbolTable {
 	return compiler.CreateSymbolTable(data)
 }
 
+func constTrue(compiler.Invocation, *compiler.Symbol, *compiler.SymbolTable) (compiler.CompileTree, error) {
+	return compiler.Immediate{Value: true, Kind: compiler.CT_IMMED_TRUE}, nil
+
+}
+
 func createCompilerPlugin(st *compiler.SymbolTable, settings *intrinsics) compiler.Intrinsics {
 	intrinsics := compiler.NewIntrinsics()
 
@@ -26,6 +31,7 @@ func createCompilerPlugin(st *compiler.SymbolTable, settings *intrinsics) compil
 		{"comparenqsetting", settings.CompareNq},
 		{"regionhasshortcuts", settings.HasShortcuts},
 		{"hasdungeonshortcuts", settings.HasShortcuts},
+		{"inverthasdungeonshortcuts", settings.InvertHasShortcuts},
 		{"invertloadsetting", settings.LoadSetting},
 		{"istrialskipped", settings.IsTrialSkipped},
 		{"istrickenabled", settings.IsTrickEnabled},
@@ -38,6 +44,10 @@ func createCompilerPlugin(st *compiler.SymbolTable, settings *intrinsics) compil
 			panic(slipup.Createf("could not find symbol for %q", pair.Name))
 		}
 		intrinsics.Add(sym, intoIntrinsicFunc(pair.Func))
+	}
+
+	for _, always := range []string{"hasallnotesforsong", "atday", "atnight", "atdampetime"} {
+		intrinsics.Add(st.Named(always), constTrue)
 	}
 
 	return intrinsics
@@ -60,14 +70,13 @@ func (wc *WorldCompiler) Setup(z *app.Zootlr) error {
 	lastMile := compiler.LastMileOptimizations(&symbols, &intrinsics)
 
 	for unit := range assembly.Units {
+		dontio.WriteLineOut(z.Ctx(), unit.Name)
 		ct, unassembleErr := compiler.Unassemble(unit, &symbols)
 		if unassembleErr != nil {
 			panic(unassembleErr)
 		}
 		ct = lastMile(ct)
 		tape := comp.Compile(ct)
-
-		dontio.WriteLineOut(z.Ctx(), unit.Name)
 		dontio.WriteLineOut(z.Ctx(), compiler.ReadTape(tape, &symbols))
 	}
 

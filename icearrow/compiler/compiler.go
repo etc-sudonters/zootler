@@ -13,10 +13,11 @@ func (rc *RuleCompiler) init() {
 	}
 
 	fast := map[string]IceArrowOp{
-		"has":      IA_HAS_QTY,
-		"has_all":  IA_HAS_ALL,
-		"has_any":  IA_HAS_ANY,
-		"checkage": IA_IS_ADULT,
+		"has":       IA_HAS_QTY,
+		"has_all":   IA_HAS_ALL,
+		"has_any":   IA_HAS_ANY,
+		"checkage":  IA_IS_ADULT,
+		"hasbottle": IA_HAS_BOTTLE,
 	}
 
 	rc.fastOps = make(map[uint32]IceArrowOp, len(fast))
@@ -57,31 +58,38 @@ func (rc *RuleCompiler) Compile(fragment CompileTree) Tape {
 			switch op {
 			case IA_HAS_QTY:
 				handle := encodeU16(uint16(i.Args[0].(Load).Id))
-				qLoad := i.Args[1].(Load)
-				var qty uint8
-				switch qLoad.Kind {
-				case CT_LOAD_CONST:
-					c := rc.Symbols.Const(qLoad.Id)
-					qty = uint8(c.Value)
-					break
-				case CT_LOAD_IDENT:
-					var exists bool
-					ident := rc.Symbols.Symbol(qLoad.Id)
-					qty, exists = map[string]uint8{
-						"lacstokens":           6,
-						"bigpoecount":          1,
-						"bridgetokens":         100,
-						"ganonbosskeytokens":   100,
-						"triforcegoalperworld": 16,
-					}[ident.Name]
-					if !exists {
-						panic(slipup.Createf("trying to resolve setting %q", ident.Name))
+				switch arg := i.Args[1].(type) {
+				case Load:
+					var qty uint8
+					switch arg.Kind {
+					case CT_LOAD_CONST:
+						c := rc.Symbols.Const(arg.Id)
+						qty = uint8(c.Value)
+						break
+					case CT_LOAD_IDENT:
+						var exists bool
+						ident := rc.Symbols.Symbol(arg.Id)
+						qty, exists = map[string]uint8{
+							"lacstokens":           6,
+							"bigpoecount":          1,
+							"bridgetokens":         100,
+							"ganonbosskeytokens":   100,
+							"triforcegoalperworld": 16,
+						}[ident.Name]
+						if !exists {
+							panic(slipup.Createf("trying to resolve setting %q", ident.Name))
+						}
+					default:
+						panic("unreachable")
 					}
+					tape.write(op, handle[0], handle[1], qty)
+					break
+				case Immediate:
+					tape.write(op, handle[0], handle[1], arg.Value.(uint8))
+					break
 				default:
 					panic("unreachable")
 				}
-
-				tape.write(op, handle[0], handle[1], qty)
 				break
 			case IA_HAS_ANY, IA_HAS_ALL:
 				for idx := range i.Args {
@@ -103,6 +111,10 @@ func (rc *RuleCompiler) Compile(fragment CompileTree) Tape {
 				default:
 					panic(slipup.Createf("unknown age %q", age.Value))
 				}
+				break
+			case IA_HAS_BOTTLE:
+				tape.write(op)
+				break
 			}
 			return i
 		}

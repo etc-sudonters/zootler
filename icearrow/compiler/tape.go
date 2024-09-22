@@ -44,6 +44,10 @@ func ReadTape(tape Tape, st *SymbolTable) string {
 			tt.padToGutter(0)
 			tt.WriteString("IA_HAS_ANY")
 			break
+		case IA_HAS_BOTTLE:
+			tt.padToGutter(0)
+			tt.WriteString("IA_HAS_BOTTLE")
+			break
 		case IA_IS_CHILD:
 			tt.padToGutter(0)
 			tt.WriteString("IA_IS_CHILD")
