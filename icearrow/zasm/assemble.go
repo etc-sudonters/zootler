@@ -9,7 +9,8 @@ import (
 )
 
 type Assembler struct {
-	Data DataBuilder
+	Data    DataBuilder
+	Symbols *SymbolTable
 }
 
 func (a *Assembler) CreateDataTables() Data {
@@ -87,27 +88,35 @@ func (a *Assembler) BooleanOp(node *ast.BooleanOp) (Instructions, error) {
 }
 
 func (a *Assembler) Call(node *ast.Call) (Instructions, error) {
-	iw := IntoIW(a.callArgs(node.Args))
+	sym := a.Symbols.DeclareName(node.Callee, SYM_FUNC)
+	iw := IW()
+	for _, arg := range node.Args {
+		instrs, _ := ast.Transform(a, arg)
+		iw = iw.Union(instrs)
+	}
 	name := a.Data.Names.Intern(node.Callee)
+	IW().WriteCallSymbol(sym, len(node.Args))
 	return iw.WriteCall(name, len(node.Args)).I, nil
 }
 
 func (a *Assembler) Identifier(node *ast.Identifier) (Instructions, error) {
+	sym := a.Symbols.DeclareName(node.Name, symTypeFromAst(node))
 	name := a.Data.Names.Intern(node.Name)
 	op, exists := zasmLoadOps[node.Kind]
 	if !exists {
 		panic(slipup.Createf("unknown identifier kind for %q", node.Name))
 	}
+	_ = IW().WriteLoadSymbol(sym)
 	return IW().WriteLoadIdent(op, name).I, nil
 }
 
 var zasmLoadOps = map[ast.AstIdentifierKind]Op{
-	ast.AST_IDENT_TOK: OP_LOAD_TOK,
-	ast.AST_IDENT_EVT: OP_LOAD_TOK,
-	ast.AST_IDENT_SYM: OP_LOAD_SYM,
-	ast.AST_IDENT_VAR: OP_LOAD_VAR,
-	ast.AST_IDENT_TRK: OP_LOAD_TRK,
-	ast.AST_IDENT_SET: OP_LOAD_SET,
+	ast.AST_IDENT_TOKEN:   OP_LOAD_TOK,
+	ast.AST_IDENT_EVENT:   OP_LOAD_TOK,
+	ast.AST_IDENT_SYMBOL:  OP_LOAD_SYM,
+	ast.AST_IDENT_VAR:     OP_LOAD_VAR,
+	ast.AST_IDENT_TRICK:   OP_LOAD_TRK,
+	ast.AST_IDENT_SETTING: OP_LOAD_SET,
 }
 
 func (a *Assembler) Literal(node *ast.Literal) (Instructions, error) {
@@ -115,10 +124,14 @@ func (a *Assembler) Literal(node *ast.Literal) (Instructions, error) {
 	case bool:
 		return IW().WriteLoadBool(v).I, nil
 	case float64:
+		sym := a.Symbols.DeclareConst(nan.PackFloat64(v))
 		c := a.Data.Consts.Intern(nan.PackFloat64(v))
+		_ = IW().WriteLoadSymbol(sym)
 		return IW().WriteLoadConst(c).I, nil
 	case string:
+		sym := a.Symbols.InternString(v)
 		str := a.Data.Strs.Intern(v)
+		_ = IW().WriteLoadSymbol(sym)
 		return IW().WriteLoadStr(str).I, nil
 	default:
 		panic("unreachable")
@@ -127,13 +140,4 @@ func (a *Assembler) Literal(node *ast.Literal) (Instructions, error) {
 
 func (a *Assembler) Empty(node *ast.Empty) (Instructions, error) {
 	return nil, nil
-}
-
-func (a *Assembler) callArgs(args []ast.Node) Instructions {
-	iw := IW()
-	for _, arg := range args {
-		instrs, _ := ast.Transform(a, arg)
-		iw = iw.Union(instrs)
-	}
-	return iw.I
 }

@@ -65,16 +65,16 @@ const (
 	AST_BOOL_OR               = 5
 	AST_BOOL_NEGATE           = 6
 
-	AST_IDENT_UNK AstIdentifierKind = 0x00
-	AST_IDENT_EXP                   = 0x01
-	AST_IDENT_TOK                   = 0x02
-	AST_IDENT_VAR                   = 0x03
-	AST_IDENT_SET                   = 0x04
-	AST_IDENT_TRK                   = 0x05
-	AST_IDENT_BIF                   = 0x06
-	AST_IDENT_EVT                   = 0x07
-	AST_IDENT_SYM                   = 0x08
-	AST_IDENT_UNP                   = 0xFF
+	AST_IDENT_UNK     AstIdentifierKind = 0x00
+	AST_IDENT_EXPAND                    = 0x01
+	AST_IDENT_TOKEN                     = 0x02
+	AST_IDENT_VAR                       = 0x03
+	AST_IDENT_SETTING                   = 0x04
+	AST_IDENT_TRICK                     = 0x05
+	AST_IDENT_BUILTIN                   = 0x06
+	AST_IDENT_EVENT                     = 0x07
+	AST_IDENT_SYMBOL                    = 0x08
+	AST_IDENT_UNP                       = 0xFF
 
 	AST_NODE_EMPTY AstNodeType = iota
 	AST_NODE_CMP

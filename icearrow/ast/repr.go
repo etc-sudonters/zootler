@@ -83,22 +83,22 @@ func (r *AstRender) Identifier(ast *Identifier) error {
 	case AST_IDENT_UNK, AST_IDENT_UNP:
 		fmt.Fprintf(&r.s, "UNK{%s}", ast.Name)
 		break
-	case AST_IDENT_EXP:
+	case AST_IDENT_EXPAND:
 		fmt.Fprintf(&r.s, "FUNC{%s}", ast.Name)
 		break
-	case AST_IDENT_TOK, AST_IDENT_EVT:
+	case AST_IDENT_TOKEN, AST_IDENT_EVENT:
 		fmt.Fprintf(&r.s, "TOK{%s}", ast.Name)
 		break
 	case AST_IDENT_VAR:
 		fmt.Fprintf(&r.s, "VAR{%s}", ast.Name)
 		break
-	case AST_IDENT_SET:
+	case AST_IDENT_SETTING:
 		fmt.Fprintf(&r.s, "SET{%s}", ast.Name)
 		break
-	case AST_IDENT_TRK:
+	case AST_IDENT_TRICK:
 		fmt.Fprintf(&r.s, "TRK{%s}", ast.Name)
 		break
-	case AST_IDENT_BIF:
+	case AST_IDENT_BUILTIN:
 		fmt.Fprintf(&r.s, "BIF{%s}", ast.Name)
 		break
 	default:

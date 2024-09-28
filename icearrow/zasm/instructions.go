@@ -160,7 +160,46 @@ func (iw *InstructionWriter) WriteOp(o Op) *InstructionWriter {
 	return iw.Write(EncodeOp(o))
 }
 
-func (iw *InstructionWriter) WriteLoadConst(h intern.Handle[nan.PackedValue]) *InstructionWriter {
+func (iw *InstructionWriter) WriteLoadSymbol(sym *Symbol) *InstructionWriter {
+	if sym.Type == SYM_NULL {
+		panic("cannot load null symbol")
+	}
+
+	op, exists := map[SymbolType]Op{
+		SYM_F64:  OP_LOAD_CONST,
+		SYM_STR:  OP_LOAD_STR,
+		SYM_TOK:  OP_LOAD_TOK,
+		SYM_VAR:  OP_LOAD_VAR,
+		SYM_SET:  OP_LOAD_SET,
+		SYM_TRK:  OP_LOAD_TRK,
+		SYM_NAME: OP_LOAD_SYM,
+	}[sym.Type]
+	if !exists {
+		panic(slipup.Createf("unknown symbol type %v", sym))
+	}
+	return iw.Write(EncodeOpAndU24(op, uint32(sym.Idx)))
+}
+
+func (iw *InstructionWriter) WriteCallSymbol(sym *Symbol, arity int) *InstructionWriter {
+	var op Op
+	switch arity {
+	case 0:
+		op = OP_CALL_0
+		break
+	case 1:
+		op = OP_CALL_1
+		break
+	case 2:
+		op = OP_CALL_2
+		break
+	default:
+		panic(slipup.Createf("unsupported arity %d", arity))
+	}
+
+	return iw.Write(EncodeOpAndU24(op, uint32(sym.Idx)))
+}
+
+func (iw *InstructionWriter) WriteLoadConst(h intern.Handle[nan.Packed]) *InstructionWriter {
 	return iw.Write(EncodeOpAndU24(OP_LOAD_CONST, AssertU24(h)))
 }
 

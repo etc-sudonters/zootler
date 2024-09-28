@@ -151,13 +151,13 @@ func (a *astsexpr) Call(node *ast.Call) error {
 }
 func (a *astsexpr) Identifier(node *ast.Identifier) error {
 	switch node.Kind {
-	case ast.AST_IDENT_EXP, ast.AST_IDENT_BIF:
+	case ast.AST_IDENT_EXPAND, ast.AST_IDENT_BUILTIN:
 		fmt.Fprintf(&a.sb, "<>%s", node.Name)
 		break
-	case ast.AST_IDENT_TOK, ast.AST_IDENT_EVT:
+	case ast.AST_IDENT_TOKEN, ast.AST_IDENT_EVENT:
 		fmt.Fprintf(&a.sb, "@%s", node.Name)
 		break
-	case ast.AST_IDENT_SET, ast.AST_IDENT_TRK:
+	case ast.AST_IDENT_SETTING, ast.AST_IDENT_TRICK:
 		fmt.Fprintf(&a.sb, "&%s", node.Name)
 		break
 	case ast.AST_IDENT_VAR:

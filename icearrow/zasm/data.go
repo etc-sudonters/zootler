@@ -8,13 +8,13 @@ import (
 
 type Data struct {
 	Strs   []string
-	Consts []nan.PackedValue
+	Consts []nan.Packed
 	Names  []string
 }
 
 type DataBuilder struct {
 	Strs   intern.HashIntern[string]
-	Consts intern.HashIntern[nan.PackedValue]
+	Consts intern.HashIntern[nan.Packed]
 	Names  intern.HashInternF[string, string]
 }
 
@@ -30,7 +30,7 @@ func CreateDataTables(db DataBuilder) Data {
 func NewDataBuilder() DataBuilder {
 	var db DataBuilder
 	db.Strs = intern.NewInterner[string]()
-	db.Consts = intern.NewInterner[nan.PackedValue]()
+	db.Consts = intern.NewInterner[nan.Packed]()
 	db.Names = intern.NewInternerF(
 		func(s string) string { return string(internal.Normalize(s)) },
 	)

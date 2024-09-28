@@ -19,9 +19,14 @@ import (
 
 type RuleAssembler struct {
 	ScriptPath string
+	data       zasm.DataBuilder
+	syms       zasm.SymbolTable
 }
 
 func (rc RuleAssembler) Setup(z *app.Zootlr) error {
+	rc.data = zasm.NewDataBuilder()
+	rc.syms = zasm.NewTable()
+
 	assembler := rc.createAssembler()
 	locations := app.GetResource[entities.Locations](z).Res
 	edges := app.GetResource[entities.Edges](z)
@@ -94,7 +99,8 @@ func (rc RuleAssembler) Setup(z *app.Zootlr) error {
 
 func (rc RuleAssembler) createAssembler() zasm.Assembler {
 	return zasm.Assembler{
-		Data: zasm.NewDataBuilder(),
+		Data:    rc.data,
+		Symbols: &rc.syms,
 	}
 }
 

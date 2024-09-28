@@ -26,7 +26,7 @@ type Execution struct {
 }
 
 func (vm *VM) Execute(tape *compiler.Tape, state VMState, st *compiler.SymbolTable) Execution {
-	stk := stack.Make[nan.PackedValue](0, 32)
+	stk := stack.Make[nan.Packed](0, 32)
 	PC := 0
 	end := tape.Len()
 
@@ -46,7 +46,7 @@ func (vm *VM) Execute(tape *compiler.Tape, state VMState, st *compiler.SymbolTab
 			hi := tape.Ops[PC+2]
 			handle := uint32(hi)<<8 | uint32(lo)
 			val := st.Symbol(handle)
-			stk.Push(nan.PackPtr(val.Id))
+			stk.Push(nan.PackToken(val.Id))
 			PC += 2
 			break
 		case compiler.IA_LOAD_TRUE:
@@ -200,6 +200,6 @@ func (vm *VM) abortEmptyStack(err error) {
 	vm.abortOnErr(err, "no values pushed to stack")
 }
 
-func (vm *VM) abortTypeAssert(expected string, pv nan.PackedValue) {
+func (vm *VM) abortTypeAssert(expected string, pv nan.Packed) {
 	panic(slipup.Createf("expected %q, got %s", expected, pv))
 }

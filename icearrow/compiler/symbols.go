@@ -48,7 +48,7 @@ type SymbolTable struct {
 	strings []String
 }
 
-func (st *SymbolTable) ConstOf(pv nan.PackedValue) *Const {
+func (st *SymbolTable) ConstOf(pv nan.Packed) *Const {
 	for i := range st.consts {
 		sym := &st.consts[i]
 		if sym.Value.Equals(pv) {
@@ -126,7 +126,7 @@ func (s *Symbol) Set(kind SymbolKind) {
 
 type Const struct {
 	Id    uint32
-	Value nan.PackedValue
+	Value nan.Packed
 }
 
 type String struct {

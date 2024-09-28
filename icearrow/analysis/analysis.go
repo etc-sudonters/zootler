@@ -28,7 +28,7 @@ func NewAnalysis(edges entities.Edges) AnalysisContext {
 	}
 
 	for _, symbol := range symbolic {
-		ac.names[internal.Normalize(symbol)] = ast.AST_IDENT_SYM
+		ac.names[internal.Normalize(symbol)] = ast.AST_IDENT_SYMBOL
 	}
 
 	return ac
@@ -80,15 +80,15 @@ func (a *AnalysisContext) SetCurrent(location string) {
 }
 
 func (ctx *AnalysisContext) NameToken(name string) {
-	ctx.names[internal.Normalize(name)] = ast.AST_IDENT_TOK
+	ctx.names[internal.Normalize(name)] = ast.AST_IDENT_TOKEN
 }
 
 func (ctx *AnalysisContext) NameSetting(name string) {
-	ctx.names[internal.Normalize(name)] = ast.AST_IDENT_SET
+	ctx.names[internal.Normalize(name)] = ast.AST_IDENT_SETTING
 }
 
 func (ctx *AnalysisContext) NameBuiltIn(name string) {
-	ctx.names[internal.Normalize(name)] = ast.AST_IDENT_BIF
+	ctx.names[internal.Normalize(name)] = ast.AST_IDENT_BUILTIN
 }
 
 func (ctx *AnalysisContext) AddExpansion(name string, params []string, body ast.Node) {
@@ -160,7 +160,7 @@ func (ctx *AnalysisContext) lateExpander(call *ast.Call) (ast.Node, error) {
 		Args: []ast.Node{
 			&ast.Identifier{
 				Name: name,
-				Kind: ast.AST_IDENT_EVT,
+				Kind: ast.AST_IDENT_EVENT,
 			},
 			&ast.Literal{Value: float64(1), Kind: ast.AST_LIT_NUM},
 		},
@@ -174,15 +174,15 @@ func (ctx *AnalysisContext) tagIdentifier(ident *ast.Identifier) {
 	} else if kind, assigned := ctx.names[internal.Normalize(name)]; assigned {
 		ident.Kind = kind
 	} else if strings.HasPrefix(ident.Name, "logic_") {
-		ident.Kind = ast.AST_IDENT_TRK
+		ident.Kind = ast.AST_IDENT_TRICK
 	} else if ctx.isToken(name) || ctx.looksLikeToken(name) {
-		ident.Kind = ast.AST_IDENT_TOK
+		ident.Kind = ast.AST_IDENT_TOKEN
 	} else if ctx.isSetting(ident.Name) {
-		ident.Kind = ast.AST_IDENT_SET
+		ident.Kind = ast.AST_IDENT_SETTING
 	} else if ctx.isExpandable(name) {
-		ident.Kind = ast.AST_IDENT_EXP
+		ident.Kind = ast.AST_IDENT_EXPAND
 	} else if ctx.isBuiltIn(name) {
-		ident.Kind = ast.AST_IDENT_BIF
+		ident.Kind = ast.AST_IDENT_BUILTIN
 	} else if ctx.isVar(name) {
 		ident.Kind = ast.AST_IDENT_VAR
 	} else {
@@ -192,17 +192,17 @@ func (ctx *AnalysisContext) tagIdentifier(ident *ast.Identifier) {
 
 func (ctx *AnalysisContext) isToken(name string) bool {
 	ident, exists := ctx.names[internal.Normalize(name)]
-	return exists && ident == ast.AST_IDENT_TOK
+	return exists && ident == ast.AST_IDENT_TOKEN
 }
 
 func (ctx *AnalysisContext) isSetting(name string) bool {
 	ident, exists := ctx.names[internal.Normalize(name)]
-	return exists && ident == ast.AST_IDENT_SET
+	return exists && ident == ast.AST_IDENT_SETTING
 }
 
 func (ctx *AnalysisContext) isBuiltIn(name string) bool {
 	ident, exists := ctx.names[internal.Normalize(name)]
-	return exists && ident == ast.AST_IDENT_BIF
+	return exists && ident == ast.AST_IDENT_BUILTIN
 }
 
 func (ctx *AnalysisContext) isVar(name string) bool {
@@ -230,7 +230,7 @@ func chaseIdentifier(node ast.Node, ctx *AnalysisContext) (*ast.Identifier, bool
 		str, isStr := l.Value.(string)
 		if isStr && ctx.looksLikeToken(str) {
 			i := new(ast.Identifier)
-			i.Kind = ast.AST_IDENT_TOK
+			i.Kind = ast.AST_IDENT_TOKEN
 			i.Name = str
 			return i, nil
 		}
@@ -261,7 +261,7 @@ func noBareIdents(node ast.Node) (ast.Node, error) {
 
 	re.identifier = func(r *rewriter, i *ast.Identifier) (ast.Node, error) {
 		switch i.Kind {
-		case ast.AST_IDENT_TOK:
+		case ast.AST_IDENT_TOKEN:
 			return &ast.Call{
 				Callee: "has",
 				Args:   []ast.Node{i, ast.LiteralNumber(1)},
@@ -434,7 +434,7 @@ func promotions(node ast.Node, ctx *AnalysisContext) (ast.Node, error) {
 			if isLit {
 				c.Args[0] = &ast.Identifier{
 					Name: lit.Value.(string),
-					Kind: ast.AST_IDENT_TOK,
+					Kind: ast.AST_IDENT_TOKEN,
 				}
 			}
 		}
@@ -459,7 +459,7 @@ func promotions(node ast.Node, ctx *AnalysisContext) (ast.Node, error) {
 
 	isSettingIdent := func(node ast.Node) (*ast.Identifier, bool) {
 		ident, isIdent := ast.AssertAs[*ast.Identifier](node)
-		return ident, isIdent && ident.Kind == ast.AST_IDENT_SET
+		return ident, isIdent && ident.Kind == ast.AST_IDENT_SETTING
 	}
 
 	isVarIdent := func(node ast.Node) (*ast.Identifier, bool) {
@@ -533,22 +533,22 @@ func promotions(node ast.Node, ctx *AnalysisContext) (ast.Node, error) {
 
 	re.identifier = func(r *rewriter, ident *ast.Identifier) (ast.Node, error) {
 		switch ident.Kind {
-		case ast.AST_IDENT_BIF:
+		case ast.AST_IDENT_BUILTIN:
 			return &ast.Call{
 				Callee: ident.Name,
 				Args:   nil,
 			}, nil
-		case ast.AST_IDENT_TOK, ast.AST_IDENT_EVT:
+		case ast.AST_IDENT_TOKEN, ast.AST_IDENT_EVENT:
 			return &ast.Call{
 				Callee: "has",
 				Args:   []ast.Node{ident, ast.LiteralNumber(1)},
 			}, nil
-		case ast.AST_IDENT_SET:
+		case ast.AST_IDENT_SETTING:
 			return &ast.Call{
 				Callee: "load_setting",
 				Args:   []ast.Node{ident},
 			}, nil
-		case ast.AST_IDENT_TRK:
+		case ast.AST_IDENT_TRICK:
 			return &ast.Call{
 				Callee: "is_trick_enabled",
 				Args:   []ast.Node{ident},
@@ -562,7 +562,7 @@ func promotions(node ast.Node, ctx *AnalysisContext) (ast.Node, error) {
 		if isStr && ctx.isToken(str) || ctx.looksLikeToken(str) {
 			return &ast.Identifier{
 				Name: lit.Value.(string),
-				Kind: ast.AST_IDENT_TOK,
+				Kind: ast.AST_IDENT_TOKEN,
 			}, nil
 		}
 		return lit, nil
