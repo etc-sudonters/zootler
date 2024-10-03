@@ -1,42 +1,44 @@
-package zasm
+package symbols
 
 import (
 	"slices"
-	"sudonters/zootler/icearrow/ast"
 	"sudonters/zootler/icearrow/nan"
-
-	"github.com/etc-sudonters/substrate/slipup"
 )
 
-func NewTable() SymbolTable {
-	var st SymbolTable
+func NewTable() Table {
+	var st Table
 	st.named = make(map[string]int)
 	st.interned = make(map[string]int)
 	st.constants = make(map[uint64]int)
-	st.symbols = []Symbol{{Idx: SymbolIdx(0x00), Type: SYM_NULL}}
+	st.symbols = []Entry{{Idx: Idx(0x00), Type: SYM_NULL}}
 	st.strings = []uint8{0x0}
 	st.interned[""] = 0
 	return st
 }
 
-type SymbolIdx uint16
-type SymbolType uint8
-type Symbol struct {
-	Idx   SymbolIdx
-	Name  SymbolIdx
-	Type  SymbolType
+type Idx uint16
+type Type uint8
+type Entry struct {
+	Idx   Idx
+	Name  Idx
+	Type  Type
 	Value uint64
 }
 
-type SymbolTable struct {
+type Table struct {
+	symbols   []Entry
 	strings   []uint8
-	symbols   []Symbol
-	named     map[string]int
-	interned  map[string]int
 	constants map[uint64]int
+
+	named    map[string]int
+	interned map[string]int
 }
 
-func (st *SymbolTable) DeclareConst(value nan.Packed) *Symbol {
+func (st *Table) ByIdx(i Idx) *Entry {
+	return &st.symbols[int(i)]
+}
+
+func (st *Table) DeclareConst(value nan.Packed) *Entry {
 	bits := value.Bits()
 	if sym, exists := st.constants[bits]; exists {
 		return &st.symbols[int(sym)]
@@ -49,7 +51,11 @@ func (st *SymbolTable) DeclareConst(value nan.Packed) *Symbol {
 	return sym
 }
 
-func (st *SymbolTable) InternString(value string) *Symbol {
+func RepackSymbol(s *Entry) nan.Packed {
+	return nan.PackBits(s.Value)
+}
+
+func (st *Table) InternString(value string) *Entry {
 	if sym, exists := st.interned[value]; exists {
 		return &st.symbols[sym]
 	}
@@ -65,7 +71,18 @@ func (st *SymbolTable) InternString(value string) *Symbol {
 	return sym
 }
 
-func (st *SymbolTable) DeclareName(name string, typ SymbolType) *Symbol {
+func (st *Table) DivulgeString(sym *Entry) string {
+	if sym.Type != SYM_STR {
+		panic("not a string")
+	}
+
+	start := (sym.Value << 32) >> 32
+	length := sym.Value >> 32
+	bytes := st.strings[start : start+length]
+	return string(bytes)
+}
+
+func (st *Table) DeclareName(name string, typ Type) *Entry {
 	if typ == SYM_NULL {
 		panic("cannot declare null symbol")
 	}
@@ -85,10 +102,10 @@ func (st *SymbolTable) DeclareName(name string, typ SymbolType) *Symbol {
 	return sym
 }
 
-func (st *SymbolTable) mint() *Symbol {
-	var sym Symbol
+func (st *Table) mint() *Entry {
+	var sym Entry
 	idx := len(st.symbols)
-	symdex := SymbolIdx(idx)
+	symdex := Idx(idx)
 	if idx != int(symdex) {
 		panic("symbol table grew too large")
 	}
@@ -98,7 +115,7 @@ func (st *SymbolTable) mint() *Symbol {
 }
 
 const (
-	SYM_NULL SymbolType = iota
+	SYM_NULL Type = iota
 	SYM_BOOL
 	SYM_STR
 	SYM_UNUM
@@ -112,7 +129,7 @@ const (
 	SYM_NAME
 )
 
-func symTypeFromPacked(value nan.Packed) SymbolType {
+func symTypeFromPacked(value nan.Packed) Type {
 	switch value.Type() {
 	case nan.PT_F64:
 		return SYM_F64
@@ -136,24 +153,5 @@ func symTypeFromPacked(value nan.Packed) SymbolType {
 		return SYM_VAR
 	default:
 		panic("unknown packed value type")
-	}
-}
-
-func symTypeFromAst(ident *ast.Identifier) SymbolType {
-	switch ident.Kind {
-	case ast.AST_IDENT_TOKEN, ast.AST_IDENT_EVENT:
-		return SYM_TOK
-	case ast.AST_IDENT_VAR:
-		return SYM_VAR
-	case ast.AST_IDENT_SETTING:
-		return SYM_SET
-	case ast.AST_IDENT_TRICK:
-		return SYM_TRK
-	case ast.AST_IDENT_BUILTIN:
-		return SYM_FUNC
-	case ast.AST_IDENT_SYMBOL:
-		return SYM_NAME
-	default:
-		panic(slipup.Createf("unsupported symbol type: %s", ident.Name))
 	}
 }

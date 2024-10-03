@@ -4,13 +4,14 @@ import (
 	"errors"
 	"sudonters/zootler/icearrow/ast"
 	"sudonters/zootler/icearrow/nan"
+	"sudonters/zootler/icearrow/symbols"
 
 	"github.com/etc-sudonters/substrate/slipup"
 )
 
 type Assembler struct {
 	Data    DataBuilder
-	Symbols *SymbolTable
+	Symbols *symbols.Table
 }
 
 func (a *Assembler) CreateDataTables() Data {
@@ -88,7 +89,7 @@ func (a *Assembler) BooleanOp(node *ast.BooleanOp) (Instructions, error) {
 }
 
 func (a *Assembler) Call(node *ast.Call) (Instructions, error) {
-	sym := a.Symbols.DeclareName(node.Callee, SYM_FUNC)
+	sym := a.Symbols.DeclareName(node.Callee, symbols.SYM_FUNC)
 	iw := IW()
 	for _, arg := range node.Args {
 		instrs, _ := ast.Transform(a, arg)
@@ -100,7 +101,7 @@ func (a *Assembler) Call(node *ast.Call) (Instructions, error) {
 }
 
 func (a *Assembler) Identifier(node *ast.Identifier) (Instructions, error) {
-	sym := a.Symbols.DeclareName(node.Name, symTypeFromAst(node))
+	sym := a.Symbols.DeclareName(node.Name, typeFromAst(node))
 	name := a.Data.Names.Intern(node.Name)
 	op, exists := zasmLoadOps[node.Kind]
 	if !exists {
@@ -140,4 +141,23 @@ func (a *Assembler) Literal(node *ast.Literal) (Instructions, error) {
 
 func (a *Assembler) Empty(node *ast.Empty) (Instructions, error) {
 	return nil, nil
+}
+
+func typeFromAst(ident *ast.Identifier) symbols.Type {
+	switch ident.Kind {
+	case ast.AST_IDENT_TOKEN, ast.AST_IDENT_EVENT:
+		return symbols.SYM_TOK
+	case ast.AST_IDENT_VAR:
+		return symbols.SYM_VAR
+	case ast.AST_IDENT_SETTING:
+		return symbols.SYM_SET
+	case ast.AST_IDENT_TRICK:
+		return symbols.SYM_TRK
+	case ast.AST_IDENT_BUILTIN:
+		return symbols.SYM_FUNC
+	case ast.AST_IDENT_SYMBOL:
+		return symbols.SYM_NAME
+	default:
+		panic(slipup.Createf("unsupported symbol type: %s", ident.Name))
+	}
 }

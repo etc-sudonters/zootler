@@ -6,6 +6,7 @@ import (
 	"sudonters/zootler/icearrow/analysis"
 	"sudonters/zootler/icearrow/ast"
 	parsing "sudonters/zootler/icearrow/parser"
+	"sudonters/zootler/icearrow/symbols"
 	"sudonters/zootler/icearrow/zasm"
 	"sudonters/zootler/internal"
 	"sudonters/zootler/internal/app"
@@ -20,12 +21,12 @@ import (
 type RuleAssembler struct {
 	ScriptPath string
 	data       zasm.DataBuilder
-	syms       zasm.SymbolTable
+	syms       symbols.Table
 }
 
 func (rc RuleAssembler) Setup(z *app.Zootlr) error {
 	rc.data = zasm.NewDataBuilder()
-	rc.syms = zasm.NewTable()
+	rc.syms = symbols.NewTable()
 
 	assembler := rc.createAssembler()
 	locations := app.GetResource[entities.Locations](z).Res

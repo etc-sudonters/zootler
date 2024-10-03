@@ -3,6 +3,7 @@ package zasm
 import (
 	"slices"
 	"sudonters/zootler/icearrow/nan"
+	"sudonters/zootler/icearrow/symbols"
 	"sudonters/zootler/internal/intern"
 
 	"github.com/etc-sudonters/substrate/slipup"
@@ -160,19 +161,19 @@ func (iw *InstructionWriter) WriteOp(o Op) *InstructionWriter {
 	return iw.Write(EncodeOp(o))
 }
 
-func (iw *InstructionWriter) WriteLoadSymbol(sym *Symbol) *InstructionWriter {
-	if sym.Type == SYM_NULL {
+func (iw *InstructionWriter) WriteLoadSymbol(sym *symbols.Entry) *InstructionWriter {
+	if sym.Type == symbols.SYM_NULL {
 		panic("cannot load null symbol")
 	}
 
-	op, exists := map[SymbolType]Op{
-		SYM_F64:  OP_LOAD_CONST,
-		SYM_STR:  OP_LOAD_STR,
-		SYM_TOK:  OP_LOAD_TOK,
-		SYM_VAR:  OP_LOAD_VAR,
-		SYM_SET:  OP_LOAD_SET,
-		SYM_TRK:  OP_LOAD_TRK,
-		SYM_NAME: OP_LOAD_SYM,
+	op, exists := map[symbols.Type]Op{
+		symbols.SYM_F64:  OP_LOAD_CONST,
+		symbols.SYM_STR:  OP_LOAD_STR,
+		symbols.SYM_TOK:  OP_LOAD_TOK,
+		symbols.SYM_VAR:  OP_LOAD_VAR,
+		symbols.SYM_SET:  OP_LOAD_SET,
+		symbols.SYM_TRK:  OP_LOAD_TRK,
+		symbols.SYM_NAME: OP_LOAD_SYM,
 	}[sym.Type]
 	if !exists {
 		panic(slipup.Createf("unknown symbol type %v", sym))
@@ -180,7 +181,7 @@ func (iw *InstructionWriter) WriteLoadSymbol(sym *Symbol) *InstructionWriter {
 	return iw.Write(EncodeOpAndU24(op, uint32(sym.Idx)))
 }
 
-func (iw *InstructionWriter) WriteCallSymbol(sym *Symbol, arity int) *InstructionWriter {
+func (iw *InstructionWriter) WriteCallSymbol(sym *symbols.Entry, arity int) *InstructionWriter {
 	var op Op
 	switch arity {
 	case 0:

@@ -152,7 +152,7 @@ type PackableInt interface {
 }
 
 func PackUint[P PackableUint](p P) Packed {
-	return pack(zunum | uint64(p)<<1)
+	return PackBits(zunum | uint64(p)<<1)
 }
 
 func PackInt[P PackableInt](p P) Packed {
@@ -165,13 +165,13 @@ func PackFloat64(p float64) Packed {
 
 func PackBool(b bool) Packed {
 	if b {
-		return pack(ztrue)
+		return PackBits(ztrue)
 	}
-	return pack(zfalse)
+	return PackBits(zfalse)
 }
 
 func PackToken(ptr uint32) Packed {
-	return pack(ztoken | uint64(ptr)<<1)
+	return PackBits(ztoken | uint64(ptr)<<1)
 }
 
 func PackPtr(typ PtrType, ptr uint16) Packed {
@@ -179,23 +179,23 @@ func PackPtr(typ PtrType, ptr uint16) Packed {
 
 	switch typ {
 	case PTR_FUNC:
-		return pack(zfunc | ptr64)
+		return PackBits(zfunc | ptr64)
 	case PTR_SETTING:
-		return pack(zsetting | ptr64)
+		return PackBits(zsetting | ptr64)
 	case PTR_STR:
-		return pack(zstr | ptr64)
+		return PackBits(zstr | ptr64)
 	case PTR_TOKEN:
-		return pack(ztoken | ptr64)
+		return PackBits(ztoken | ptr64)
 	case PTR_TRICK:
-		return pack(ztrick | ptr64)
+		return PackBits(ztrick | ptr64)
 	case PTR_VAR:
-		return pack(zvar | ptr64)
+		return PackBits(zvar | ptr64)
 	default:
 		panic("unknown ptr type")
 	}
 }
 
-func pack(u uint64) Packed {
+func PackBits(u uint64) Packed {
 	return Packed(math.Float64frombits(u))
 }
 
