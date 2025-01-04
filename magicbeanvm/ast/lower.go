@@ -1,0 +1,171 @@
+package ast
+
+import (
+	"errors"
+	"fmt"
+	"strings"
+	"sudonters/zootler/internal/ruleparser"
+	"sudonters/zootler/magicbeanvm/symbols"
+)
+
+var (
+	UnknownNode     = errors.New("unknown node")
+	UnknownOperator = errors.New("unknown operator")
+	UnknownLiteral  = errors.New("unknown literal type")
+
+	compareOps = map[ruleparser.BinOpKind]CompareOp{
+		ruleparser.BinOpEq:    CompareEq,
+		ruleparser.BinOpNotEq: CompareNq,
+		ruleparser.BinOpLt:    CompareLt,
+	}
+)
+
+const (
+	isTrickEnabledPrefix = "logic_"
+)
+
+type CouldNotLowerTree struct {
+	Node  ruleparser.Tree
+	Cause error
+}
+
+func (err CouldNotLowerTree) Error() string {
+	return fmt.Sprintf("could not lower parse tree: %s", err.Node.Type())
+}
+
+func Lower(tbl *symbols.Table, node ruleparser.Tree) (Node, error) {
+	switch node := node.(type) {
+	case *ruleparser.BinOp:
+		switch node.Op {
+		case ruleparser.BinOpContains:
+			return createCall(tbl, "load_setting_2", node.Right, node.Left)
+		case ruleparser.BinOpEq, ruleparser.BinOpNotEq, ruleparser.BinOpLt:
+			lhs, lhsErr := Lower(tbl, node.Left)
+			rhs, rhsErr := Lower(tbl, node.Right)
+			if lhsErr != nil || rhsErr != nil {
+				return nil, CouldNotLowerTree{node, errors.Join(lhsErr, rhsErr)}
+			}
+			op := compareOps[node.Op]
+
+			if isSetting(tbl, lhs) || isSetting(tbl, rhs) {
+				return Invoke{
+					Target: IdentifierFrom(tbl.Declare("compare_setting", symbols.FUNCTION)),
+					Args:   []Node{Number(op), lhs, rhs},
+				}, nil
+			}
+
+			return Compare{
+				LHS: lhs,
+				RHS: rhs,
+				Op:  op,
+			}, nil
+		default:
+			return nil, CouldNotLowerTree{node, UnknownOperator}
+		}
+	case *ruleparser.BoolOp:
+		switch node.Op {
+		case ruleparser.BoolOpAnd:
+			lhs, lhsErr := Lower(tbl, node.Left)
+			rhs, rhsErr := Lower(tbl, node.Right)
+			if lhsErr != nil || rhsErr != nil {
+				return nil, CouldNotLowerTree{node, errors.Join(lhsErr, rhsErr)}
+			}
+			every := Every{lhs, rhs}
+			return every.Flatten(), nil
+		case ruleparser.BoolOpOr:
+			lhs, lhsErr := Lower(tbl, node.Left)
+			rhs, rhsErr := Lower(tbl, node.Right)
+			if lhsErr != nil || rhsErr != nil {
+				return nil, CouldNotLowerTree{node, errors.Join(lhsErr, rhsErr)}
+			}
+			anyOf := AnyOf{lhs, rhs}
+			return anyOf.Flatten(), nil
+		default:
+			return nil, CouldNotLowerTree{node, UnknownOperator}
+		}
+	case *ruleparser.Call:
+		var invoke Invoke
+		var err error
+
+		invoke.Target, err = Lower(tbl, node.Callee)
+		if err != nil {
+			return nil, CouldNotLowerTree{node, err}
+		}
+
+		invoke.Args = make([]Node, len(node.Args))
+		for i := range node.Args {
+			var argErr error
+			invoke.Args[i], argErr = Lower(tbl, node.Args[i])
+			if argErr != nil {
+				err = errors.Join(err, argErr)
+			}
+		}
+
+		return invoke, err
+	case *ruleparser.Identifier:
+		//TODO how to not special case
+		if node.Value != "logic_rules" {
+			if trimmed, didTrim := strings.CutPrefix(node.Value, isTrickEnabledPrefix); didTrim {
+				return createCall(tbl, "is_trick_enabled", ruleparser.StringLiteral(trimmed))
+			}
+		}
+		symbol := tbl.Declare(node.Value, symbols.UNKNOWN)
+		return IdentifierFrom(symbol), nil
+	case *ruleparser.Literal:
+		switch value := node.Value.(type) {
+		case float64:
+			return Number(value), nil
+		case bool:
+			return Bool(value), nil
+		case string:
+			return String(value), nil
+		default:
+			return nil, CouldNotLowerTree{node, UnknownLiteral}
+		}
+	case *ruleparser.Subscript:
+		return createCall(tbl, "load_setting_2", node.Target, node.Index)
+	case *ruleparser.Tuple:
+		return createCall(tbl, "has", node.Elems...)
+	case *ruleparser.UnaryOp:
+		switch node.Op {
+		case ruleparser.UnaryNot:
+			body, err := Lower(tbl, node.Target)
+			if err != nil {
+				return nil, CouldNotLowerTree{node, err}
+			}
+			return Invert{body}, nil
+		default:
+			return nil, CouldNotLowerTree{node, UnknownOperator}
+		}
+	}
+	return nil, CouldNotLowerTree{node, UnknownNode}
+}
+
+func createCall(tbl *symbols.Table, name string, args ...ruleparser.Tree) (Node, error) {
+	symbol := tbl.Declare(name, symbols.FUNCTION)
+	invoke := Invoke{
+		Target: IdentifierFrom(symbol),
+		Args:   make([]Node, len(args)),
+	}
+
+	var err error
+	for i := range args {
+		var argErr error
+		invoke.Args[i], argErr = Lower(tbl, args[i])
+		if argErr != nil {
+			err = errors.Join(err, argErr)
+		}
+	}
+
+	return invoke, err
+}
+
+func isSetting(tbl *symbols.Table, node Node) bool {
+	switch node := node.(type) {
+	case Identifier:
+		sym := tbl.LookUpByIndex(node.AsIndex())
+		return sym.Type == symbols.SETTING
+	default:
+		return false
+	}
+}
