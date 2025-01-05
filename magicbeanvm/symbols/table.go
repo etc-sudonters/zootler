@@ -2,7 +2,6 @@ package symbols
 
 import (
 	"fmt"
-	"sudonters/zootler/magicbeanvm/nan"
 )
 
 func NewTable() Table {
@@ -17,91 +16,114 @@ type Table struct {
 	syms  []Sym
 }
 
-func (tbl *Table) DeclareMany(typ Type, names []string) {
+func (tbl *Table) All(f func(*Sym) bool) {
+	for i := range tbl.syms {
+		if tbl.syms[i].Index != Index(i) {
+			continue
+		}
+		if !f(&tbl.syms[i]) {
+			return
+		}
+	}
+}
+
+func (tbl *Table) DeclareMany(typ Kind, names []string) {
 	for i := range names {
 		tbl.Declare(names[i], typ)
 	}
 }
 
-func (tbl *Table) Declare(name string, typ Type) *Sym {
-	if idx, exists := tbl.names[name]; exists {
-		sym := &tbl.syms[idx]
-		sym.SetType(typ)
+func (tbl *Table) Declare(name string, typ Kind) *Sym {
+	if sym := tbl.byname(name); sym != nil {
+		sym.SetKind(typ)
 		return sym
 	}
 
 	var sym Sym
 	sym.Name = name
 	sym.Index = Index(len(tbl.syms))
-	sym.Type = typ
+	sym.Kind = typ
 	tbl.syms = append(tbl.syms, sym)
 	tbl.names[name] = int(sym.Index)
 	return &tbl.syms[int(sym.Index)]
 }
 
 func (tbl *Table) LookUpByName(name string) *Sym {
+	return tbl.byname(name)
+}
+
+func (tbl *Table) LookUpByIndex(index Index) *Sym {
+	return tbl.byindex(int(index))
+}
+
+func (tbl *Table) byindex(idx int) *Sym {
+	symbol := &tbl.syms[idx]
+	if int(symbol.Index) != idx {
+		symbol = &tbl.syms[int(symbol.Index)]
+	}
+	return symbol
+}
+
+func (tbl *Table) byname(name string) *Sym {
 	if idx, exists := tbl.names[name]; exists {
-		return &tbl.syms[idx]
+		return tbl.byindex(idx)
 	}
 	return nil
 }
 
-func (tbl *Table) LookUpByIndex(index Index) *Sym {
-	return &tbl.syms[int(index)]
-}
-
 func (tbl *Table) Alias(symbol *Sym, alias string) {
-	aliasing := tbl.Declare(alias, symbol.Type)
-	aliasing.Value = nan.PackPtr(uint32(symbol.Index))
+	aliasing := tbl.Declare(alias, symbol.Kind)
+	aliasing.Index = symbol.Index
 }
 
 type Sym struct {
 	Name  string
 	Index Index
-	Type  Type
-	Value nan.PackedValue
+	Kind  Kind
 }
 
-func (s *Sym) SetType(t Type) {
+func (s *Sym) SetKind(t Kind) {
 	switch {
 	case t == UNKNOWN:
 		return
-	case t == FUNCTION && s.Type == TOKEN:
-		s.Type = FUNCTION
-	case t == FUNCTION && (s.Type == BUILT_IN || s.Type == COMP_TIME):
+		// event is more specific than token
+	case t == EVENT && s.Kind == TOKEN:
+		s.Kind = EVENT
+	case s.Kind == EVENT && t == TOKEN:
 		return
-	case s.Type == UNKNOWN:
-		s.Type = t
-	case s.Type != t:
-		panic(fmt.Errorf("$%04X %q redeclared with different type: %q -> %q", s.Index, s.Name, s.Type, t))
+		// aliased over
+	case t == COMPILED_FUNC && s.Kind == TOKEN:
+		s.Kind = COMPILED_FUNC
+		// function is least specific
+	case t == FUNCTION && (s.Kind == BUILT_IN || s.Kind == COMP_TIME || s.Kind == COMPILED_FUNC):
+		return
+	case s.Kind == UNKNOWN:
+		s.Kind = t
+		// rudimentary type checking
+	case s.Kind != t:
+		panic(fmt.Errorf("$%04X %q redeclared with different kind: %q -> %q", s.Index, s.Name, s.Kind, t))
 	}
 }
 
 func (s *Sym) Eq(o *Sym) bool {
 	this, other := s.Index, o.Index
-
-	if thisPtr, isPtrThis := s.Value.Pointer(); isPtrThis {
-		this = Index(thisPtr)
-	}
-
-	if otherPtr, isPtrOther := o.Value.Pointer(); isPtrOther {
-		other = Index(otherPtr)
-	}
-
 	return this == other
 }
 
 type Index int
-type Type string
+type Kind string
 
 const (
-	_         Type = ""
-	BUILT_IN       = "BUILT_IN"
-	COMP_TIME      = "COMP_TIME"
-	FUNCTION       = "FUNCTION"
-	GLOBAL         = "GLOBAL"
-	LOCATION       = "LOCATION"
-	SETTING        = "SETTING"
-	TOKEN          = "TOKEN"
-	UNKNOWN        = "UNKNOWN"
+	_             Kind = ""
+	BUILT_IN           = "BUILT_IN"
+	COMP_TIME          = "COMP_TIME"
+	FUNCTION           = "FUNCTION"
+	GLOBAL             = "GLOBAL"
+	LOCATION           = "LOCATION"
+	EVENT              = "EVENT"
+	SETTING            = "SETTING"
+	TOKEN              = "TOKEN"
+	UNKNOWN            = "UNKNOWN"
+	COMPILED_FUNC      = "INLINED_FUNC"
+	TRANSIT            = "TRANSIT"
 )

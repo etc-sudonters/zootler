@@ -36,6 +36,9 @@ type Visitor struct {
 }
 
 func (v Visitor) Visit(node Node) error {
+	if node == nil {
+		panic("visited nil node")
+	}
 
 	switch node := node.(type) {
 	case AnyOf:

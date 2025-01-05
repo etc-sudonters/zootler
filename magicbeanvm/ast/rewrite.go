@@ -69,7 +69,7 @@ type Rewriter struct {
 
 func (v Rewriter) Rewrite(ast Node) (Node, error) {
 	if ast == nil {
-		return nil, nil
+		panic("rewriting nil node")
 	}
 	switch ast := ast.(type) {
 	case AnyOf:

@@ -6,16 +6,21 @@ import (
 )
 
 const (
-	qnan   uint64 = 0x7ff8000000000001
+	qnan   uint64 = 0x00000007ff8000000000001
+	zconst        = qnan | 0x0000670000000000
+	zstr          = qnan | 0x0000680000000000
 	zptr          = qnan | 0x0000690000000000
-	unum          = qnan | 0x00006A0000000000
-	snum          = qnan | 0x00006B0000000000
-	zbool         = qnan | 0x00006C0000000000
-	ztrue         = qnan | 0x00006C1000000000
-	zfalse        = qnan | 0x00006C2000000000
+	unum          = qnan | 0x00006a0000000000
+	snum          = qnan | 0x00006b0000000000
+	zbool         = qnan | 0x00006c0000000000
+	ztrue         = qnan | 0x00006c1000000000
+	zfalse        = qnan | 0x00006c2000000000
 )
 
 type PackedValue float64
+type Pointer uint32
+type ConstantPointer uint32
+type StringPointer uint32
 
 func (pv PackedValue) String() string {
 	if pv == pv {
@@ -23,18 +28,24 @@ func (pv PackedValue) String() string {
 	}
 
 	u := unpack(pv)
-	if u&zptr == zptr {
+
+	switch {
+	case u&zconst == zconst:
+		return fmt.Sprintf("CONST: %d", (^zptr&u)>>1)
+	case u&zstr == zstr:
+		return fmt.Sprintf("STR: %d", (^zptr&u)>>1)
+	case u&zptr == zptr:
 		return fmt.Sprintf("PTR: %d", (^zptr&u)>>1)
-	} else if u&unum == unum {
+	case u&unum == unum:
 		return fmt.Sprintf("0x%04X", (^unum&u)>>1)
-	} else if u&snum == snum {
+	case u&snum == snum:
 		return fmt.Sprintf("%d", int32((^snum&u)>>1))
-	} else if u&ztrue == ztrue {
+	case u&ztrue == ztrue:
 		return "true"
-	} else if u&zfalse == zfalse {
+	case u&zfalse == zfalse:
 		return "false"
-	} else {
-		return "???wtf"
+	default:
+		panic("not implemented")
 	}
 }
 
@@ -75,18 +86,30 @@ func (pv PackedValue) Uint() (uint32, bool) {
 	return uint32(val), true
 }
 
-func (pv PackedValue) Pointer() (uint32, bool) {
-	u, isPtr := unpackWithMask(pv, zptr)
-	if !isPtr {
-		return 0, false
-	}
+func (pv PackedValue) Pointer() (Pointer, bool) {
+	return unpackPtr[Pointer](pv, zptr)
+}
 
-	return uint32((^zptr & u) >> 1), true
+func (pv PackedValue) ConstantPointer() (ConstantPointer, bool) {
+	return unpackPtr[ConstantPointer](pv, zconst)
+}
+
+func (pv PackedValue) StringPointer() (StringPointer, bool) {
+	return unpackPtr[StringPointer](pv, zconst)
 }
 
 func (pv PackedValue) Bool() (bool, bool) {
 	u, isBool := unpackWithMask(pv, zbool)
 	return u&ztrue == ztrue, isBool
+}
+
+func unpackPtr[P ~uint32](pv PackedValue, mask uint64) (P, bool) {
+	u, isPtr := unpackWithMask(pv, mask)
+	if !isPtr {
+		return 0, false
+	}
+
+	return P((^mask & u) >> 1), true
 }
 
 type PackableUint interface {
@@ -118,6 +141,14 @@ func PackBool(b bool) PackedValue {
 
 func PackPtr(ptr uint32) PackedValue {
 	return pack(zptr | uint64(ptr)<<1)
+}
+
+func PackStr(strPtr uint32) PackedValue {
+	return pack(zstr | uint64(strPtr)<<1)
+}
+
+func PackConst(conPtr uint32) PackedValue {
+	return pack(zconst | uint64(conPtr)<<1)
 }
 
 func pack(u uint64) PackedValue {

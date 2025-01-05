@@ -34,7 +34,7 @@ const (
 	FunctionTableKey funcTableKey = "function-table"
 )
 
-func InlineCalls(ctx *Context, syms *symbols.Table, funcs ast.FunctionTable) ast.Rewriter {
+func InlineCalls(ctx *Context, syms *symbols.Table, funcs *ast.FunctionTable) ast.Rewriter {
 	replacer := replacer{
 		scopes: make([]map[ast.Identifier]ast.Node, 16),
 		sp:     -1,
@@ -48,7 +48,7 @@ func InlineCalls(ctx *Context, syms *symbols.Table, funcs ast.FunctionTable) ast
 type inliner struct {
 	ctx      *Context
 	syms     *symbols.Table
-	funcs    ast.FunctionTable
+	funcs    *ast.FunctionTable
 	replacer *replacer
 }
 
@@ -58,7 +58,7 @@ func (this *inliner) Invoke(node ast.Invoke, rewrite ast.Rewriting) (ast.Node, e
 		return node, nil
 	}
 
-	fn, exists := this.funcs[target]
+	fn, exists := this.funcs.Get(target)
 	if !exists {
 		return node, nil
 	}

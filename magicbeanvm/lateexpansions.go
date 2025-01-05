@@ -1,16 +1,17 @@
-package optimizer
+package magicbeanvm
 
 import (
 	"errors"
 	"fmt"
 	"sudonters/zootler/magicbeanvm/ast"
+	"sudonters/zootler/magicbeanvm/optimizer"
 	"sudonters/zootler/magicbeanvm/symbols"
 )
 
 const LateExpansionKey lateKey = "late-expansions"
 const CurrentLocationKey currentKey = "current-key"
 
-func ExtractLateExpansions(ctx *Context, tbl *symbols.Table) ast.Rewriter {
+func ExtractLateExpansions(ctx *optimizer.Context, tbl *symbols.Table) ast.Rewriter {
 	var late late
 	late.at, late.here = tbl.Declare("at", symbols.FUNCTION), tbl.Declare("here", symbols.FUNCTION)
 	late.tbl = tbl
@@ -58,7 +59,7 @@ type currentKey string
 type late struct {
 	at, here *symbols.Sym
 	tbl      *symbols.Table
-	ctx      *Context
+	ctx      *optimizer.Context
 }
 
 func (this late) Invoke(invoke ast.Invoke, rewrite ast.Rewriting) (ast.Node, error) {

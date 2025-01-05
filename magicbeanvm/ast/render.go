@@ -66,7 +66,7 @@ func (r *renderer) Every(node Every, visit Visiting) error {
 }
 
 func (r *renderer) Identifier(node Identifier, visit Visiting) error {
-	fmt.Fprintf(r, "($%04X %s)", node.Symbol.Index, node.Symbol.Name)
+	fmt.Fprintf(r, "($%04X %q)", node.Symbol.Index, node.Symbol.Name)
 	return nil
 }
 
@@ -88,7 +88,7 @@ func (r *renderer) Number(node Number, visit Visiting) error {
 	return nil
 }
 func (r *renderer) String(node String, visit Visiting) error {
-	fmt.Fprintf(r, "%q", node)
+	fmt.Fprintf(r, "s%q", node)
 	return nil
 }
 

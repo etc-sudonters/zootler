@@ -164,7 +164,7 @@ func isSetting(tbl *symbols.Table, node Node) bool {
 	switch node := node.(type) {
 	case Identifier:
 		sym := tbl.LookUpByIndex(node.AsIndex())
-		return sym.Type == symbols.SETTING
+		return sym.Kind == symbols.SETTING
 	default:
 		return false
 	}

@@ -22,7 +22,7 @@ type promotetokens struct {
 func (this promotetokens) Identifier(node ast.Identifier, _ ast.Rewriting) (ast.Node, error) {
 	symbol := this.LookUpByIndex(node.AsIndex())
 
-	switch symbol.Type {
+	switch symbol.Kind {
 	case symbols.TOKEN:
 		return this.has(node), nil
 	case symbols.SETTING:
@@ -42,13 +42,17 @@ func (this promotetokens) String(node ast.String, _ ast.Rewriting) (ast.Node, er
 	switch {
 	case symbol == nil:
 		return node, nil
-	case symbol.Type == symbols.TOKEN:
+	case symbol.Kind == symbols.TOKEN:
 		return this.has(ast.IdentifierFrom(symbol)), nil
-	case symbol.Type == symbols.SETTING:
+	case symbol.Kind == symbols.SETTING:
 		return this.loadSetting(symbol.Name), nil
 	default:
-		return node, nil
+		rawSymbol := this.LookUpByName(strings.ReplaceAll(symbol.Name, "_", " "))
+		if rawSymbol != nil {
+			return this.has(ast.IdentifierFrom(rawSymbol)), nil
+		}
 	}
+	return node, nil
 }
 
 func (this promotetokens) has(what ast.Node) ast.Invoke {

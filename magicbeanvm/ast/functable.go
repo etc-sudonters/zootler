@@ -8,21 +8,21 @@ import (
 	"github.com/etc-sudonters/substrate/peruse"
 )
 
-func BuildFunctionTable(tbl *symbols.Table, grammar peruse.Grammar[ruleparser.Tree], decls map[string]string) (FunctionTable, error) {
-	funcs := make(FunctionTable, len(decls))
-	bodies := make(map[Identifier]string, len(decls))
+func BuildFunctionTable(symbolTable *symbols.Table, grammar peruse.Grammar[ruleparser.Tree], decls map[string]string) (FunctionTable, error) {
+	funcTable := make(functbl, len(decls))
+	bodies := make(map[symbols.Index]string, len(decls))
 
 	for header, body := range decls {
 		var decl FunctionDecl
-		head, declErr := Parse(header, tbl, grammar)
+		head, declErr := Parse(header, symbolTable, grammar)
 		if declErr != nil {
 			panic(declErr)
 		}
 
 		switch head := head.(type) {
 		case Invoke:
-			decl.Symbol = LookUpNodeInTable(tbl, head.Target)
-			if decl.Symbol.Type == symbols.BUILT_IN {
+			decl.Symbol = LookUpNodeInTable(symbolTable, head.Target)
+			if decl.Symbol.Kind == symbols.BUILT_IN {
 				continue
 			}
 			if decl.Symbol == nil {
@@ -33,8 +33,8 @@ func BuildFunctionTable(tbl *symbols.Table, grammar peruse.Grammar[ruleparser.Tr
 				decl.Params[i] = head.Args[i].(Identifier)
 			}
 		case Identifier:
-			decl.Symbol = tbl.LookUpByIndex(head.AsIndex())
-			if decl.Symbol.Type == symbols.BUILT_IN {
+			decl.Symbol = symbolTable.LookUpByIndex(head.AsIndex())
+			if decl.Symbol.Kind == symbols.BUILT_IN {
 				continue
 			}
 			decl.Params = nil
@@ -42,23 +42,23 @@ func BuildFunctionTable(tbl *symbols.Table, grammar peruse.Grammar[ruleparser.Tr
 			panic(fmt.Errorf("expected identifier or invoke style declaration, got %#v", head))
 		}
 
-		decl.Symbol.SetType(symbols.FUNCTION)
+		decl.Symbol.SetKind(symbols.COMPILED_FUNC)
 		id := IdentifierFrom(decl.Symbol)
-		bodies[id] = body
-		funcs[id] = decl
+		bodies[id.AsIndex()] = body
+		funcTable[id.AsIndex()] = decl
 	}
 
-	for id, decl := range funcs {
+	for id, decl := range funcTable {
 		body := bodies[id]
-		nodes, bodyErr := Parse(body, tbl, grammar)
+		nodes, bodyErr := Parse(body, symbolTable, grammar)
 		if bodyErr != nil {
 			panic(bodyErr)
 		}
 		decl.Body = nodes
-		funcs[id] = decl
+		funcTable[id] = decl
 	}
 
-	return funcs, nil
+	return FunctionTable{funcTable}, nil
 }
 
 type FunctionDecl struct {
@@ -67,4 +67,13 @@ type FunctionDecl struct {
 	Body   Node
 }
 
-type FunctionTable map[Identifier]FunctionDecl
+type FunctionTable struct {
+	tbl functbl
+}
+
+func (ft *FunctionTable) Get(which Identifier) (FunctionDecl, bool) {
+	decl, exists := ft.tbl[which.AsIndex()]
+	return decl, exists
+}
+
+type functbl map[symbols.Index]FunctionDecl
