@@ -14,7 +14,7 @@ func Render(node Node) string {
 	render := renderer{&sb}
 	v := Visitor{
 		AnyOf:      (&render).AnyOf,
-		Bool:       (&render).Bool,
+		Boolean:    (&render).Bool,
 		Compare:    (&render).Compare,
 		Every:      (&render).Every,
 		Identifier: (&render).Identifier,

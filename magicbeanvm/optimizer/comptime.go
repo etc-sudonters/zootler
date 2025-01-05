@@ -12,6 +12,7 @@ var compileTimeNames = []string{
 	"is_trick_enabled",
 	"load_setting",
 	"load_setting_2",
+	"had_night_start",
 }
 
 func CompileTimeNames() []string {

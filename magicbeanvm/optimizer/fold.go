@@ -11,11 +11,27 @@ func FoldConstants(tbl *symbols.Table) ast.Rewriter {
 		AnyOf:   fold.AnyOf,
 		Compare: fold.Compare,
 		Every:   fold.Every,
+		Invert:  fold.Invert,
 	}
 }
 
 type fold struct {
 	*symbols.Table
+}
+
+func (f fold) Invert(node ast.Invert, rewrite ast.Rewriting) (ast.Node, error) {
+	inner, err := rewrite(node.Inner)
+	if err != nil {
+		return nil, err
+	}
+
+	switch inner := inner.(type) {
+	case ast.Bool:
+		return ast.Bool(!inner), nil
+	default:
+		return ast.Invert{inner}, nil
+	}
+
 }
 
 func (f fold) AnyOf(node ast.AnyOf, rewrite ast.Rewriting) (ast.Node, error) {

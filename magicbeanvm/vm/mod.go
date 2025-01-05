@@ -11,13 +11,17 @@ func GlobalNames() []string {
 }
 
 var globalNames = []string{
-	"age",
-	"Forest",
 	"Fire",
-	"Water",
+	"Forest",
+	"Light",
 	"Shadow",
 	"Spirit",
-	"Light",
+	"Water",
+	"adult",
+	"age",
+	"both",
+	"either",
+	"child",
 }
 
 var builtInNames = []string{

@@ -12,8 +12,9 @@ func NewTable() Table {
 }
 
 type Table struct {
-	names map[string]int
-	syms  []Sym
+	names   map[string]int
+	syms    []Sym
+	aliased int
 }
 
 func (tbl *Table) All(f func(*Sym) bool) {
@@ -74,6 +75,19 @@ func (tbl *Table) byname(name string) *Sym {
 func (tbl *Table) Alias(symbol *Sym, alias string) {
 	aliasing := tbl.Declare(alias, symbol.Kind)
 	aliasing.Index = symbol.Index
+	tbl.aliased += 1
+}
+
+func (tbl *Table) Size() int {
+	return len(tbl.syms) - tbl.aliased
+}
+
+func (tbl *Table) RawSize() int {
+	return len(tbl.syms)
+}
+
+func (tbl *Table) AliasCount() int {
+	return tbl.aliased
 }
 
 type Sym struct {
@@ -126,4 +140,5 @@ const (
 	UNKNOWN            = "UNKNOWN"
 	COMPILED_FUNC      = "INLINED_FUNC"
 	TRANSIT            = "TRANSIT"
+	LOCAL              = "LOCAL"
 )

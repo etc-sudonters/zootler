@@ -28,9 +28,11 @@ func (this promotetokens) Identifier(node ast.Identifier, _ ast.Rewriting) (ast.
 	case symbols.SETTING:
 		return this.loadSetting(symbol.Name), nil
 	default:
-		rawSymbol := this.LookUpByName(strings.ReplaceAll(symbol.Name, "_", " "))
-		if rawSymbol != nil {
-			return this.has(ast.IdentifierFrom(rawSymbol)), nil
+		if strings.Contains(symbol.Name, "_") {
+			rawSymbol := this.LookUpByName(strings.ReplaceAll(symbol.Name, "_", " "))
+			if rawSymbol != nil {
+				return this.has(ast.IdentifierFrom(rawSymbol)), nil
+			}
 		}
 	}
 	return node, nil
@@ -47,9 +49,11 @@ func (this promotetokens) String(node ast.String, _ ast.Rewriting) (ast.Node, er
 	case symbol.Kind == symbols.SETTING:
 		return this.loadSetting(symbol.Name), nil
 	default:
-		rawSymbol := this.LookUpByName(strings.ReplaceAll(symbol.Name, "_", " "))
-		if rawSymbol != nil {
-			return this.has(ast.IdentifierFrom(rawSymbol)), nil
+		if strings.Contains(symbol.Name, "_") {
+			rawSymbol := this.LookUpByName(strings.ReplaceAll(symbol.Name, "_", " "))
+			if rawSymbol != nil {
+				return this.has(ast.IdentifierFrom(rawSymbol)), nil
+			}
 		}
 	}
 	return node, nil

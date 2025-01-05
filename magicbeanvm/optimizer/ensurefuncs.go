@@ -6,7 +6,7 @@ import (
 	"sudonters/zootler/magicbeanvm/symbols"
 )
 
-func EnsureFuncs(symbols *symbols.Table, funcs *ast.FunctionTable) ast.Rewriter {
+func EnsureFuncs(symbols *symbols.Table, funcs *ast.CompilingFunctions) ast.Rewriter {
 	promote := ensurefuncs{symbols, funcs}
 	return ast.Rewriter{
 		Invoke:     ast.DontRewrite[ast.Invoke](),
@@ -16,7 +16,7 @@ func EnsureFuncs(symbols *symbols.Table, funcs *ast.FunctionTable) ast.Rewriter 
 
 type ensurefuncs struct {
 	symbols *symbols.Table
-	funcs   *ast.FunctionTable
+	funcs   *ast.CompilingFunctions
 }
 
 func (this ensurefuncs) Identifier(node ast.Identifier, _ ast.Rewriting) (ast.Node, error) {

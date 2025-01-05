@@ -7,7 +7,7 @@ import (
 type Kind string
 type Boolean bool
 type Token nan.Pointer
-type String []byte
+type String string
 type Number float64
 type BuiltIn struct {
 	Func      func(...Object) (Object, error)

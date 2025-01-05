@@ -25,7 +25,7 @@ type VisitFunc[T Node] func(T, Visiting) error
 
 type Visitor struct {
 	AnyOf      VisitFunc[AnyOf]
-	Bool       VisitFunc[Bool]
+	Boolean    VisitFunc[Bool]
 	Compare    VisitFunc[Compare]
 	Every      VisitFunc[Every]
 	Identifier VisitFunc[Identifier]
@@ -33,93 +33,107 @@ type Visitor struct {
 	Invoke     VisitFunc[Invoke]
 	Number     VisitFunc[Number]
 	String     VisitFunc[String]
+	filled     bool
 }
 
-func (v Visitor) Visit(node Node) error {
-	if node == nil {
-		panic("visited nil node")
+func (v *Visitor) fillIn() {
+	if v.filled {
+		return
 	}
 
+	if v.AnyOf == nil {
+		v.AnyOf = VisitAnyOf
+	}
+	if v.Boolean == nil {
+		v.Boolean = VisitBoolean
+	}
+	if v.Compare == nil {
+		v.Compare = VisitCompare
+	}
+	if v.Every == nil {
+		v.Every = VisitEvery
+	}
+	if v.Identifier == nil {
+		v.Identifier = VisitIdentifier
+	}
+	if v.Invert == nil {
+		v.Invert = VisitInvert
+	}
+	if v.Invoke == nil {
+		v.Invoke = VisitInvoke
+	}
+	if v.Number == nil {
+		v.Number = VisitNumber
+	}
+	if v.String == nil {
+		v.String = VisitString
+	}
+
+}
+
+func (v *Visitor) Visit(node Node) error {
+	v.fillIn()
+	return v.visit(node)
+}
+
+func (v *Visitor) visit(node Node) error {
+	visit := v.visit
 	switch node := node.(type) {
 	case AnyOf:
-		if v.AnyOf == nil {
-			return v.anyof(node, v.Visit)
-		}
-		return v.AnyOf(node, v.Visit)
+		return v.AnyOf(node, visit)
 	case Bool:
-		if v.Bool == nil {
-			return v.boolean(node)
-		}
-		return v.Bool(node, v.Visit)
+		return v.Boolean(node, visit)
 	case Compare:
-		if v.Compare == nil {
-			return v.compare(node, v.Visit)
-		}
-		return v.Compare(node, v.Visit)
+		return v.Compare(node, visit)
 	case Every:
-		if v.Every == nil {
-			return v.every(node, v.Visit)
-		}
-		return v.Every(node, v.Visit)
+		return v.Every(node, visit)
 	case Identifier:
-		if v.Identifier == nil {
-			return v.identifier(node)
-		}
-		return v.Identifier(node, v.Visit)
+		return v.Identifier(node, visit)
 	case Invert:
-		if v.Invert == nil {
-			return v.invert(node)
-		}
-		return v.Invert(node, v.Visit)
+		return v.Invert(node, visit)
 	case Invoke:
-		if v.Invoke == nil {
-			return v.invoke(node)
-		}
-		return v.Invoke(node, v.Visit)
+		return v.Invoke(node, visit)
 	case Number:
-		if v.Number == nil {
-			return v.number(node)
-		}
-		return v.Number(node, v.Visit)
+		return v.Number(node, visit)
 	case String:
-		if v.String == nil {
-			return v.str(node)
-		}
-		return v.String(node, v.Visit)
+		return v.String(node, visit)
 	default:
+		if node == nil {
+			panic("visited nil node")
+		}
 		panic("not implemented")
 	}
 }
 
-func (v Visitor) anyof(anyof AnyOf, visit Visiting) error {
+func VisitAnyOf(anyof AnyOf, visit Visiting) error {
 	return visit.All(anyof)
 }
 
-func (v Visitor) boolean(_ Bool) error {
+func VisitBoolean(_ Bool, visit Visiting) error {
 	return nil
 }
 
-func (v Visitor) compare(compare Compare, visit Visiting) error {
+func VisitCompare(compare Compare, visit Visiting) error {
 	return visit.All([]Node{compare.LHS, compare.RHS})
 }
 
-func (v Visitor) every(every Every, visit Visiting) error {
+func VisitEvery(every Every, visit Visiting) error {
 	return visit.All(every)
 }
 
-func (v Visitor) identifier(_ Identifier) error {
+func VisitIdentifier(_ Identifier, _ Visiting) error {
 	return nil
 }
 
-func (v Visitor) invert(invert Invert) error {
-	return v.Visit(invert.Inner)
+func VisitInvert(invert Invert, visit Visiting) error {
+	return visit(invert.Inner)
 }
 
-func (v Visitor) invoke(invoke Invoke) error {
-	err := v.Visit(invoke.Target)
+func VisitInvoke(invoke Invoke, visit Visiting) error {
+	err := visit(invoke.Target)
 
 	for i := range invoke.Args {
-		argErr := v.Visit(invoke.Args[i])
+		argErr := visit(invoke.Args[i])
 		if argErr != nil {
 			err = errors.Join(argErr)
 		}
@@ -127,10 +141,10 @@ func (v Visitor) invoke(invoke Invoke) error {
 	return err
 }
 
-func (v Visitor) number(_ Number) error {
+func VisitNumber(_ Number, _ Visiting) error {
 	return nil
 }
 
-func (v Visitor) str(_ String) error {
+func VisitString(_ String, _ Visiting) error {
 	return nil
 }

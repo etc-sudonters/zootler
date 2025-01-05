@@ -8,19 +8,31 @@ import (
 	"sudonters/zootler/magicbeanvm/symbols"
 )
 
-const LateExpansionKey lateKey = "late-expansions"
-const CurrentLocationKey currentKey = "current-key"
+const lateExpansionKey lateKey = "late-expansions"
+const currentLocationKey currentKey = "current-key"
 
-func ExtractLateExpansions(ctx *optimizer.Context, tbl *symbols.Table) ast.Rewriter {
+func SetCurrentLocation(ctx *optimizer.Context, where string) {
+	ctx.Store(currentLocationKey, where)
+}
+
+func SwapLateExpansions(ctx *optimizer.Context) LateExpansions {
+	var late LateExpansions
+	stored := ctx.Swap(lateExpansionKey, make(LateExpansions))
+	if stored != nil {
+		late = stored.(LateExpansions)
+	} else {
+		late = make(LateExpansions)
+	}
+	return late
+}
+
+func ExtractLateExpansions(ctx *optimizer.Context, tbl *symbols.Table) late {
 	var late late
 	late.at, late.here = tbl.Declare("at", symbols.FUNCTION), tbl.Declare("here", symbols.FUNCTION)
 	late.tbl = tbl
-	captured := make(LateExpansions)
 	late.ctx = ctx
-	ctx.Store(LateExpansionKey, captured)
-	return ast.Rewriter{
-		Invoke: late.Invoke,
-	}
+	ctx.Store(lateExpansionKey, make(LateExpansions))
+	return late
 }
 
 type LateExpansion struct {
@@ -62,36 +74,34 @@ type late struct {
 	ctx      *optimizer.Context
 }
 
-func (this late) Invoke(invoke ast.Invoke, rewrite ast.Rewriting) (ast.Node, error) {
-	target := this.lookUpFromNode(invoke.Target)
-	if target == nil || (!target.Eq(this.at) && !target.Eq(this.here)) {
-		return invoke, nil
+func (this late) At(args []ast.Node) (ast.Node, error) {
+	if len(args) != 2 {
+		panic("wrong arg count")
 	}
-
-	var attachedTo string
-	var rule ast.Node
-	switch target.Name {
-	case "at":
-		str, ok := invoke.Args[0].(ast.String)
-		if !ok {
-			return nil, fmt.Errorf("expected first argument to 'at' to be string: %#v", invoke.Args[0])
-		}
-		attachedTo = string(str)
-		rule = invoke.Args[1]
-	case "here":
-		current := this.ctx.Retrieve(CurrentLocationKey)
-		if current == nil {
-			return nil, errors.New("expected current location to be set")
-		}
-		attachedTo = current.(string)
-		rule = invoke.Args[0]
-	default:
-		panic("unreachable")
+	str, ok := args[0].(ast.String)
+	if !ok {
+		return nil, fmt.Errorf("expected first argument to 'at' to be string: %#v", args[0])
 	}
+	replacement, _, err := this.rewrite(string(str), args[1])
+	return replacement, err
+}
 
-	captured := this.ctx.Retrieve(LateExpansionKey).(LateExpansions)
+func (this late) Here(args []ast.Node) (ast.Node, error) {
+	if len(args) != 1 {
+		panic("wrong arg count")
+	}
+	current := this.ctx.Retrieve(currentLocationKey)
+	if current == nil {
+		return nil, errors.New("expected current location to be set")
+	}
+	replacement, _, err := this.rewrite(current.(string), args[0])
+	return replacement, err
+}
+
+func (this late) rewrite(attachedTo string, rule ast.Node) (ast.Node, *LateExpansion, error) {
+	captured := this.ctx.Retrieve(lateExpansionKey).(LateExpansions)
 	delayed := captured.AppendTo(attachedTo)
-	token := this.tbl.Declare(fmt.Sprintf("Token#%04d@%s", delayed.Rank, attachedTo), symbols.TOKEN)
+	token := this.tbl.Declare(fmt.Sprintf("Token#%04d@%s", delayed.Rank, attachedTo), symbols.EVENT)
 	delayed.AttachedTo = this.tbl.Declare(attachedTo, symbols.LOCATION).Index
 	delayed.Token = token.Index
 	delayed.Rule = rule
@@ -101,14 +111,5 @@ func (this late) Invoke(invoke ast.Invoke, rewrite ast.Rewriting) (ast.Node, err
 		Args: []ast.Node{
 			ast.IdentifierFrom(token), ast.Number(1),
 		},
-	}, nil
-}
-
-func (this late) lookUpFromNode(node ast.Node) *symbols.Sym {
-	switch node := node.(type) {
-	case ast.Identifier:
-		return this.tbl.LookUpByIndex(node.AsIndex())
-	default:
-		return nil
-	}
+	}, delayed, nil
 }

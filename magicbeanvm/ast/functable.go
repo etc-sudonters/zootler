@@ -8,12 +8,12 @@ import (
 	"github.com/etc-sudonters/substrate/peruse"
 )
 
-func BuildFunctionTable(symbolTable *symbols.Table, grammar peruse.Grammar[ruleparser.Tree], decls map[string]string) (FunctionTable, error) {
+func BuildCompilingFunctionTable(symbolTable *symbols.Table, grammar peruse.Grammar[ruleparser.Tree], decls map[string]string) (CompilingFunctions, error) {
 	funcTable := make(functbl, len(decls))
 	bodies := make(map[symbols.Index]string, len(decls))
 
 	for header, body := range decls {
-		var decl FunctionDecl
+		var decl CompilingFunction
 		head, declErr := Parse(header, symbolTable, grammar)
 		if declErr != nil {
 			panic(declErr)
@@ -30,7 +30,9 @@ func BuildFunctionTable(symbolTable *symbols.Table, grammar peruse.Grammar[rulep
 			}
 			decl.Params = make([]Identifier, len(head.Args))
 			for i := range decl.Params {
-				decl.Params[i] = head.Args[i].(Identifier)
+				param := head.Args[i].(Identifier)
+				param.Symbol.SetKind(symbols.LOCAL)
+				decl.Params[i] = param
 			}
 		case Identifier:
 			decl.Symbol = symbolTable.LookUpByIndex(head.AsIndex())
@@ -58,22 +60,22 @@ func BuildFunctionTable(symbolTable *symbols.Table, grammar peruse.Grammar[rulep
 		funcTable[id] = decl
 	}
 
-	return FunctionTable{funcTable}, nil
+	return CompilingFunctions{funcTable}, nil
 }
 
-type FunctionDecl struct {
+type CompilingFunction struct {
 	Symbol *symbols.Sym
 	Params []Identifier
 	Body   Node
 }
 
-type FunctionTable struct {
+type CompilingFunctions struct {
 	tbl functbl
 }
 
-func (ft *FunctionTable) Get(which Identifier) (FunctionDecl, bool) {
+func (ft *CompilingFunctions) Get(which Identifier) (CompilingFunction, bool) {
 	decl, exists := ft.tbl[which.AsIndex()]
 	return decl, exists
 }
 
-type functbl map[symbols.Index]FunctionDecl
+type functbl map[symbols.Index]CompilingFunction

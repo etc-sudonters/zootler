@@ -109,6 +109,8 @@ var settings = []string{
 	"ganon_bosskey_tokens_stones",
 	"ganon_bosskey_tokens_tokens",
 	"gerudo_fortress",
+	"hints",
+	"keysanity",
 	"lacs_condition",
 	"lacs_hearts",
 	"lacs_hearts",
@@ -127,6 +129,8 @@ var settings = []string{
 	"shuffle_empty_pots",
 	"shuffle_expensive_merchants",
 	"shuffle_ganon_bosskey",
+	"shuffle_gerudo_fortress_heart_piece",
+	"shuffle_hideout_entrances",
 	"shuffle_individual_ocarina_notes",
 	"shuffle_interior_entrances",
 	"shuffle_overworld_entrances",
@@ -141,7 +145,6 @@ var settings = []string{
 	"triforce_goal_per_world",
 	"warp_songs",
 	"zora_fountain",
-	"shuffle_gerudo_fortress_heart_piece",
 }
 
 func ReadHelpers(path string) map[string]string {
