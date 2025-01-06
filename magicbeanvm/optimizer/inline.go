@@ -50,7 +50,8 @@ func (this *inliner) Invoke(node ast.Invoke, rewrite ast.Rewriting) (ast.Node, e
 	replacer.PushScope(scope)
 	defer replacer.PopScope()
 
-	body, replaceErr := replacer.Rewriter().Rewrite(fn.Body)
+	rewriter := replacer.Rewriter()
+	body, replaceErr := rewriter.Rewrite(fn.Body)
 	if replaceErr != nil {
 		return nil, replaceErr
 	}

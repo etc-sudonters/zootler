@@ -57,7 +57,7 @@ func (r Rewriting) All(ast []Node) ([]Node, error) {
 
 type Rewriter struct {
 	AnyOf      RewriteFunc[AnyOf]
-	Bool       RewriteFunc[Boolean]
+	Boolean    RewriteFunc[Boolean]
 	Compare    RewriteFunc[Compare]
 	Every      RewriteFunc[Every]
 	Identifier RewriteFunc[Identifier]
@@ -65,73 +65,82 @@ type Rewriter struct {
 	Invoke     RewriteFunc[Invoke]
 	Number     RewriteFunc[Number]
 	String     RewriteFunc[String]
+	filled     bool
 }
 
-func (v Rewriter) Rewrite(ast Node) (Node, error) {
+func (this *Rewriter) fill() {
+	if this.filled {
+		return
+	}
+	if this.AnyOf == nil {
+		this.AnyOf = RewriteAnyOf
+	}
+	if this.Boolean == nil {
+		this.Boolean = RewriteBoolean
+	}
+	if this.Compare == nil {
+		this.Compare = RewriteCompare
+	}
+	if this.Every == nil {
+		this.Every = RewriteEvery
+	}
+	if this.Identifier == nil {
+		this.Identifier = RewriteIdentifier
+	}
+	if this.Invert == nil {
+		this.Invert = RewriteInvert
+	}
+	if this.Invoke == nil {
+		this.Invoke = RewriteInvoke
+	}
+	if this.Number == nil {
+		this.Number = RewriteNumber
+	}
+	if this.String == nil {
+		this.String = RewriteString
+	}
+
+}
+
+func (this *Rewriter) Rewrite(ast Node) (Node, error) {
+	this.fill()
 	if ast == nil {
 		panic("rewriting nil node")
 	}
 	switch ast := ast.(type) {
 	case AnyOf:
-		if v.AnyOf == nil {
-			return v.anyof(ast, v.Rewrite)
-		}
-		return v.AnyOf(ast, v.Rewrite)
+		return this.AnyOf(ast, this.Rewrite)
 	case Boolean:
-		if v.Bool == nil {
-			return v.boolean(ast)
-		}
-		return v.Bool(ast, v.Rewrite)
+		return this.Boolean(ast, this.Rewrite)
 	case Compare:
-		if v.Compare == nil {
-			return v.compare(ast, v.Rewrite)
-		}
-		return v.Compare(ast, v.Rewrite)
+		return this.Compare(ast, this.Rewrite)
 	case Every:
-		if v.Every == nil {
-			return v.every(ast, v.Rewrite)
-		}
-		return v.Every(ast, v.Rewrite)
+		return this.Every(ast, this.Rewrite)
 	case Identifier:
-		if v.Identifier == nil {
-			return v.identifier(ast)
-		}
-		return v.Identifier(ast, v.Rewrite)
+		return this.Identifier(ast, this.Rewrite)
 	case Invert:
-		if v.Invert == nil {
-			return v.invert(ast)
-		}
-		return v.Invert(ast, v.Rewrite)
+		return this.Invert(ast, this.Rewrite)
 	case Invoke:
-		if v.Invoke == nil {
-			return v.invoke(ast)
-		}
-		return v.Invoke(ast, v.Rewrite)
+		return this.Invoke(ast, this.Rewrite)
 	case Number:
-		if v.Number == nil {
-			return v.number(ast)
-		}
-		return v.Number(ast, v.Rewrite)
+		return this.Number(ast, this.Rewrite)
 	case String:
-		if v.String == nil {
-			return v.str(ast)
-		}
-		return v.String(ast, v.Rewrite)
+		return this.String(ast, this.Rewrite)
 	default:
 		return nil, CouldNotRewrite{ast, UnknownNode}
 	}
 }
 
-func (v Rewriter) anyof(anyof AnyOf, rewrite Rewriting) (Node, error) {
+func RewriteAnyOf(anyof AnyOf, rewrite Rewriting) (Node, error) {
 	items, err := rewrite.All(anyof)
 	return AnyOf(items), err
 }
 
-func (v Rewriter) boolean(b Boolean) (Node, error) {
+func RewriteBoolean(b Boolean, _ Rewriting) (Node, error) {
 	return b, nil
 }
 
-func (v Rewriter) compare(compare Compare, rewrite Rewriting) (Node, error) {
+func RewriteCompare(compare Compare, rewrite Rewriting) (Node, error) {
 	operands, err := rewrite.All([]Node{compare.LHS, compare.RHS})
 	return Compare{
 		LHS: operands[0],
@@ -140,39 +149,38 @@ func (v Rewriter) compare(compare Compare, rewrite Rewriting) (Node, error) {
 	}, err
 }
 
-func (v Rewriter) every(every Every, rewrite Rewriting) (Node, error) {
+func RewriteEvery(every Every, rewrite Rewriting) (Node, error) {
 	items, err := rewrite.All(every)
 	return Every(items), err
 }
 
-func (v Rewriter) identifier(i Identifier) (Node, error) {
+func RewriteIdentifier(i Identifier, _ Rewriting) (Node, error) {
 	return i, nil
 }
 
-func (v Rewriter) invert(invert Invert) (Node, error) {
-	return v.Rewrite(invert.Inner)
+func RewriteInvert(invert Invert, rewrite Rewriting) (Node, error) {
+	return rewrite(invert.Inner)
 }
 
-func (v Rewriter) invoke(invoke Invoke) (Node, error) {
+func RewriteInvoke(invoke Invoke, rewrite Rewriting) (Node, error) {
 	var rewritten Invoke
 	var err error
-	rewritten.Target, err = v.Rewrite(invoke.Target)
-	rewritten.Args = make([]Node, len(invoke.Args))
-
-	for i := range invoke.Args {
-		var argErr error
-		rewritten.Args[i], argErr = v.Rewrite(invoke.Args[i])
-		if argErr != nil {
-			err = errors.Join(argErr)
-		}
+	rewritten.Target, err = rewrite(invoke.Target)
+	if err != nil {
+		return nil, err
 	}
+	rewritten.Args, err = rewrite.All(invoke.Args)
+	if err != nil {
+		return nil, err
+	}
+
 	return rewritten, err
 }
 
-func (v Rewriter) number(n Number) (Node, error) {
+func RewriteNumber(n Number, _ Rewriting) (Node, error) {
 	return n, nil
 }
 
-func (v Rewriter) str(s String) (Node, error) {
+func RewriteString(s String, _ Rewriting) (Node, error) {
 	return s, nil
 }
