@@ -1,30 +1,39 @@
 {
-
-  "configurations": {
-    "zootler": {
-      "adapter": "vscode-go",
-      "configuration": {
-        "request": "launch",
-        "program": "${workspaceRoot}/cmd/zootler/",
-        "args": [
-          "-d",
-          "${workspaceRoot}/inputs/data/",
-          "-l",
-          "${workspaceRoot}/inputs/logic/glitchless"
-        ],
-        "mode": "debug",
-        "dlvToolPath": "$GOPATH/bin/dlv"
-      }
-    },
-    "test": {
-      "adapter": "vscode-go",
-      "configuration": {
-        "request": "launch",
-        "program": "${fileDirname}",
-        "args": [],
-        "mode": "test",
-        "dlvToolPath": "$GOPATH/bin/dlv"
-      }
+    "configurations": {
+        "magicbean": {
+            "adapter": "vscode-go",
+            "configuration": {
+                "request": "launch",
+                "program": "${workspaceRoot}/cmd/magicbean/",
+                "args": [],
+                "mode": "debug",
+                "dlvToolPath": "$GOPATH/bin/dlv"
+            }
+        },
+        "zootler": {
+            "adapter": "vscode-go",
+            "configuration": {
+                "request": "launch",
+                "program": "${workspaceRoot}/cmd/zootler/",
+                "args": [
+                    "-d",
+                    "${workspaceRoot}/inputs/data/",
+                    "-l",
+                    "${workspaceRoot}/inputs/logic/glitchless"
+                ],
+                "mode": "debug",
+                "dlvToolPath": "$GOPATH/bin/dlv"
+            }
+        },
+        "test": {
+            "adapter": "vscode-go",
+            "configuration": {
+                "request": "launch",
+                "program": "${fileDirname}",
+                "args": [],
+                "mode": "test",
+                "dlvToolPath": "$GOPATH/bin/dlv"
+            }
+        }
     }
-  }
 }
