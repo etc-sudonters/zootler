@@ -28,10 +28,13 @@ func (f fold) Invert(node ast.Invert, rewrite ast.Rewriting) (ast.Node, error) {
 	switch inner := inner.(type) {
 	case ast.Boolean:
 		return ast.Boolean(!inner), nil
-	default:
-		return ast.Invert{inner}, nil
+	case ast.AnyOf:
+		// TODO
+	case ast.Every:
+		// TODO
 	}
 
+	return ast.Invert{Inner: inner}, nil
 }
 
 func (f fold) AnyOf(node ast.AnyOf, rewrite ast.Rewriting) (ast.Node, error) {

@@ -26,7 +26,7 @@ func DisassembleAll(compiled []magicbeanvm.CompiledSource) {
 	for _, compiled := range compiled {
 		fmt.Println()
 		fmt.Printf("%q: %q\n", compiled.OriginatingRegion, compiled.Destination)
-		fmt.Println(code.Disassemble(compiled.ByteCode.Tape))
+		fmt.Println(code.DisassembleToString(compiled.ByteCode.Tape))
 	}
 	fmt.Println()
 	fmt.Printf("Disassembled %06d\n", len(compiled))
@@ -89,12 +89,12 @@ func (this analysis) String() string {
 	return str.String()
 }
 
-func (this analysis) register(env *magicbeanvm.CompilationEnvironment) {
-	env.Analysis.PostOptimize(func(env *magicbeanvm.CompilationEnvironment) ast.Visitor {
+func (this analysis) register(env *magicbeanvm.CompileEnv) {
+	env.Analysis.PostOptimize(func(env *magicbeanvm.CompileEnv) ast.Visitor {
 		finder := findinvokes{env.Symbols, this.invokes}
 		return ast.Visitor{Invoke: finder.Invoke}
 	})
-	env.Analysis.PostOptimize(func(env *magicbeanvm.CompilationEnvironment) ast.Visitor {
+	env.Analysis.PostOptimize(func(env *magicbeanvm.CompileEnv) ast.Visitor {
 		return countnodes(this.nodes)
 	})
 }
@@ -143,7 +143,7 @@ func (this findinvokes) Invoke(node ast.Invoke, _ ast.Visiting) error {
 
 	if symbol != nil {
 		switch symbol.Kind {
-		case symbols.BUILT_IN, symbols.COMPILED_FUNC, symbols.COMP_TIME, symbols.FUNCTION:
+		case symbols.BUILT_IN, symbols.COMPILED_FUNC, symbols.COMP_FUNC, symbols.FUNCTION:
 			sym := this.counting[symbol.Name]
 			this.counting[symbol.Name] = invokecount{
 				count: sym.count + 1,

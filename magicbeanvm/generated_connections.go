@@ -16,9 +16,9 @@ func SetCurrentLocation(ctx *optimizer.Context, where string) {
 	ctx.Store(currentLocationKey, where)
 }
 
-func CompileGeneratedConnections(compiler *compiling) ([]CompiledSource, error) {
+func CompileGeneratedConnections(compiler *codegen) ([]CompiledSource, error) {
 	var compiled []CompiledSource
-	ctx := compiler.Optimization.Context
+	ctx := compiler.Optimize.Context
 	connections := SwapGeneratedConnections(ctx)
 	for size := connections.Size(); size > 0; size = connections.Size() {
 		var offset int
@@ -54,7 +54,7 @@ func SwapGeneratedConnections(ctx *optimizer.Context) GeneratedConnections {
 	return conns
 }
 
-func CompileTimeConnectionGeneration(ctx *optimizer.Context, tbl *symbols.Table) ConnectionGenerator {
+func ConnectionGeneration(ctx *optimizer.Context, tbl *symbols.Table) ConnectionGenerator {
 	var conns ConnectionGenerator
 	conns.at, conns.here = tbl.Declare("at", symbols.FUNCTION), tbl.Declare("here", symbols.FUNCTION)
 	conns.tbl = tbl

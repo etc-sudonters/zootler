@@ -122,7 +122,7 @@ func (s *Sym) SetKind(t Kind) {
 	case t == COMPILED_FUNC && s.Kind == TOKEN:
 		s.Kind = COMPILED_FUNC
 		// function is least specific
-	case t == FUNCTION && (s.Kind == BUILT_IN || s.Kind == COMP_TIME || s.Kind == COMPILED_FUNC):
+	case t == FUNCTION && (s.Kind == BUILT_IN || s.Kind == COMP_FUNC || s.Kind == COMPILED_FUNC):
 		return
 	case s.Kind == UNKNOWN:
 		s.Kind = t
@@ -143,7 +143,7 @@ type Kind string
 const (
 	_             Kind = ""
 	BUILT_IN           = "BUILT_IN"
-	COMP_TIME          = "COMP_TIME"
+	COMP_FUNC          = "COMP_FUNC"
 	FUNCTION           = "FUNCTION"
 	GLOBAL             = "GLOBAL"
 	LOCATION           = "LOCATION"

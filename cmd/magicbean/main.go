@@ -15,17 +15,17 @@ func main() {
 		panic(tokenErr)
 	}
 	analysis := newanalysis()
-	compileEnv := magicbeanvm.NewCompileEnvironment(
+	compileEnv := magicbeanvm.NewCompileEnv(
 		magicbeanvm.Defaults(),
 		magicbeanvm.WithTokens(rawTokens),
-		magicbeanvm.WithCompilerFunctions(func(env *magicbeanvm.CompilationEnvironment) optimizer.CompilerFunctions {
+		magicbeanvm.WithCompilerFunctions(func(env *magicbeanvm.CompileEnv) optimizer.CompilerFunctions {
 			return compfuncs{
 				constCompileFuncs(true),
-				magicbeanvm.CompileTimeConnectionGeneration(env.Optimization.Context, env.Symbols),
+				magicbeanvm.ConnectionGeneration(env.Optimize.Context, env.Symbols),
 			}
 
 		}),
-		func(env *magicbeanvm.CompilationEnvironment) {
+		func(env *magicbeanvm.CompileEnv) {
 			funcBuildErr := env.BuildFunctionTable(ReadHelpers(".data/logic/helpers.json"))
 			if funcBuildErr != nil {
 				panic(funcBuildErr)

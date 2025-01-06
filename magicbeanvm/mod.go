@@ -55,60 +55,60 @@ type Source struct {
 	Destination       string
 }
 
-type ConfigureCompiler func(*CompilationEnvironment)
+type ConfigureCompiler func(*CompileEnv)
 
-func WithCompilerFunctions(f func(*CompilationEnvironment) optimizer.CompilerFunctions) ConfigureCompiler {
-	return func(env *CompilationEnvironment) {
+func WithCompilerFunctions(f func(*CompileEnv) optimizer.CompilerFunctions) ConfigureCompiler {
+	return func(env *CompileEnv) {
 		funcs := f(env)
-		env.Optimization.CompilerFuncs = funcs
-		env.Optimization.AddOptimizer(func(innerEnv *CompilationEnvironment) ast.Rewriter {
-			return optimizer.RunCompilerFunctions(innerEnv.Symbols, innerEnv.Optimization.CompilerFuncs)
+		env.Optimize.CompilerFuncs = funcs
+		env.Optimize.AddOptimizer(func(innerEnv *CompileEnv) ast.Rewriter {
+			return optimizer.RunCompilerFunctions(innerEnv.Symbols, innerEnv.Optimize.CompilerFuncs)
 		})
 	}
 }
 
 func WithTokens(names []string) ConfigureCompiler {
-	return func(env *CompilationEnvironment) {
+	return func(env *CompileEnv) {
 		env.Symbols.DeclareMany(symbols.TOKEN, names)
 	}
 }
 
 func Defaults() ConfigureCompiler {
-	return func(env *CompilationEnvironment) {
-		env.Optimization.Passes = 10
+	return func(env *CompileEnv) {
+		env.Optimize.Passes = 10
 
-		env.Symbols.DeclareMany(symbols.COMP_TIME, optimizer.CompileTimeNames())
+		env.Symbols.DeclareMany(symbols.COMP_FUNC, optimizer.CompilerFuncNames())
 		env.Symbols.DeclareMany(symbols.BUILT_IN, objects.BuiltInFunctionNames())
 		env.Symbols.DeclareMany(symbols.GLOBAL, vm.GlobalNames())
 		env.Symbols.DeclareMany(symbols.SETTING, settings.Names())
 
-		env.OnSourceLoad(func(env *CompilationEnvironment, src *Source) {
-			SetCurrentLocation(env.Optimization.Context, src.OriginatingRegion)
+		env.OnSourceLoad(func(env *CompileEnv, src *Source) {
+			SetCurrentLocation(env.Optimize.Context, src.OriginatingRegion)
 		})
-		env.Optimization.AddOptimizer(func(env *CompilationEnvironment) ast.Rewriter {
-			return optimizer.InlineCalls(env.Optimization.Context, env.Symbols, env.Functions)
+		env.Optimize.AddOptimizer(func(env *CompileEnv) ast.Rewriter {
+			return optimizer.InlineCalls(env.Optimize.Context, env.Symbols, env.Functions)
 		})
-		env.Optimization.AddOptimizer(func(env *CompilationEnvironment) ast.Rewriter {
+		env.Optimize.AddOptimizer(func(env *CompileEnv) ast.Rewriter {
 			return optimizer.FoldConstants(env.Symbols)
 		})
-		env.Optimization.AddOptimizer(func(env *CompilationEnvironment) ast.Rewriter {
-			return optimizer.EnsureFuncs(env.Symbols, env.Functions)
+		env.Optimize.AddOptimizer(func(env *CompileEnv) ast.Rewriter {
+			return optimizer.InvokeBareFuncs(env.Symbols, env.Functions)
 		})
-		env.Optimization.AddOptimizer(func(env *CompilationEnvironment) ast.Rewriter {
+		env.Optimize.AddOptimizer(func(env *CompileEnv) ast.Rewriter {
 			return optimizer.CollapseHas(env.Symbols)
 		})
-		env.Optimization.AddOptimizer(func(env *CompilationEnvironment) ast.Rewriter {
+		env.Optimize.AddOptimizer(func(env *CompileEnv) ast.Rewriter {
 			return optimizer.PromoteTokens(env.Symbols)
 		})
 	}
 }
 
-func NewCompileEnvironment(configure ...ConfigureCompiler) CompilationEnvironment {
-	var env CompilationEnvironment
+func NewCompileEnv(configure ...ConfigureCompiler) CompileEnv {
+	var env CompileEnv
 	env.Grammar = ruleparser.NewRulesGrammar()
 	env.Symbols = ptr(symbols.NewTable())
 	env.Objects = ptr(objects.NewTableBuilder())
-	env.Optimization.Context = ptr(optimizer.NewCtx())
+	env.Optimize.Context = ptr(optimizer.NewCtx())
 
 	for i := range configure {
 		configure[i](&env)
@@ -117,23 +117,23 @@ func NewCompileEnvironment(configure ...ConfigureCompiler) CompilationEnvironmen
 	return env
 }
 
-type SourceLoaded func(*CompilationEnvironment, *Source)
-type Optimizer func(*CompilationEnvironment) ast.Rewriter
-type Analyzer func(*CompilationEnvironment) ast.Visitor
+type SourceLoaded func(*CompileEnv, *Source)
+type Optimizer func(*CompileEnv) ast.Rewriter
+type Analyzer func(*CompileEnv) ast.Visitor
 
-type CompilationEnvironment struct {
-	Grammar           peruse.Grammar[ruleparser.Tree]
-	Symbols           *symbols.Table
-	Functions         *ast.PartialFunctionTable
-	Objects           *objects.TableBuilder
-	CompilerFunctions optimizer.CompilerFunctions
+type CompileEnv struct {
+	Grammar       peruse.Grammar[ruleparser.Tree]
+	Symbols       *symbols.Table
+	Functions     *ast.PartialFunctionTable
+	Objects       *objects.TableBuilder
+	CompilerFuncs optimizer.CompilerFunctions
 
-	Optimization Optimization
+	Optimize     Optimize
 	Analysis     Analysis
 	onSourceLoad []SourceLoaded
 }
 
-func (this *CompilationEnvironment) OnSourceLoad(f SourceLoaded) {
+func (this *CompileEnv) OnSourceLoad(f SourceLoaded) {
 	this.onSourceLoad = append(this.onSourceLoad, f)
 }
 
@@ -150,18 +150,18 @@ func (this *Analysis) PostOptimize(v Analyzer) {
 	this.post = append(this.post, v)
 }
 
-type Optimization struct {
+type Optimize struct {
 	CompilerFuncs optimizer.CompilerFunctions
 	Context       *optimizer.Context
 	Optimiziers   []Optimizer
 	Passes        int
 }
 
-func (this *Optimization) AddOptimizer(o Optimizer) {
+func (this *Optimize) AddOptimizer(o Optimizer) {
 	this.Optimiziers = append(this.Optimiziers, o)
 }
 
-func (this *CompilationEnvironment) BuildFunctionTable(declarations map[string]string) error {
+func (this *CompileEnv) BuildFunctionTable(declarations map[string]string) error {
 	var err error
 	var funcs ast.PartialFunctionTable
 	funcs, err = ast.BuildCompilingFunctionTable(this.Symbols, this.Grammar, declarations)
@@ -172,38 +172,38 @@ func (this *CompilationEnvironment) BuildFunctionTable(declarations map[string]s
 	return nil
 }
 
-func Compiler(env *CompilationEnvironment) compiling {
-	optimizers := env.Optimization.Optimiziers
+func Compiler(env *CompileEnv) codegen {
+	optimizers := env.Optimize.Optimiziers
 	analysis := env.Analysis
-	compiling := compiling{
-		CompilationEnvironment: env,
-		rewriters:              make([]ast.Rewriter, len(optimizers)),
-		preanalyzers:           make([]ast.Visitor, len(analysis.pre)),
-		postanalyzers:          make([]ast.Visitor, len(analysis.post)),
+	codegen := codegen{
+		CompileEnv:    env,
+		rewriters:     make([]ast.Rewriter, len(optimizers)),
+		preanalyzers:  make([]ast.Visitor, len(analysis.pre)),
+		postanalyzers: make([]ast.Visitor, len(analysis.post)),
 	}
-	for i := range compiling.rewriters {
-		compiling.rewriters[i] = optimizers[i](env)
+	for i := range codegen.rewriters {
+		codegen.rewriters[i] = optimizers[i](env)
 	}
-	for i := range compiling.preanalyzers {
-		compiling.preanalyzers[i] = analysis.pre[i](env)
+	for i := range codegen.preanalyzers {
+		codegen.preanalyzers[i] = analysis.pre[i](env)
 	}
-	for i := range compiling.postanalyzers {
-		compiling.postanalyzers[i] = analysis.post[i](env)
+	for i := range codegen.postanalyzers {
+		codegen.postanalyzers[i] = analysis.post[i](env)
 	}
-	return compiling
+	return codegen
 }
 
-type compiling struct {
-	*CompilationEnvironment
+type codegen struct {
+	*CompileEnv
 	rewriters     []ast.Rewriter
 	preanalyzers  []ast.Visitor
 	postanalyzers []ast.Visitor
 }
 
-func (this compiling) CompileSource(src *Source) (compiler.ByteCode, error) {
+func (this codegen) CompileSource(src *Source) (compiler.ByteCode, error) {
 	var bytecode compiler.ByteCode
 	for i := range this.onSourceLoad {
-		this.onSourceLoad[i](this.CompilationEnvironment, src)
+		this.onSourceLoad[i](this.CompileEnv, src)
 	}
 
 	if src.Ast == nil {
@@ -218,7 +218,7 @@ func (this compiling) CompileSource(src *Source) (compiler.ByteCode, error) {
 		this.preanalyzers[i].Visit(src.Ast)
 	}
 
-	for range this.Optimization.Passes {
+	for range this.Optimize.Passes {
 		var rewriteErr error
 		src.Ast, rewriteErr = ast.RewriteWithEvery(src.Ast, this.rewriters)
 		if rewriteErr != nil {

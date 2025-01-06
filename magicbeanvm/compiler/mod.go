@@ -60,15 +60,15 @@ func (this *compiler) AnyOf(node ast.AnyOf, visit ast.Visiting) error {
 	if err != nil {
 		return err
 	}
-	this.emit(code.BEAN_NEED_ANY, len(node))
+	this.emit(code.NEED_ANY, len(node))
 	return nil
 }
 
 func (this *compiler) Boolean(node ast.Boolean, visit ast.Visiting) error {
 	if node {
-		this.emit(code.BEAN_PUSH_T)
+		this.emit(code.PUSH_T)
 	} else {
-		this.emit(code.BEAN_PUSH_F)
+		this.emit(code.PUSH_F)
 	}
 	return nil
 }
@@ -79,11 +79,11 @@ func (this *compiler) Compare(node ast.Compare, visit ast.Visiting) error {
 	}
 	switch node.Op {
 	case ast.CompareEq:
-		this.emit(code.BEAN_CMP_EQ)
+		this.emit(code.CMP_EQ)
 	case ast.CompareNq:
-		this.emit(code.BEAN_CMP_NQ)
+		this.emit(code.CMP_NQ)
 	case ast.CompareLt:
-		this.emit(code.BEAN_CMP_LT)
+		this.emit(code.CMP_LT)
 	default:
 		return fmt.Errorf("uncompilable comparison op: %v", node.Op)
 	}
@@ -96,7 +96,7 @@ func (this *compiler) Every(node ast.Every, visit ast.Visiting) error {
 	if err != nil {
 		return err
 	}
-	this.emit(code.BEAN_NEED_ALL, len(node))
+	this.emit(code.NEED_ALL, len(node))
 	return nil
 }
 
@@ -105,11 +105,11 @@ func (this *compiler) Identifier(node ast.Identifier, visit ast.Visiting) error 
 	switch symbol.Kind {
 	case symbols.BUILT_IN:
 		index := this.objects.BuiltIn(symbol.Name)
-		this.emit(code.BEAN_PUSH_BUILTIN, int(index))
+		this.emit(code.PUSH_BUILTIN, int(index))
 		return nil
 	case symbols.TOKEN, symbols.EVENT:
 		index := this.objects.Name(symbol.Name)
-		this.emit(code.BEAN_PUSH_PTR, int(index))
+		this.emit(code.PUSH_PTR, int(index))
 	default:
 		return fmt.Errorf("uncompilable identifier: %s", symbol)
 	}
@@ -120,7 +120,7 @@ func (this *compiler) Invert(node ast.Invert, visit ast.Visiting) error {
 	if err := visit(node.Inner); err != nil {
 		return err
 	}
-	this.emit(code.BEAN_PUSH_OPP)
+	this.emit(code.INVERT)
 	return nil
 }
 
@@ -136,26 +136,26 @@ func (this *compiler) Invoke(node ast.Invoke, visit ast.Visiting) error {
 			if what != nil && isQty {
 				fast = true
 				ptr := this.objects.Name(what.Name)
-				this.emit(code.BEAN_CHK_QTY, int(ptr), int(qty))
+				this.emit(code.CHK_QTY, int(ptr), int(qty))
 			}
 		case "has_anyof":
 			fast = true
 			if argsErr := visit.All(node.Args); argsErr != nil {
 				return argsErr
 			}
-			this.emit(code.BEAN_CHK_ANY, len(node.Args))
+			this.emit(code.CHK_ANY, len(node.Args))
 		case "has_every":
 			fast = true
 			if argsErr := visit.All(node.Args); argsErr != nil {
 				return argsErr
 			}
-			this.emit(code.BEAN_CHK_ALL, len(node.Args))
+			this.emit(code.CHK_ALL, len(node.Args))
 		case "is_adult":
 			fast = true
-			this.emit(code.BEAN_IS_ADULT)
+			this.emit(code.IS_ADULT)
 		case "is_child":
 			fast = true
-			this.emit(code.BEAN_IS_CHILD)
+			this.emit(code.IS_CHILD)
 		}
 
 		if fast {
@@ -170,20 +170,20 @@ func (this *compiler) Invoke(node ast.Invoke, visit ast.Visiting) error {
 	if targetErr := visit(node.Target); targetErr != nil {
 		return targetErr
 	}
-	this.emit(code.BEAN_CALL, len(node.Args))
+	this.emit(code.INVOKE, len(node.Args))
 	return nil
 }
 
 func (this *compiler) Number(node ast.Number, visit ast.Visiting) error {
 	obj := objects.Number(node)
 	idx := this.objects.Constant(obj)
-	this.emit(code.BEAN_PUSH_CONST, int(idx))
+	this.emit(code.PUSH_CONST, int(idx))
 	return nil
 }
 
 func (this *compiler) String(node ast.String, visit ast.Visiting) error {
 	obj := objects.String(node)
 	idx := this.objects.Constant(obj)
-	this.emit(code.BEAN_PUSH_CONST, int(idx))
+	this.emit(code.PUSH_CONST, int(idx))
 	return nil
 }

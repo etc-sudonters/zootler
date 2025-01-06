@@ -32,10 +32,15 @@ func (this dis) writeu8(u8 uint8) {
 	fmt.Fprintf(this, "0x%02X", u8)
 }
 
-func Disassemble(tape Instructions) string {
+func DisassembleToString(tape Instructions) string {
 	var s strings.Builder
+	DisassembleInto(&s, tape)
+	return s.String()
+}
+
+func DisassembleInto(w io.Writer, tape Instructions) {
 	var offset int
-	dis := dis{&s}
+	dis := dis{w}
 
 	length := len(tape)
 
@@ -55,6 +60,4 @@ func Disassemble(tape Instructions) string {
 		}
 		dis.Clear()
 	}
-
-	return s.String()
 }

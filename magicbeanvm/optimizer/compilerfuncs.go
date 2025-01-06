@@ -15,7 +15,7 @@ var compilerFuncNames = []string{
 	"had_night_start",
 }
 
-func CompileTimeNames() []string {
+func CompilerFuncNames() []string {
 	return compilerFuncNames[:]
 }
 
