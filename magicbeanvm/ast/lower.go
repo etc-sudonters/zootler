@@ -103,9 +103,9 @@ func Lower(tbl *symbols.Table, node ruleparser.Tree) (Node, error) {
 
 		return invoke, err
 	case *ruleparser.Identifier:
-		//TODO how to not special case
-		if node.Value != "logic_rules" {
-			if trimmed, didTrim := strings.CutPrefix(node.Value, isTrickEnabledPrefix); didTrim {
+		if trimmed, didTrim := strings.CutPrefix(node.Value, isTrickEnabledPrefix); didTrim {
+			//TODO how to not special case
+			if node.Value != "logic_rules" {
 				return createCall(tbl, "is_trick_enabled", ruleparser.StringLiteral(trimmed))
 			}
 		}
@@ -116,7 +116,7 @@ func Lower(tbl *symbols.Table, node ruleparser.Tree) (Node, error) {
 		case float64:
 			return Number(value), nil
 		case bool:
-			return Bool(value), nil
+			return Boolean(value), nil
 		case string:
 			return String(value), nil
 		default:

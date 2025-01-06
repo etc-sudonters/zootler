@@ -25,7 +25,7 @@ type VisitFunc[T Node] func(T, Visiting) error
 
 type Visitor struct {
 	AnyOf      VisitFunc[AnyOf]
-	Boolean    VisitFunc[Bool]
+	Boolean    VisitFunc[Boolean]
 	Compare    VisitFunc[Compare]
 	Every      VisitFunc[Every]
 	Identifier VisitFunc[Identifier]
@@ -81,7 +81,7 @@ func (v *Visitor) visit(node Node) error {
 	switch node := node.(type) {
 	case AnyOf:
 		return v.AnyOf(node, visit)
-	case Bool:
+	case Boolean:
 		return v.Boolean(node, visit)
 	case Compare:
 		return v.Compare(node, visit)
@@ -109,7 +109,7 @@ func VisitAnyOf(anyof AnyOf, visit Visiting) error {
 	return visit.All(anyof)
 }
 
-func VisitBoolean(_ Bool, visit Visiting) error {
+func VisitBoolean(_ Boolean, visit Visiting) error {
 	return nil
 }
 

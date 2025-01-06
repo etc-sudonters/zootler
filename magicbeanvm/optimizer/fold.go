@@ -26,8 +26,8 @@ func (f fold) Invert(node ast.Invert, rewrite ast.Rewriting) (ast.Node, error) {
 	}
 
 	switch inner := inner.(type) {
-	case ast.Bool:
-		return ast.Bool(!inner), nil
+	case ast.Boolean:
+		return ast.Boolean(!inner), nil
 	default:
 		return ast.Invert{inner}, nil
 	}
@@ -62,9 +62,9 @@ func (f fold) Compare(node ast.Compare, rewrite ast.Rewriting) (ast.Node, error)
 
 	switch node.Op {
 	case ast.CompareEq:
-		return ast.Bool(lhs.Eq(rhs)), nil
+		return ast.Boolean(lhs.Eq(rhs)), nil
 	case ast.CompareNq:
-		return !ast.Bool(lhs.Eq(rhs)), nil
+		return !ast.Boolean(lhs.Eq(rhs)), nil
 	default:
 		panic("unreachable")
 	}

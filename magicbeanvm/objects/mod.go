@@ -1,17 +1,14 @@
 package objects
 
-import (
-	"sudonters/zootler/magicbeanvm/nan"
-)
+type Callable = func(...Object) (Object, error)
 
 type Kind string
 type Boolean bool
-type Token nan.Pointer
 type String string
 type Number float64
-type BuiltIn struct {
-	Func      func(...Object) (Object, error)
-	NumParams int
+type BuiltInFunc struct {
+	Name string
+	Func Callable
 }
 
 const (
@@ -20,26 +17,24 @@ const (
 	BUILT_IN      = "BUILT_IN"
 	NUMBER        = "NUMBER"
 	STRING        = "STRING"
-	TOKEN         = "TOKEN"
 )
 
 type Object interface {
 	Kind() Kind
 }
 
-func (this *Token) Kind() Kind {
-	return TOKEN
-}
-func (this *String) Kind() Kind {
+func (this String) Kind() Kind {
 	return STRING
 }
-func (this *Number) Kind() Kind {
+
+func (this Number) Kind() Kind {
 	return NUMBER
 }
-func (this *Boolean) Kind() Kind {
+
+func (this Boolean) Kind() Kind {
 	return BOOLEAN
 }
 
-func (this *BuiltIn) Kind() Kind {
+func (this BuiltInFunc) Kind() Kind {
 	return BUILT_IN
 }

@@ -5,7 +5,7 @@ import (
 	"sudonters/zootler/magicbeanvm/symbols"
 )
 
-var compileTimeNames = []string{
+var compilerFuncNames = []string{
 	"at",
 	"compare_setting",
 	"here",
@@ -16,10 +16,10 @@ var compileTimeNames = []string{
 }
 
 func CompileTimeNames() []string {
-	return compileTimeNames[:]
+	return compilerFuncNames[:]
 }
 
-type CompileTime interface {
+type CompilerFunctions interface {
 	At([]ast.Node) (ast.Node, error)
 	CompareSetting([]ast.Node) (ast.Node, error)
 	HadNightStart([]ast.Node) (ast.Node, error)
@@ -29,19 +29,19 @@ type CompileTime interface {
 	LoadSetting2([]ast.Node) (ast.Node, error)
 }
 
-func RunCompileTimeFuncs(symbols *symbols.Table, funcs CompileTime) ast.Rewriter {
-	ct := comptime{symbols, funcs}
+func RunCompilerFunctions(symbols *symbols.Table, funcs CompilerFunctions) ast.Rewriter {
+	ct := compilerfuncs{symbols, funcs}
 	return ast.Rewriter{
 		Invoke: ct.Invoke,
 	}
 }
 
-type comptime struct {
+type compilerfuncs struct {
 	symbols *symbols.Table
-	funcs   CompileTime
+	funcs   CompilerFunctions
 }
 
-func (this comptime) Invoke(node ast.Invoke, _ ast.Rewriting) (ast.Node, error) {
+func (this compilerfuncs) Invoke(node ast.Invoke, _ ast.Rewriting) (ast.Node, error) {
 	symbol := ast.LookUpNodeInTable(this.symbols, node.Target)
 	if symbol == nil {
 		return node, nil

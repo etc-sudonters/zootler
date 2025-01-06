@@ -17,6 +17,15 @@ type Table struct {
 	aliased int
 }
 
+func (tbl *Table) RawAll(f func(*Sym) bool) {
+	for i := range tbl.syms {
+		if !f(&tbl.syms[i]) {
+			return
+		}
+	}
+
+}
+
 func (tbl *Table) All(f func(*Sym) bool) {
 	for i := range tbl.syms {
 		if tbl.syms[i].Index != Index(i) {
@@ -73,7 +82,7 @@ func (tbl *Table) byname(name string) *Sym {
 }
 
 func (tbl *Table) Alias(symbol *Sym, alias string) {
-	aliasing := tbl.Declare(alias, symbol.Kind)
+	aliasing := tbl.Declare(alias, ALIAS)
 	aliasing.Index = symbol.Index
 	tbl.aliased += 1
 }
@@ -96,9 +105,13 @@ type Sym struct {
 	Kind  Kind
 }
 
+func (s *Sym) String() string {
+	return fmt.Sprintf("{Name: %q, Index: %d, Kind: %q}", s.Name, s.Index, s.Kind)
+}
+
 func (s *Sym) SetKind(t Kind) {
 	switch {
-	case t == UNKNOWN:
+	case t == UNKNOWN || t == ALIAS:
 		return
 		// event is more specific than token
 	case t == EVENT && s.Kind == TOKEN:
@@ -138,7 +151,8 @@ const (
 	SETTING            = "SETTING"
 	TOKEN              = "TOKEN"
 	UNKNOWN            = "UNKNOWN"
-	COMPILED_FUNC      = "INLINED_FUNC"
+	COMPILED_FUNC      = "COMPILED_FUNC"
 	TRANSIT            = "TRANSIT"
+	ALIAS              = "ALIAS"
 	LOCAL              = "LOCAL"
 )

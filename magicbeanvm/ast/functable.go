@@ -8,12 +8,12 @@ import (
 	"github.com/etc-sudonters/substrate/peruse"
 )
 
-func BuildCompilingFunctionTable(symbolTable *symbols.Table, grammar peruse.Grammar[ruleparser.Tree], decls map[string]string) (CompilingFunctions, error) {
-	funcTable := make(functbl, len(decls))
-	bodies := make(map[symbols.Index]string, len(decls))
+func BuildCompilingFunctionTable(symbolTable *symbols.Table, grammar peruse.Grammar[ruleparser.Tree], decls map[string]string) (PartialFunctionTable, error) {
+	funcTable := PartialFunctionTable{make(map[string]PartialFunction, len(decls))}
+	bodies := make(map[string]string, len(decls))
 
 	for header, body := range decls {
-		var decl CompilingFunction
+		var decl PartialFunction
 		head, declErr := Parse(header, symbolTable, grammar)
 		if declErr != nil {
 			panic(declErr)
@@ -46,36 +46,42 @@ func BuildCompilingFunctionTable(symbolTable *symbols.Table, grammar peruse.Gram
 
 		decl.Symbol.SetKind(symbols.COMPILED_FUNC)
 		id := IdentifierFrom(decl.Symbol)
-		bodies[id.AsIndex()] = body
-		funcTable[id.AsIndex()] = decl
+		bodies[id.Symbol.Name] = body
+		funcTable.add(decl.Symbol, decl)
 	}
 
-	for id, decl := range funcTable {
-		body := bodies[id]
+	for name, compiling := range funcTable.tbl {
+		body := bodies[name]
 		nodes, bodyErr := Parse(body, symbolTable, grammar)
 		if bodyErr != nil {
 			panic(bodyErr)
 		}
-		decl.Body = nodes
-		funcTable[id] = decl
+		compiling.Body = nodes
+		funcTable.tbl[name] = compiling
 	}
 
-	return CompilingFunctions{funcTable}, nil
+	return funcTable, nil
 }
 
-type CompilingFunction struct {
+type PartialFunction struct {
 	Symbol *symbols.Sym
 	Params []Identifier
 	Body   Node
 }
 
-type CompilingFunctions struct {
-	tbl functbl
+type PartialFunctionTable struct {
+	tbl map[string]PartialFunction
 }
 
-func (ft *CompilingFunctions) Get(which Identifier) (CompilingFunction, bool) {
-	decl, exists := ft.tbl[which.AsIndex()]
-	return decl, exists
+func (this *PartialFunctionTable) Get(name string) (PartialFunction, bool) {
+	fn, exists := this.tbl[name]
+	return fn, exists
 }
 
-type functbl map[symbols.Index]CompilingFunction
+func (this *PartialFunctionTable) add(sym *symbols.Sym, body PartialFunction) {
+	if _, exists := this.tbl[sym.Name]; exists {
+		return
+	}
+
+	this.tbl[sym.Name] = body
+}

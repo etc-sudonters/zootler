@@ -1,12 +1,103 @@
 package main
 
 import (
+	"fmt"
 	"regexp"
+	"slices"
+	"strings"
+	"sudonters/zootler/magicbeanvm"
 	"sudonters/zootler/magicbeanvm/ast"
+	"sudonters/zootler/magicbeanvm/code"
 	"sudonters/zootler/magicbeanvm/symbols"
 )
 
 var funcName = regexp.MustCompile("[^A-Z]")
+
+func DisassembleAll(compiled []magicbeanvm.CompiledSource) {
+	slices.SortFunc(compiled, func(a, b magicbeanvm.CompiledSource) int {
+		switch cmp := strings.Compare(a.OriginatingRegion, b.OriginatingRegion); cmp {
+		case 0:
+			return strings.Compare(a.Destination, b.Destination)
+		default:
+			return cmp
+		}
+	})
+
+	for _, compiled := range compiled {
+		fmt.Println()
+		fmt.Printf("%q: %q\n", compiled.OriginatingRegion, compiled.Destination)
+		fmt.Println(code.Disassemble(compiled.ByteCode.Tape))
+	}
+	fmt.Println()
+	fmt.Printf("Disassembled %06d\n", len(compiled))
+	fmt.Println()
+
+}
+
+func SymbolReport(symbolTable *symbols.Table) {
+	size, total, aliased := symbolTable.Size(), symbolTable.RawSize(), symbolTable.AliasCount()
+	fmt.Println("Symbol Report")
+	fmt.Printf("ALIAS: %04d %04X\n", aliased, aliased)
+	fmt.Printf("COUNT: %04d %04X\n", size, size)
+	fmt.Printf("TOTAL: %04d %04X\n", total, total)
+	fmt.Println()
+	fmt.Println("KINDS")
+	counts := make(map[symbols.Kind]int)
+	for symbol := range symbolTable.RawAll {
+		counts[symbol.Kind] = counts[symbol.Kind] + 1
+	}
+	for kind, count := range counts {
+		fmt.Printf("%04d %s\n", count, kind)
+	}
+	fmt.Println()
+
+}
+
+type analysis struct {
+	nodes   map[ast.Kind]int
+	invokes map[string]invokecount
+
+	invokeFinder *findinvokes
+}
+
+func newanalysis() analysis {
+	return analysis{
+		make(map[ast.Kind]int),
+		make(map[string]invokecount),
+		nil,
+	}
+}
+
+func (this analysis) Report() {
+	fmt.Println(this.String())
+}
+
+func (this analysis) String() string {
+	var str strings.Builder
+	fmt.Fprintln(&str, "INVOKE TOTALS")
+	for name, item := range this.invokes {
+		fmt.Fprintf(&str, "%06d\t%s\t\t%s\n", item.count, item.kind, name)
+	}
+	fmt.Fprintln(&str)
+
+	fmt.Fprintln(&str, "NODE TOTALS")
+	for kind, count := range this.nodes {
+		fmt.Fprintf(&str, "%06d\t%s\n", count, kind)
+	}
+	fmt.Fprintln(&str)
+
+	return str.String()
+}
+
+func (this analysis) register(env *magicbeanvm.CompilationEnvironment) {
+	env.Analysis.PostOptimize(func(env *magicbeanvm.CompilationEnvironment) ast.Visitor {
+		finder := findinvokes{env.Symbols, this.invokes}
+		return ast.Visitor{Invoke: finder.Invoke}
+	})
+	env.Analysis.PostOptimize(func(env *magicbeanvm.CompilationEnvironment) ast.Visitor {
+		return countnodes(this.nodes)
+	})
+}
 
 func countnodes(counter nodecounter) ast.Visitor {
 	return ast.Visitor{
@@ -37,15 +128,14 @@ func (c nodecounter) tick(node ast.Node) {
 	c[which] = count + 1
 }
 
-type symcount struct {
+type invokecount struct {
 	kind  symbols.Kind
 	count int
 }
 
 type findinvokes struct {
 	symbols  *symbols.Table
-	counting map[string]symcount
-	has      map[string]int
+	counting map[string]invokecount
 }
 
 func (this findinvokes) Invoke(node ast.Invoke, _ ast.Visiting) error {
@@ -53,43 +143,11 @@ func (this findinvokes) Invoke(node ast.Invoke, _ ast.Visiting) error {
 
 	if symbol != nil {
 		switch symbol.Kind {
-		case symbols.BUILT_IN:
+		case symbols.BUILT_IN, symbols.COMPILED_FUNC, symbols.COMP_TIME, symbols.FUNCTION:
 			sym := this.counting[symbol.Name]
-			this.counting[symbol.Name] = symcount{
+			this.counting[symbol.Name] = invokecount{
 				count: sym.count + 1,
 				kind:  symbol.Kind,
-			}
-		}
-		switch {
-		case symbol.Name == "has":
-			var name string
-			qty, ok := node.Args[1].(ast.Number)
-			if !ok {
-				qty = 1
-			}
-			switch what := node.Args[0].(type) {
-			case ast.Identifier:
-				name = what.Symbol.Name
-			case ast.String:
-				symbol := this.symbols.LookUpByName(string(what))
-				name = symbol.Name
-			default:
-				panic("unreachable...?")
-			}
-			this.has[name] = int(qty) + this.has[name]
-		case symbol.Name == "has_every" || symbol.Name == "has_anyof":
-			for i := range node.Args {
-				var name string
-				switch what := node.Args[i].(type) {
-				case ast.Identifier:
-					name = what.Symbol.Name
-				case ast.String:
-					symbol := this.symbols.LookUpByName(string(what))
-					name = symbol.Name
-				default:
-					panic("unreachable...?")
-				}
-				this.has[name] = this.has[name] + 1
 			}
 		}
 	}

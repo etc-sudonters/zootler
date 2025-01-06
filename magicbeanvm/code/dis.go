@@ -13,11 +13,11 @@ type dis struct {
 func (this dis) WriteOp(offset int, def Defintion) {
 	fmt.Fprintf(this, "0x%02X | ", offset)
 	this.writeu8(uint8(def.Op))
-	fmt.Fprintf(this, " | %-16s", def.Name)
+	fmt.Fprintf(this, " | %-12s", def.Name)
 }
 
 func (this dis) CopyU16(tape []byte) {
-	fmt.Fprintf(this, "0x%02X", ReadU16(tape))
+	fmt.Fprintf(this, "0x%04X", ReadU16(tape))
 }
 
 func (this dis) CopyU8(tape []byte) {
@@ -30,7 +30,6 @@ func (this dis) Clear() {
 
 func (this dis) writeu8(u8 uint8) {
 	fmt.Fprintf(this, "0x%02X", u8)
-
 }
 
 func Disassemble(tape Instructions) string {

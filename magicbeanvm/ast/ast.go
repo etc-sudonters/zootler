@@ -29,7 +29,7 @@ const (
 )
 
 type AnyOf []Node
-type Bool bool
+type Boolean bool
 type Compare struct {
 	LHS, RHS Node
 	Op       CompareOp
@@ -53,7 +53,7 @@ type Node interface {
 }
 
 func (a AnyOf) Kind() Kind      { return KindAnyOf }
-func (a Bool) Kind() Kind       { return KindBool }
+func (a Boolean) Kind() Kind    { return KindBool }
 func (a Compare) Kind() Kind    { return KindCompare }
 func (a Every) Kind() Kind      { return KindEvery }
 func (a Identifier) Kind() Kind { return KindIdentifier }
@@ -82,9 +82,9 @@ func (every Every) Reduce() Node {
 
 	for i := range every {
 		switch node := every[i].(type) {
-		case Bool:
+		case Boolean:
 			if !node {
-				return Bool(false)
+				return Boolean(false)
 			}
 		default:
 			nodes = append(nodes, node)
@@ -93,7 +93,7 @@ func (every Every) Reduce() Node {
 
 	switch len(nodes) {
 	case 0:
-		return Bool(true)
+		return Boolean(true)
 	case 1:
 		return nodes[0]
 	default:
@@ -121,9 +121,9 @@ func (anyof AnyOf) Reduce() Node {
 
 	for i := range anyof {
 		switch node := anyof[i].(type) {
-		case Bool:
+		case Boolean:
 			if node {
-				return Bool(true)
+				return Boolean(true)
 			}
 		default:
 			nodes = append(nodes, node)
@@ -132,7 +132,7 @@ func (anyof AnyOf) Reduce() Node {
 
 	switch len(nodes) {
 	case 0:
-		return Bool(false)
+		return Boolean(false)
 	case 1:
 		return nodes[0]
 	default:

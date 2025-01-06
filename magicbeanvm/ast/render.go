@@ -34,7 +34,7 @@ func (r *renderer) AnyOf(node AnyOf, visit Visiting) error {
 	return nil
 }
 
-func (r *renderer) Bool(node Bool, visit Visiting) error {
+func (r *renderer) Bool(node Boolean, visit Visiting) error {
 	switch node {
 	case true:
 		r.WriteString("True")

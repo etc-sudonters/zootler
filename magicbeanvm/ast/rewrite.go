@@ -57,7 +57,7 @@ func (r Rewriting) All(ast []Node) ([]Node, error) {
 
 type Rewriter struct {
 	AnyOf      RewriteFunc[AnyOf]
-	Bool       RewriteFunc[Bool]
+	Bool       RewriteFunc[Boolean]
 	Compare    RewriteFunc[Compare]
 	Every      RewriteFunc[Every]
 	Identifier RewriteFunc[Identifier]
@@ -77,7 +77,7 @@ func (v Rewriter) Rewrite(ast Node) (Node, error) {
 			return v.anyof(ast, v.Rewrite)
 		}
 		return v.AnyOf(ast, v.Rewrite)
-	case Bool:
+	case Boolean:
 		if v.Bool == nil {
 			return v.boolean(ast)
 		}
@@ -127,7 +127,7 @@ func (v Rewriter) anyof(anyof AnyOf, rewrite Rewriting) (Node, error) {
 	return AnyOf(items), err
 }
 
-func (v Rewriter) boolean(b Bool) (Node, error) {
+func (v Rewriter) boolean(b Boolean) (Node, error) {
 	return b, nil
 }
 
