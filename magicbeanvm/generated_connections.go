@@ -84,7 +84,7 @@ func (this GeneratedConnections) All(f func(*Source) bool) {
 	}
 }
 
-func (this GeneratedConnections) AppendTo(parent string) *generated {
+func (this GeneratedConnections) appendto(parent string) *generated {
 	items := this.connections[parent]
 	rank := len(items)
 	items = append(items, generated{
@@ -141,7 +141,7 @@ func (this ConnectionGenerator) Here(args []ast.Node) (ast.Node, error) {
 func (this ConnectionGenerator) generate(originationName string, rule ast.Node) ast.Node {
 	origination := this.tbl.Declare(originationName, symbols.LOCATION)
 	connections := this.ctx.Retrieve(generatedConnectionsKey).(GeneratedConnections)
-	connection := connections.AppendTo(origination.Name)
+	connection := connections.appendto(origination.Name)
 
 	destinationName := fmt.Sprintf("Token$%04d#%04d@%s", connections.generation, connection.rank, origination.Name)
 	destination := this.tbl.Declare(destinationName, symbols.EVENT)

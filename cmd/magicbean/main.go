@@ -16,9 +16,9 @@ func main() {
 	}
 	analysis := newanalysis()
 	compileEnv := magicbeanvm.NewCompileEnv(
-		magicbeanvm.Defaults(),
-		magicbeanvm.WithTokens(rawTokens),
-		magicbeanvm.WithCompilerFunctions(func(env *magicbeanvm.CompileEnv) optimizer.CompilerFunctions {
+		magicbeanvm.CompilerDefaults(),
+		magicbeanvm.CompilerWithTokens(rawTokens),
+		magicbeanvm.CompilerWithFunctions(func(env *magicbeanvm.CompileEnv) optimizer.CompilerFunctions {
 			return compfuncs{
 				constCompileFuncs(true),
 				magicbeanvm.ConnectionGeneration(env.Optimize.Context, env.Symbols),

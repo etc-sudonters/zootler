@@ -57,7 +57,7 @@ type Source struct {
 
 type ConfigureCompiler func(*CompileEnv)
 
-func WithCompilerFunctions(f func(*CompileEnv) optimizer.CompilerFunctions) ConfigureCompiler {
+func CompilerWithFunctions(f func(*CompileEnv) optimizer.CompilerFunctions) ConfigureCompiler {
 	return func(env *CompileEnv) {
 		funcs := f(env)
 		env.Optimize.CompilerFuncs = funcs
@@ -67,13 +67,13 @@ func WithCompilerFunctions(f func(*CompileEnv) optimizer.CompilerFunctions) Conf
 	}
 }
 
-func WithTokens(names []string) ConfigureCompiler {
+func CompilerWithTokens(names []string) ConfigureCompiler {
 	return func(env *CompileEnv) {
 		env.Symbols.DeclareMany(symbols.TOKEN, names)
 	}
 }
 
-func Defaults() ConfigureCompiler {
+func CompilerDefaults() ConfigureCompiler {
 	return func(env *CompileEnv) {
 		env.Optimize.Passes = 10
 
