@@ -9,7 +9,7 @@ import (
 	"github.com/etc-sudonters/substrate/slipup"
 )
 
-func intoIntrinsics(settings *settings.ZootrSettings) intrinsics {
+func intoIntrinsics(settings *settings.Zootr) intrinsics {
 	var i intrinsics
 	i.settings = settings
 	i.bools = make(map[string]bool)
@@ -44,7 +44,7 @@ func intoIntrinsicFunc(resolver settingResolver) compiler.Intrinsic {
 }
 
 type intrinsics struct {
-	settings *settings.ZootrSettings
+	settings *settings.Zootr
 	bools    map[string]bool
 }
 

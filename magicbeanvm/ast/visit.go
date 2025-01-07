@@ -7,9 +7,9 @@ type Visiting func(Node) error
 func (v Visiting) All(ast []Node) error {
 	var err error
 	for i := range ast {
-		err = v(ast[i])
-		if err != nil {
-			err = errors.Join(err)
+		thisErr := v(ast[i])
+		if thisErr != nil {
+			err = errors.Join(thisErr)
 		}
 	}
 	return err
@@ -131,6 +131,9 @@ func VisitInvert(invert Invert, visit Visiting) error {
 
 func VisitInvoke(invoke Invoke, visit Visiting) error {
 	err := visit(invoke.Target)
+	if err != nil {
+		return err
+	}
 
 	for i := range invoke.Args {
 		argErr := visit(invoke.Args[i])

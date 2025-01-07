@@ -9,7 +9,7 @@ func Has[F flagged](setting, expecting F) bool {
 
 }
 
-type ZootrSettings struct {
+type Zootr struct {
 	Seed            uint64
 	Worlds          uint8
 	LogicRules      LogicRuleSet

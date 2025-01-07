@@ -13,6 +13,7 @@ var compilerFuncNames = []string{
 	"load_setting",
 	"load_setting_2",
 	"had_night_start",
+	"region_has_shortcuts",
 }
 
 func CompilerFuncNames() []string {
@@ -27,6 +28,7 @@ type CompilerFunctions interface {
 	IsTrickEnabled([]ast.Node) (ast.Node, error)
 	LoadSetting([]ast.Node) (ast.Node, error)
 	LoadSetting2([]ast.Node) (ast.Node, error)
+	RegionHasShortcuts([]ast.Node) (ast.Node, error)
 }
 
 func RunCompilerFunctions(symbols *symbols.Table, funcs CompilerFunctions) ast.Rewriter {
@@ -62,6 +64,8 @@ func (this compilerfuncs) Invoke(node ast.Invoke, _ ast.Rewriting) (ast.Node, er
 		return this.funcs.LoadSetting(node.Args)
 	case "load_setting_2":
 		return this.funcs.LoadSetting2(node.Args)
+	case "region_has_shortcuts":
+		return this.funcs.RegionHasShortcuts(node.Args)
 	default:
 		return node, nil
 	}

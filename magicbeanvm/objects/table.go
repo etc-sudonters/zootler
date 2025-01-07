@@ -1,64 +1,39 @@
 package objects
 
-type Index uint16
+type BuildTable func(*Table)
 
-const maxObjects int = 0xFFFF
-
-func NewTableBuilder() TableBuilder {
-	builtins := make(frozen[string], len(builtInIndex))
-	for name := range builtInIndex {
-		builtins[name] = builtInIndex[name]
+func TableFrom(builder TableBuilder) BuildTable {
+	return func(tbl *Table) {
+		tbl.constants = make([]Object, len(builder.constants))
+		for obj, index := range builder.constants {
+			tbl.constants[index] = obj
+		}
 	}
+}
 
-	tbl := TableBuilder{
-		constants: make(tracker[Object], 256),
-		names:     make(tracker[string], 512),
-		builtins:  builtins,
+func TableWithBuiltIns(funcs BuiltInFunctionTable) BuildTable {
+	return func(tbl *Table) {
+		tbl.BuiltIns = NewBuiltins(funcs)
 	}
+}
 
+func NewTable(build ...BuildTable) Table {
+	var tbl Table
+	for i := range build {
+		build[i](&tbl)
+	}
 	return tbl
 }
 
-type tracker[V comparable] map[V]Index
-
-func (this tracker[V]) track(tracking V) Index {
-	if index, exists := this[tracking]; exists {
-		return index
-	}
-
-	size := len(this)
-	if size > maxObjects {
-		panic("too many constants")
-	}
-
-	index := Index(size)
-	this[tracking] = index
-	return index
+type Table struct {
+	constants []Object
+	BuiltIns  BuiltInFunctions
 }
 
-type frozen[V comparable] map[V]Index
-
-func (this frozen[V]) track(tracking V) Index {
-	if index, exists := this[tracking]; exists {
-		return index
-	}
-	panic("cannot add new items to frozen tracker")
+func (this *Table) Constant(index Index) Object {
+	return this.constants[int(index)]
 }
 
-type TableBuilder struct {
-	constants tracker[Object]
-	builtins  frozen[string]
-	names     tracker[string]
-}
-
-func (this *TableBuilder) Constant(constant Object) Index {
-	return this.constants.track(constant)
-}
-
-func (this *TableBuilder) Name(name string) Index {
-	return this.names.track(name)
-}
-
-func (this *TableBuilder) BuiltIn(name string) Index {
-	return this.builtins.track(name)
+func (this *Table) BuiltIn(index Index) *BuiltInFunc {
+	return this.BuiltIns.Get(index)
 }

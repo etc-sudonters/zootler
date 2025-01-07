@@ -109,7 +109,10 @@ func (this *compiler) Identifier(node ast.Identifier, visit ast.Visiting) error 
 		return nil
 	case symbols.TOKEN, symbols.EVENT:
 		index := this.objects.Name(symbol.Name)
-		this.emit(code.PUSH_PTR, int(index))
+		this.emit(code.PUSH_TOKEN, int(index))
+	case symbols.SETTING:
+		index := this.objects.Name(symbol.Name)
+		this.emit(code.PUSH_SETTING, int(index))
 	default:
 		return fmt.Errorf("uncompilable identifier: %s", symbol)
 	}
@@ -140,13 +143,15 @@ func (this *compiler) Invoke(node ast.Invoke, visit ast.Visiting) error {
 			}
 		case "has_anyof":
 			fast = true
-			if argsErr := visit.All(node.Args); argsErr != nil {
+			argsErr := visit.All(node.Args)
+			if argsErr != nil {
 				return argsErr
 			}
 			this.emit(code.CHK_ANY, len(node.Args))
 		case "has_every":
 			fast = true
-			if argsErr := visit.All(node.Args); argsErr != nil {
+			argsErr := visit.All(node.Args)
+			if argsErr != nil {
 				return argsErr
 			}
 			this.emit(code.CHK_ALL, len(node.Args))

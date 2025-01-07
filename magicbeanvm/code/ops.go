@@ -11,8 +11,9 @@ var definitions = map[Op]Defintion{
 	PUSH_T:       {"PUSH_T", PUSH_T, nil},
 	PUSH_F:       {"PUSH_F", PUSH_F, nil},
 	PUSH_CONST:   {"PUSH_CONST", PUSH_CONST, []int{2}},
-	PUSH_PTR:     {"PUSH_PTR", PUSH_PTR, []int{2}},
+	PUSH_TOKEN:   {"PUSH_TOKEN", PUSH_TOKEN, []int{2}},
 	PUSH_BUILTIN: {"PUSH_BUILTIN", PUSH_BUILTIN, []int{2}},
+	PUSH_SETTING: {"PUSH_SETTING", PUSH_SETTING, []int{2}},
 	INVERT:       {"INVERT", INVERT, nil},
 	NEED_ALL:     {"NEED_ALL", NEED_ALL, []int{2}},
 	NEED_ANY:     {"NEED_ANY", NEED_ANY, []int{2}},
@@ -70,11 +71,12 @@ const (
 	PUSH_T          = 0x21
 	PUSH_F          = 0x22
 	PUSH_CONST      = 0x23
-	PUSH_PTR        = 0x25
+	PUSH_TOKEN      = 0x25
 	PUSH_BUILTIN    = 0x26
-	INVERT          = 0x27
-	NEED_ALL        = 0x31
-	NEED_ANY        = 0x32
+	PUSH_SETTING    = 0x27
+	INVERT          = 0x31
+	NEED_ALL        = 0x32
+	NEED_ANY        = 0x33
 	CHK_QTY         = 0x41
 	CHK_ALL         = 0x42
 	CHK_ANY         = 0x43

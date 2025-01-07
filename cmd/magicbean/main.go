@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"sudonters/zootler/internal/settings"
 	"sudonters/zootler/magicbeanvm"
-	"sudonters/zootler/magicbeanvm/ast"
 	"sudonters/zootler/magicbeanvm/optimizer"
 )
 
@@ -14,6 +14,13 @@ func main() {
 	if tokenErr != nil {
 		panic(tokenErr)
 	}
+
+	locations, locationErr := readLogicFiles(".data/logic/glitchless")
+	if locationErr != nil {
+		panic(locationErr)
+	}
+
+	seedSettings := settings.Default()
 	analysis := newanalysis()
 	compileEnv := magicbeanvm.NewCompileEnv(
 		magicbeanvm.CompilerDefaults(),
@@ -21,6 +28,10 @@ func main() {
 		magicbeanvm.CompilerWithFunctions(func(env *magicbeanvm.CompileEnv) optimizer.CompilerFunctions {
 			return compfuncs{
 				constCompileFuncs(true),
+				settingCompilerFuncs{
+					settings: &seedSettings,
+					symbols:  env.Symbols,
+				},
 				magicbeanvm.ConnectionGeneration(env.Optimize.Context, env.Symbols),
 			}
 
@@ -35,14 +46,9 @@ func main() {
 		},
 	)
 
+	source, _ := SourceRules(locations), FakeSourceRules()
 	codeGen := magicbeanvm.Compiler(&compileEnv)
 
-	locations, locationErr := readLogicFiles(".data/logic/glitchless")
-	if locationErr != nil {
-		panic(locationErr)
-	}
-
-	source := SourceRules(locations)
 	compiled := make([]magicbeanvm.CompiledSource, len(source))
 	var failedCompiles []failedcompile
 
@@ -85,6 +91,7 @@ func main() {
 
 	compiled = slices.Concat(compiled, connections)
 
+	ExectuteAll(&compileEnv, compiled)
 	DisassembleAll(compiled)
 	analysis.Report()
 	SymbolReport(compileEnv.Symbols)
@@ -112,31 +119,4 @@ func (this failedcompile) String() string {
 	}
 
 	return str.String()
-}
-
-type compfuncs struct {
-	constCompileFuncs
-	magicbeanvm.ConnectionGenerator
-}
-
-type constCompileFuncs ast.Boolean
-
-func (ct constCompileFuncs) LoadSetting([]ast.Node) (ast.Node, error) {
-	return ast.Boolean(ct), nil
-}
-
-func (ct constCompileFuncs) LoadSetting2([]ast.Node) (ast.Node, error) {
-	return ast.Boolean(ct), nil
-}
-
-func (ct constCompileFuncs) CompareSetting([]ast.Node) (ast.Node, error) {
-	return ast.Boolean(ct), nil
-}
-
-func (ct constCompileFuncs) IsTrickEnabled([]ast.Node) (ast.Node, error) {
-	return ast.Boolean(ct), nil
-}
-
-func (ct constCompileFuncs) HadNightStart([]ast.Node) (ast.Node, error) {
-	return ast.Boolean(ct), nil
 }

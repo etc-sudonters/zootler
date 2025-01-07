@@ -43,6 +43,12 @@ type CompiledSource struct {
 	ByteCode compiler.ByteCode
 }
 
+func (this CompiledSource) ExecutionUnit() vm.ExecutionUnit {
+	return vm.ExecutionUnit{
+		ByteCode: this.ByteCode,
+	}
+}
+
 func ptr[T any](what T) *T {
 	return &what
 }

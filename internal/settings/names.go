@@ -39,8 +39,6 @@ var names = []string{
 	"keysanity",
 	"lacs_condition",
 	"lacs_hearts",
-	"lacs_hearts",
-	"lacs_medallions",
 	"lacs_medallions",
 	"lacs_rewards",
 	"lacs_stones",

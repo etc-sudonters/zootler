@@ -10,41 +10,55 @@ func BuiltInFunctionNames() []string {
 	return names
 }
 
-func GetBuiltInIndex(name string) (index Index, exists bool) {
-	index, exists = builtInIndex[name]
-	return
+func GetBuiltInIndex(name string) (Index, bool) {
+	def, exists := builtInIndex[name]
+	return def.index, exists
 }
 
-var builtInIndex = map[string]Index{
-	"at_dampe_time":          Index(0),
-	"at_day":                 Index(1),
-	"at_night":               Index(2),
-	"has":                    Index(3),
-	"has_all_notes_for_song": Index(4),
-	"has_anyof":              Index(5),
-	"has_bottle":             Index(6),
-	"has_dungeon_rewards":    Index(7),
-	"has_every":              Index(8),
-	"has_hearts":             Index(9),
-	"has_medallions":         Index(10),
-	"has_stones":             Index(11),
-	"is_starting_age":        Index(12),
-	"region_has_shortcuts":   Index(13),
-	"is_adult":               Index(14),
-	"is_child":               Index(15),
+type builtindef struct {
+	name   string
+	index  Index
+	params int
 }
 
-func NewBuiltins(tbl BuiltInFunctionTable) BuiltIns {
-	var funcs BuiltIns
+var builtInIndex = map[string]builtindef{
+	// these functions have dedicated op codes and are almost always invoked
+	// via those codes rather than being loaded into the stack like other calls
+	"has":       {"has", Index(0), 2},
+	"has_anyof": {"has_anyof", Index(1), -1},
+	"has_every": {"has_every", Index(2), -1},
+	"is_adult":  {"is_adult", Index(3), 0},
+	"is_child":  {"is_child", Index(4), 0},
+
+	// TODO evaluate these at compile time b/c they depend on settings (shuffle
+	// notes, shuffle entrances) and can be turned into constants or replaced
+	// w/ a new builtin
+	"has_all_notes_for_song": {"has_all_notes_for_song", Index(5), 1},
+	"at_dampe_time":          {"at_dampe_time", Index(6), 0},
+	"at_day":                 {"at_day", Index(7), 0},
+	"at_night":               {"at_night", Index(8), 0},
+
+	// these are all invoked infrequently, with only has_bottle being noticable
+	// but not often enough to warrant a dedicated op code
+	"has_bottle":          {"has_bottle", Index(9), 0},
+	"has_dungeon_rewards": {"has_dungeon_rewards", Index(10), 1},
+	"has_hearts":          {"has_hearts", Index(11), 1},
+	"has_medallions":      {"has_medallions", Index(12), 1},
+	"has_stones":          {"has_stones", Index(13), 1},
+	"is_starting_age":     {"is_starting_age", Index(14), 0},
+}
+
+func NewBuiltins(tbl BuiltInFunctionTable) BuiltInFunctions {
+	var funcs BuiltInFunctions
 	if tbl == nil {
 		panic("nil function table")
 	}
 
-	funcs.tbl = tbl
+	funcs.BuiltInFunctionTable = tbl
 	funcs.objs = make([]BuiltInFunc, len(builtInIndex))
-	for name, index := range builtInIndex {
+	for _, def := range builtInIndex {
 		var fn Callable
-		switch name {
+		switch def.name {
 		case "at_dampe_time":
 			fn = tbl.AtDampeTime
 		case "at_day":
@@ -75,46 +89,44 @@ func NewBuiltins(tbl BuiltInFunctionTable) BuiltIns {
 			fn = tbl.IsChild
 		case "is_starting_age":
 			fn = tbl.IsStartingAge
-		case "region_has_shortcuts":
-			fn = tbl.RegionHasShortcuts
 		default:
-			panic(fmt.Errorf("unknown built in name %q", name))
+			panic(fmt.Errorf("unknown built in name %q", def.name))
 		}
 
-		funcs.objs[int(index)] = BuiltInFunc{
-			Name: name,
-			Func: fn,
+		funcs.objs[int(def.index)] = BuiltInFunc{
+			Func:   fn,
+			Name:   def.name,
+			Params: def.params,
 		}
 	}
 
 	return funcs
 }
 
-type BuiltIns struct {
-	tbl  BuiltInFunctionTable
+type BuiltInFunctions struct {
+	BuiltInFunctionTable
 	objs []BuiltInFunc
 }
 
-func (this *BuiltIns) Get(idx Index) *BuiltInFunc {
+func (this *BuiltInFunctions) Get(idx Index) *BuiltInFunc {
 	fn := &this.objs[int(idx)]
 	return fn
 }
 
 type BuiltInFunctionTable interface {
-	AtDampeTime(...Object) (Object, error)
-	AtDay(...Object) (Object, error)
-	AtNight(...Object) (Object, error)
-	Has(...Object) (Object, error)
-	HasAllNotesForSong(...Object) (Object, error)
-	HasAnyOf(...Object) (Object, error)
-	HasBottle(...Object) (Object, error)
-	HasDungeonRewards(...Object) (Object, error)
-	HasEvery(...Object) (Object, error)
-	HasHearts(...Object) (Object, error)
-	HasMedallions(...Object) (Object, error)
-	HasStones(...Object) (Object, error)
-	IsAdult(...Object) (Object, error)
-	IsChild(...Object) (Object, error)
-	IsStartingAge(...Object) (Object, error)
-	RegionHasShortcuts(...Object) (Object, error)
+	AtDampeTime([]Object) (Object, error)
+	AtDay([]Object) (Object, error)
+	AtNight([]Object) (Object, error)
+	Has([]Object) (Object, error)
+	HasAllNotesForSong([]Object) (Object, error)
+	HasAnyOf([]Object) (Object, error)
+	HasBottle([]Object) (Object, error)
+	HasDungeonRewards([]Object) (Object, error)
+	HasEvery([]Object) (Object, error)
+	HasHearts([]Object) (Object, error)
+	HasMedallions([]Object) (Object, error)
+	HasStones([]Object) (Object, error)
+	IsAdult([]Object) (Object, error)
+	IsChild([]Object) (Object, error)
+	IsStartingAge([]Object) (Object, error)
 }

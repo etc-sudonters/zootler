@@ -1,7 +1,7 @@
 package settings
 
-func Default() ZootrSettings {
-	var s ZootrSettings
+func Default() Zootr {
+	var s Zootr
 	s.LogicRules = LogicGlitchess
 	s.TriforceHunt = nil
 	s.LacsCondition = CreateLacs(CondDefault, 0)

@@ -57,7 +57,7 @@ type WorldCompiler struct {
 
 func (wc *WorldCompiler) Setup(z *app.Zootlr) error {
 	prog := app.GetResource[zasm.Assembly](z)
-	settings := app.GetResource[settings.ZootrSettings](z)
+	settings := app.GetResource[settings.Zootr](z)
 
 	assembly := &prog.Res
 	compiled := CompiledWorldRules{

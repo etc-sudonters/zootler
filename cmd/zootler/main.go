@@ -87,7 +87,7 @@ func main() {
 	}
 
 	z, appCreateErr := app.New(ctx,
-		app.SetupResource(settings.ZootrSettings{}),
+		app.SetupResource(settings.Zootr{}),
 		app.Setup(&carpenters.Mutoh{
 			Ichiro: ichiro.DataLoader{
 				Table: ichiro.TableLoader{
