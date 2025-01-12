@@ -3,10 +3,10 @@ package compiler
 import (
 	"fmt"
 	"slices"
-	"sudonters/zootler/magicbeanvm/ast"
-	"sudonters/zootler/magicbeanvm/code"
-	"sudonters/zootler/magicbeanvm/objects"
-	"sudonters/zootler/magicbeanvm/symbols"
+	"sudonters/zootler/midologic/ast"
+	"sudonters/zootler/midologic/code"
+	"sudonters/zootler/midologic/objects"
+	"sudonters/zootler/midologic/symbols"
 )
 
 type ByteCode struct {
@@ -19,12 +19,13 @@ func (this *ByteCode) concat(tape code.Instructions) int {
 	return written
 }
 
-func Compile(nodes ast.Node, symbols *symbols.Table, objects *objects.TableBuilder) (ByteCode, error) {
+func Compile(nodes ast.Node, symbols *symbols.Table, objects *objects.TableBuilder, fastops FastOps) (ByteCode, error) {
 	var compiler compiler
 	var bytecode ByteCode
 	compiler.symbols = symbols
 	compiler.objects = objects
 	compiler.code = &bytecode
+	compiler.fastops = fastops
 
 	visiting := &compiler
 	visitor := ast.Visitor{
@@ -46,12 +47,17 @@ type compiler struct {
 	tapePtr int
 	symbols *symbols.Table
 	objects *objects.TableBuilder
+	fastops FastOps
 	code    *ByteCode
 }
 
 func (this *compiler) emit(op code.Op, operands ...int) int {
+	return this.join(code.Make(op, operands...))
+}
+
+func (this *compiler) join(emitted code.Instructions) int {
 	startOfInstruction := this.tapePtr
-	this.tapePtr += this.code.concat(code.Make(op, operands...))
+	this.tapePtr += this.code.concat(emitted)
 	return startOfInstruction
 }
 
@@ -103,15 +109,15 @@ func (this *compiler) Every(node ast.Every, visit ast.Visiting) error {
 func (this *compiler) Identifier(node ast.Identifier, visit ast.Visiting) error {
 	symbol := this.symbols.LookUpByIndex(node.AsIndex())
 	switch symbol.Kind {
-	case symbols.BUILT_IN:
-		index := this.objects.BuiltIn(symbol.Name)
+	case symbols.BUILT_IN_FUNCTION:
+		index := this.objects.GetBuiltIn(symbol.Name)
 		this.emit(code.PUSH_BUILTIN, int(index))
 		return nil
 	case symbols.TOKEN, symbols.EVENT:
-		index := this.objects.Name(symbol.Name)
+		index := this.objects.GetPointerFor(symbol.Name)
 		this.emit(code.PUSH_TOKEN, int(index))
 	case symbols.SETTING:
-		index := this.objects.Name(symbol.Name)
+		index := this.objects.GetPointerFor(symbol.Name)
 		this.emit(code.PUSH_SETTING, int(index))
 	default:
 		return fmt.Errorf("uncompilable identifier: %s", symbol)
@@ -128,43 +134,17 @@ func (this *compiler) Invert(node ast.Invert, visit ast.Visiting) error {
 }
 
 func (this *compiler) Invoke(node ast.Invoke, visit ast.Visiting) error {
-	target := ast.LookUpNodeInTable(this.symbols, node.Target)
-	if target != nil {
-		var fast bool
-		switch target.Name {
-		case "has":
-			what := ast.LookUpNodeInTable(this.symbols, node.Args[0])
-			qty, isQty := node.Args[1].(ast.Number)
+	if callee := ast.LookUpNodeInTable(this.symbols, node.Target); callee != nil {
+		if fastOp := this.fastops[callee.Name]; fastOp != nil {
+			code, err := fastOp(node, this.symbols, this.objects, visit)
+			if err != nil {
+				return fmt.Errorf("during fastop generation %q: %w", callee.Name, err)
+			}
 
-			if what != nil && isQty {
-				fast = true
-				ptr := this.objects.Name(what.Name)
-				this.emit(code.CHK_QTY, int(ptr), int(qty))
+			if len(code) != 0 {
+				this.join(code)
+				return nil
 			}
-		case "has_anyof":
-			fast = true
-			argsErr := visit.All(node.Args)
-			if argsErr != nil {
-				return argsErr
-			}
-			this.emit(code.CHK_ANY, len(node.Args))
-		case "has_every":
-			fast = true
-			argsErr := visit.All(node.Args)
-			if argsErr != nil {
-				return argsErr
-			}
-			this.emit(code.CHK_ALL, len(node.Args))
-		case "is_adult":
-			fast = true
-			this.emit(code.IS_ADULT)
-		case "is_child":
-			fast = true
-			this.emit(code.IS_CHILD)
-		}
-
-		if fast {
-			return nil
 		}
 	}
 
@@ -181,14 +161,14 @@ func (this *compiler) Invoke(node ast.Invoke, visit ast.Visiting) error {
 
 func (this *compiler) Number(node ast.Number, visit ast.Visiting) error {
 	obj := objects.Number(node)
-	idx := this.objects.Constant(obj)
+	idx := this.objects.AddConstant(obj)
 	this.emit(code.PUSH_CONST, int(idx))
 	return nil
 }
 
 func (this *compiler) String(node ast.String, visit ast.Visiting) error {
 	obj := objects.String(node)
-	idx := this.objects.Constant(obj)
+	idx := this.objects.AddConstant(obj)
 	this.emit(code.PUSH_CONST, int(idx))
 	return nil
 }

@@ -2,8 +2,8 @@ package optimizer
 
 import (
 	"fmt"
-	"sudonters/zootler/magicbeanvm/ast"
-	"sudonters/zootler/magicbeanvm/symbols"
+	"sudonters/zootler/midologic/ast"
+	"sudonters/zootler/midologic/symbols"
 )
 
 func InvokeBareFuncs(symbols *symbols.Table, funcs *ast.PartialFunctionTable) ast.Rewriter {
@@ -21,9 +21,9 @@ type invokebarefuncs struct {
 
 func (this invokebarefuncs) Identifier(node ast.Identifier, _ ast.Rewriting) (ast.Node, error) {
 	switch node.Symbol.Kind {
-	case symbols.BUILT_IN:
+	case symbols.BUILT_IN_FUNCTION, symbols.COMPILER_FUNCTION:
 		return ast.Invoke{Target: node, Args: nil}, nil
-	case symbols.FUNCTION, symbols.COMPILED_FUNC:
+	case symbols.FUNCTION, symbols.SCRIPTED_FUNC:
 		fn, exists := this.funcs.Get(node.Symbol.Name)
 		if !exists {
 			return nil, fmt.Errorf("fn %q was declared but not available in table", node.Symbol.Name)

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 	"sudonters/zootler/internal/ruleparser"
-	"sudonters/zootler/magicbeanvm/symbols"
+	"sudonters/zootler/midologic/symbols"
 )
 
 var (

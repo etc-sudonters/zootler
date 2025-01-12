@@ -5,16 +5,16 @@ import (
 	"regexp"
 	"slices"
 	"strings"
-	"sudonters/zootler/magicbeanvm"
-	"sudonters/zootler/magicbeanvm/ast"
-	"sudonters/zootler/magicbeanvm/code"
-	"sudonters/zootler/magicbeanvm/symbols"
+	"sudonters/zootler/midologic"
+	"sudonters/zootler/midologic/ast"
+	"sudonters/zootler/midologic/code"
+	"sudonters/zootler/midologic/symbols"
 )
 
 var funcName = regexp.MustCompile("[^A-Z]")
 
-func DisassembleAll(compiled []magicbeanvm.CompiledSource) {
-	slices.SortFunc(compiled, func(a, b magicbeanvm.CompiledSource) int {
+func DisassembleAll(compiled []midologic.CompiledSource) {
+	slices.SortFunc(compiled, func(a, b midologic.CompiledSource) int {
 		switch cmp := strings.Compare(a.OriginatingRegion, b.OriginatingRegion); cmp {
 		case 0:
 			return strings.Compare(a.Destination, b.Destination)
@@ -89,12 +89,12 @@ func (this analysis) String() string {
 	return str.String()
 }
 
-func (this analysis) register(env *magicbeanvm.CompileEnv) {
-	env.Analysis.PostOptimize(func(env *magicbeanvm.CompileEnv) ast.Visitor {
+func (this analysis) register(env *midologic.CompileEnv) {
+	env.Analysis.PostOptimize(func(env *midologic.CompileEnv) ast.Visitor {
 		finder := findinvokes{env.Symbols, this.invokes}
 		return ast.Visitor{Invoke: finder.Invoke}
 	})
-	env.Analysis.PostOptimize(func(env *magicbeanvm.CompileEnv) ast.Visitor {
+	env.Analysis.PostOptimize(func(env *midologic.CompileEnv) ast.Visitor {
 		return countnodes(this.nodes)
 	})
 }
@@ -143,7 +143,7 @@ func (this findinvokes) Invoke(node ast.Invoke, _ ast.Visiting) error {
 
 	if symbol != nil {
 		switch symbol.Kind {
-		case symbols.BUILT_IN, symbols.COMPILED_FUNC, symbols.COMP_FUNC, symbols.FUNCTION:
+		case symbols.BUILT_IN_FUNCTION, symbols.SCRIPTED_FUNC, symbols.COMPILER_FUNCTION, symbols.FUNCTION:
 			sym := this.counting[symbol.Name]
 			this.counting[symbol.Name] = invokecount{
 				count: sym.count + 1,

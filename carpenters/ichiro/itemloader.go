@@ -77,7 +77,7 @@ func (i TokenComponents) special(vt table.Values) table.Values {
 	}
 
 	if _, ok := i.Special["bottle"]; ok {
-		vt = append(vt, components.Bottle{})
+		vt = append(vt, components.IsBottle{})
 	}
 
 	if _, ok := i.Special["ocarina_button"]; ok {

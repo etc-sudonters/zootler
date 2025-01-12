@@ -119,10 +119,10 @@ func (s *Sym) SetKind(t Kind) {
 	case s.Kind == EVENT && t == TOKEN:
 		return
 		// aliased over
-	case t == COMPILED_FUNC && s.Kind == TOKEN:
-		s.Kind = COMPILED_FUNC
+	case t == SCRIPTED_FUNC && s.Kind == TOKEN:
+		s.Kind = SCRIPTED_FUNC
 		// function is least specific
-	case t == FUNCTION && (s.Kind == BUILT_IN || s.Kind == COMP_FUNC || s.Kind == COMPILED_FUNC):
+	case t == FUNCTION && (s.Kind == BUILT_IN_FUNCTION || s.Kind == COMPILER_FUNCTION || s.Kind == SCRIPTED_FUNC):
 		return
 	case s.Kind == UNKNOWN:
 		s.Kind = t
@@ -141,18 +141,18 @@ type Index int
 type Kind string
 
 const (
-	_             Kind = ""
-	BUILT_IN           = "BUILT_IN"
-	COMP_FUNC          = "COMP_FUNC"
-	FUNCTION           = "FUNCTION"
-	GLOBAL             = "GLOBAL"
-	LOCATION           = "LOCATION"
-	EVENT              = "EVENT"
-	SETTING            = "SETTING"
-	TOKEN              = "TOKEN"
-	UNKNOWN            = "UNKNOWN"
-	COMPILED_FUNC      = "COMPILED_FUNC"
-	TRANSIT            = "TRANSIT"
-	ALIAS              = "ALIAS"
-	LOCAL              = "LOCAL"
+	_                 Kind = ""
+	BUILT_IN_FUNCTION      = "BUILT_IN_FUNCTION"
+	COMPILER_FUNCTION      = "COMPILER_FUNCTION"
+	FUNCTION               = "FUNCTION"
+	GLOBAL                 = "GLOBAL"
+	LOCATION               = "LOCATION"
+	EVENT                  = "EVENT"
+	SETTING                = "SETTING"
+	TOKEN                  = "TOKEN"
+	UNKNOWN                = "UNKNOWN"
+	SCRIPTED_FUNC          = "SCRIPTED_FUNC"
+	TRANSIT                = "TRANSIT"
+	ALIAS                  = "ALIAS"
+	LOCAL                  = "LOCAL"
 )

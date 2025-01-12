@@ -7,9 +7,9 @@ import (
 	"slices"
 	"strings"
 	"sudonters/zootler/internal"
-	"sudonters/zootler/magicbeanvm"
-	"sudonters/zootler/magicbeanvm/ast"
-	"sudonters/zootler/magicbeanvm/symbols"
+	"sudonters/zootler/midologic"
+	"sudonters/zootler/midologic/ast"
+	"sudonters/zootler/midologic/symbols"
 
 	"github.com/etc-sudonters/substrate/slipup"
 )
@@ -67,9 +67,12 @@ var rules = []hardCodedRule{
 		{"recursive-macro", "here(at('dance hall', dance))"},
 		{"Big Poe Kill", "can_ride_epona and Bow and has_bottle"},
 		{"nest-expansions", "at('Forest Temple Outside Upper Ledge', here(logic_forest_mq_hallway_switch_boomerang and can_use(Boomerang)))"},
+		{"hmmm", "is_adult and can_trigger_lacs"},
 	*/
 
-	{"hmmm", "is_adult and can_trigger_lacs"},
+	{"DMC Lower Nearby", "at('DMC Lower Nearby', can_use(Megaton_Hammer))"},
+	{"DMC Lower Nearby", "here(can_use(Megaton_Hammer))"},
+	{"can_use(Megaton_Hammer)", "can_use(Megaton_Hammer)"},
 }
 
 func fakeLoadingRules() ([]loadingRule, error) {
@@ -81,7 +84,7 @@ func fakeLoadingRules() ([]loadingRule, error) {
 			parent: item.where,
 			name:   item.where,
 			body:   item.logic,
-			kind:   symbols.EVENT,
+			kind:   symbols.LOCATION,
 		})
 	}
 
@@ -122,12 +125,12 @@ type loadingRule struct {
 	kind               symbols.Kind
 }
 
-func FakeSourceRules() []magicbeanvm.Source {
-	source := make([]magicbeanvm.Source, len(rules))
+func FakeSourceRules() []midologic.Source {
+	source := make([]midologic.Source, len(rules))
 	for i := range source {
-		source[i] = magicbeanvm.Source{
-			Kind:              magicbeanvm.SourceCheck,
-			String:            magicbeanvm.SourceString(rules[i].logic),
+		source[i] = midologic.Source{
+			Kind:              midologic.SourceTransit,
+			String:            midologic.SourceString(rules[i].logic),
 			OriginatingRegion: rules[i].where,
 			Destination:       rules[i].where,
 		}
@@ -135,17 +138,17 @@ func FakeSourceRules() []magicbeanvm.Source {
 	return source
 }
 
-func SourceRules(locations []location) (source []magicbeanvm.Source) {
+func SourceRules(locations []location) (source []midologic.Source) {
 	type pair struct {
-		kind   magicbeanvm.SourceKind
+		kind   midologic.SourceKind
 		source map[string]string
 	}
 
 	for _, location := range locations {
 		pairs := []pair{
-			{magicbeanvm.SourceCheck, location.Locations},
-			{magicbeanvm.SourceEvent, location.Events},
-			{magicbeanvm.SourceTransit, location.Exits},
+			{midologic.SourceCheck, location.Locations},
+			{midologic.SourceEvent, location.Events},
+			{midologic.SourceTransit, location.Exits},
 		}
 
 		for _, pair := range pairs {
@@ -160,12 +163,12 @@ func SourceRules(locations []location) (source []magicbeanvm.Source) {
 	return
 }
 
-func sourceRules(origin string, kind magicbeanvm.SourceKind, rules map[string]string) []magicbeanvm.Source {
-	chunk := make([]magicbeanvm.Source, 0, len(rules))
+func sourceRules(origin string, kind midologic.SourceKind, rules map[string]string) []midologic.Source {
+	chunk := make([]midologic.Source, 0, len(rules))
 	for destination, rule := range rules {
-		chunk = append(chunk, magicbeanvm.Source{
+		chunk = append(chunk, midologic.Source{
 			Kind:              kind,
-			String:            magicbeanvm.SourceString(rule),
+			String:            midologic.SourceString(rule),
 			OriginatingRegion: origin,
 			Destination:       destination,
 		})

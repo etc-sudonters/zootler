@@ -2,17 +2,16 @@ package main
 
 import (
 	"fmt"
-	"sudonters/zootler/magicbeanvm"
-	"sudonters/zootler/magicbeanvm/ast"
-	"sudonters/zootler/magicbeanvm/code"
-	"sudonters/zootler/magicbeanvm/objects"
-	"sudonters/zootler/magicbeanvm/vm"
+	"sudonters/zootler/midologic"
+	"sudonters/zootler/midologic/ast"
+	"sudonters/zootler/midologic/code"
+	"sudonters/zootler/midologic/objects"
+	"sudonters/zootler/midologic/vm"
 )
 
-func ExectuteAll(env *magicbeanvm.CompileEnv, compiled []magicbeanvm.CompiledSource) {
+func ExectuteAll(env *midologic.CompileEnv, compiled []midologic.CompiledSource) {
 	objTable := objects.NewTable(
 		objects.TableFrom(*env.Objects),
-		objects.TableWithBuiltIns(constbuiltins(true)),
 	)
 	engine := vm.New(&objTable)
 

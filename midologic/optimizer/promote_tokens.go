@@ -2,8 +2,8 @@ package optimizer
 
 import (
 	"strings"
-	"sudonters/zootler/magicbeanvm/ast"
-	"sudonters/zootler/magicbeanvm/symbols"
+	"sudonters/zootler/midologic/ast"
+	"sudonters/zootler/midologic/symbols"
 )
 
 func PromoteTokens(tbl *symbols.Table) ast.Rewriter {

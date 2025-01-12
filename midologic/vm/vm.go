@@ -3,9 +3,9 @@ package vm
 import (
 	"errors"
 	"fmt"
-	"sudonters/zootler/magicbeanvm/code"
-	"sudonters/zootler/magicbeanvm/compiler"
-	"sudonters/zootler/magicbeanvm/objects"
+	"sudonters/zootler/midologic/code"
+	"sudonters/zootler/midologic/compiler"
+	"sudonters/zootler/midologic/objects"
 )
 
 func GlobalNames() []string {
@@ -81,13 +81,11 @@ func (this *stack[T]) pop() T {
 
 type VM struct {
 	objects *objects.Table
-	stack   stack[objects.Object]
 }
 
 func New(objs *objects.Table) VM {
 	var r VM
 	r.objects = objs
-	r.stack = newstack[objects.Object](256)
 	return r
 }
 
@@ -116,8 +114,16 @@ func (this *ExecutionUnit) endOfTape() int {
 	return len(this.ByteCode.Tape)
 }
 
+func (this *ExecutionUnit) readIndex() objects.Index {
+	return objects.Index(this.readu16())
+}
+
+func (this *ExecutionUnit) readOp() code.Op {
+	return code.Op(this.readu8())
+}
+
 func (this *VM) Execute(executing ExecutionUnit) (result objects.Object, err error) {
-	this.stack.reset()
+	stack := newstack[objects.Object](256)
 	executing.reset()
 	EOT := executing.endOfTape()
 
@@ -135,7 +141,7 @@ func (this *VM) Execute(executing ExecutionUnit) (result objects.Object, err err
 
 loop:
 	for executing.ip < EOT {
-		thisOp := code.Op(executing.readu8())
+		thisOp := executing.readOp()
 		switch thisOp {
 		case code.NOP:
 			continue
@@ -143,126 +149,90 @@ loop:
 			err = errors.Join(errors.New("execution halted"), err)
 			break loop
 		case code.PUSH_T:
-			this.stack.push(objects.Boolean(true))
+			stack.push(objects.Boolean(true))
 		case code.PUSH_F:
-			this.stack.push(objects.Boolean(false))
+			stack.push(objects.Boolean(false))
 		case code.PUSH_CONST:
-			index := executing.readu16()
-			constant := this.objects.Constant(objects.Index(index))
-			this.stack.push(constant)
-		case code.PUSH_TOKEN:
-			ptr := executing.readu16()
-			this.stack.push(objects.Pointer(ptr, objects.PtrToken))
-		case code.PUSH_SETTING:
-			ptr := executing.readu16()
-			this.stack.push(objects.Pointer(ptr, objects.PtrSetting))
+			index := executing.readIndex()
+			constant := this.objects.Constant(index)
+			stack.push(constant)
+		case code.PUSH_TOKEN, code.PUSH_SETTING:
+			ptr := executing.readIndex()
+			stack.push(this.objects.Pointer(ptr))
 		case code.PUSH_BUILTIN:
-			index := executing.readu16()
-			builtin := this.objects.BuiltIn(objects.Index(index))
-			this.stack.push(builtin)
+			index := executing.readIndex()
+			builtin := this.objects.BuiltIn(index)
+			stack.push(builtin)
 		case code.INVERT:
-			obj := this.stack.pop()
-			this.stack.push(objects.Boolean(!this.truthy(obj)))
+			obj := stack.pop()
+			stack.push(objects.Boolean(!this.truthy(obj)))
 		case code.NEED_ALL:
 			count := int(executing.readu16())
 			var reduction objects.Boolean = true
-			for _, obj := range this.stackargs(count) {
+			stackargs := stack.slice(stack.ptr-count, count)
+			for _, obj := range stackargs {
 				if !this.truthy(obj) {
 					reduction = false
 					break
 				}
 			}
-			this.stack.popN(count)
-			this.stack.push(reduction)
+			stack.popN(count)
+			stack.push(reduction)
 		case code.NEED_ANY:
 			count := int(executing.readu16())
 			var reduction objects.Boolean = false
-			for _, obj := range this.stackargs(count) {
+			stackargs := stack.slice(stack.ptr-count, count)
+			for _, obj := range stackargs {
 				if this.truthy(obj) {
 					reduction = true
 					break
 				}
 			}
-			this.stack.ptr -= count
-			this.stack.push(reduction)
+			stack.ptr -= count
+			stack.push(reduction)
 		case code.CHK_QTY:
 			var answer objects.Object
-			ptr := executing.readu16()
+			ptr := executing.readIndex()
 			qty := executing.readu8()
-			answer, err = this.objects.BuiltIns.Has([]objects.Object{
-				objects.Pointer(ptr, objects.PtrToken), objects.Number(qty),
+			answer, err = func([]objects.Object) (objects.Object, error) {
+				return objects.Boolean(true), nil
+			}([]objects.Object{
+				this.objects.Pointer(ptr), objects.Number(qty),
 			})
 			if err != nil {
 				err = fmt.Errorf("has 0x%04x 0x%02x: %w", ptr, qty, err)
 				break loop
 			}
-			this.stack.push(answer)
-		case code.CHK_ALL:
-			var answer objects.Object
-			count := int(executing.readu16())
-			args := this.stackargs(count)
-			answer, err = this.objects.BuiltIns.HasEvery(args)
-			if err != nil {
-				err = fmt.Errorf("has_every 0x%04x: %w", count, err)
-				break loop
-			}
-			this.stack.popN(count)
-			if answer != nil {
-				this.stack.push(answer)
-			}
-		case code.CHK_ANY:
-			var answer objects.Object
-			count := int(executing.readu16())
-			args := this.stackargs(count)
-			answer, err = this.objects.BuiltIns.HasAnyOf(args)
-			if err != nil {
-				err = fmt.Errorf("has_anyof 0x%04x: %w", count, err)
-				break loop
-			}
-			this.stack.popN(count)
-			if answer != nil {
-				this.stack.push(answer)
-			}
-		case code.IS_CHILD:
-			var answer objects.Object
-			answer, err = this.objects.BuiltIns.IsChild(nil)
-			if err != nil {
-				break loop
-			}
-			this.stack.push(answer)
-		case code.IS_ADULT:
-			var answer objects.Object
-			answer, err = this.objects.BuiltIns.IsAdult(nil)
-			if err != nil {
-				break loop
-			}
-			this.stack.push(answer)
+			stack.push(answer)
 		case code.INVOKE:
-			fn := this.stack.pop()
+			fn := stack.pop()
 			var answer objects.Object
 			switch fn := fn.(type) {
-			case *objects.BuiltInFunc:
-				argCount := int(executing.readu16())
-				if fn.Params > -1 && argCount != fn.Params {
-					err = fmt.Errorf("%q expects %d arguments, received %d", fn.Name, fn.Params, argCount)
+			case *objects.BuiltInFunction:
+				count := int(executing.readu16())
+				if fn.Params > -1 && count != fn.Params {
+					err = fmt.Errorf("%q expects %d arguments, received %d", fn.Name, fn.Params, count)
 					break loop
 				}
-				args := this.stackargs(argCount)
-				answer, err = fn.Func(args)
+				args := stack.slice(stack.ptr-count, count)
+				answer, err = fn.Fn(args)
 				if err != nil {
 					err = fmt.Errorf("%q: %w", fn.Name, err)
 					break loop
 				}
-				this.stack.popN(argCount)
+				stack.popN(count)
 			default:
 				err = fmt.Errorf("cannot call %s", fn)
 				break loop
 			}
 			if answer != nil {
-				this.stack.push(answer)
+				stack.push(answer)
 			}
 		case code.CMP_EQ, code.CMP_NQ, code.CMP_LT:
 			err = fmt.Errorf("runtime comparison not implemented")
+			break loop
+		case code.CHK_ALL, code.CHK_ANY, code.IS_CHILD, code.IS_ADULT:
+			err = fmt.Errorf("fastop 0x%02x not implemented", thisOp)
 			break loop
 		default:
 			err = fmt.Errorf("unrecognized op: 0x%02x", thisOp)
@@ -270,14 +240,10 @@ loop:
 		}
 	}
 
-	if err == nil && this.stack.ptr > 0 {
-		result = this.stack.pop()
+	if err == nil && stack.ptr > 0 {
+		result = stack.pop()
 	}
 	return
-}
-
-func (this *VM) stackargs(count int) []objects.Object {
-	return this.stack.slice(this.stack.ptr-count, count)
 }
 
 func (this *VM) truthy(obj objects.Object) bool {

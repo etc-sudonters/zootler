@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"math/rand/v2"
 	"reflect"
 	"sudonters/zootler/internal/query"
 
@@ -21,12 +20,6 @@ type Zootlr struct {
 	reason    error
 	storage   query.Engine
 	resources map[reflect.Type]any
-}
-
-// allows caller to bring their own entropy or invoke some spooky action at a distance
-type RngFactory interface {
-	Create(seed uint64) *rand.Rand
-	Seed() (seed uint64)
 }
 
 func (z *Zootlr) Run(cmd AppCmd) error {

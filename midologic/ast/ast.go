@@ -3,7 +3,7 @@ package ast
 import (
 	"slices"
 	"sudonters/zootler/internal/ruleparser"
-	"sudonters/zootler/magicbeanvm/symbols"
+	"sudonters/zootler/midologic/symbols"
 
 	"github.com/etc-sudonters/substrate/peruse"
 )

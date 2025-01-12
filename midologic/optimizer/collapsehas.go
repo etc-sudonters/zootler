@@ -2,8 +2,8 @@ package optimizer
 
 import (
 	"slices"
-	"sudonters/zootler/magicbeanvm/ast"
-	"sudonters/zootler/magicbeanvm/symbols"
+	"sudonters/zootler/midologic/ast"
+	"sudonters/zootler/midologic/symbols"
 )
 
 func CollapseHas(tbl *symbols.Table) ast.Rewriter {

@@ -2,8 +2,8 @@ package optimizer
 
 import (
 	"fmt"
-	"sudonters/zootler/magicbeanvm/ast"
-	"sudonters/zootler/magicbeanvm/symbols"
+	"sudonters/zootler/midologic/ast"
+	"sudonters/zootler/midologic/symbols"
 )
 
 type funcTableKey string
@@ -25,18 +25,22 @@ func InlineCalls(ctx *Context, syms *symbols.Table, funcs *ast.PartialFunctionTa
 
 type inliner struct {
 	ctx      *Context
-	syms     *symbols.Table
+	symbols  *symbols.Table
 	funcs    *ast.PartialFunctionTable
 	replacer *replacer
 }
 
 func (this *inliner) Invoke(node ast.Invoke, rewrite ast.Rewriting) (ast.Node, error) {
-	target, casted := node.Target.(ast.Identifier)
-	if !casted {
+	symbol := ast.LookUpNodeInTable(this.symbols, node.Target)
+	if symbol == nil {
 		return node, nil
 	}
 
-	fn, exists := this.funcs.Get(target.Symbol.Name)
+	if symbol.Kind != symbols.SCRIPTED_FUNC {
+		return node, nil
+	}
+
+	fn, exists := this.funcs.Get(symbol.Name)
 	if !exists {
 		return node, nil
 	}

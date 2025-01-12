@@ -1,20 +1,25 @@
 package objects
 
-import "sudonters/zootler/magicbeanvm/nan"
+import (
+	"fmt"
+	"sudonters/zootler/midologic/nan"
+)
 
-type Callable = func([]Object) (Object, error)
+type BuiltInFn func([]Object) (Object, error)
+type BuiltInFunctions []BuiltInFunction
 
 type Kind string
 type Boolean bool
-type BuiltInFunc struct {
+type BuiltInFunction struct {
 	Name   string
-	Func   Callable
 	Params int
+	Fn     BuiltInFn
 }
 type Number float64
 type Ptr nan.PackedValue
 type String string
 
+type OpaquePointer uint16
 type PtrTag uint8
 
 const (
@@ -23,21 +28,26 @@ const (
 	PtrSetting        = 0x0B
 )
 
-func Pointer(ptr uint16, tag PtrTag) Ptr {
-	u32 := uint32(tag)
-	u32 = u32 | uint32(ptr<<8)
+func (this Ptr) String() string {
+	ptr, _ := nan.PackedValue(this).Pointer()
+	return fmt.Sprintf("0x%04X", ptr)
+}
+
+func Pointer(ptr OpaquePointer, tag PtrTag) Ptr {
+	u32 := uint32(tag) << 16
+	u32 = u32 | uint32(ptr)
 	return Ptr(nan.PackPtr(u32))
 }
 
-func UnpackPointer(ptr Ptr) (uint16, PtrTag) {
-	u32, isPtr := nan.PackedValue(ptr).Pointer()
+func UnpackPointer(opaque Ptr) (OpaquePointer, PtrTag) {
+	u32, isPtr := nan.PackedValue(opaque).Pointer()
 	if !isPtr {
 		panic("derefencing non-pointer")
 	}
 
-	tag := uint8(u32)
-	index := uint16(u32 >> 8)
-	return index, PtrTag(tag)
+	tag := uint8(u32 >> 16)
+	ptr := uint16(u32)
+	return OpaquePointer(ptr), PtrTag(tag)
 }
 
 const (
@@ -65,7 +75,7 @@ func (this Number) Kind() Kind {
 	return NUMBER
 }
 
-func (this *BuiltInFunc) Kind() Kind {
+func (this *BuiltInFunction) Kind() Kind {
 	return BUILT_IN
 }
 

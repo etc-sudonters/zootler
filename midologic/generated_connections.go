@@ -1,40 +1,68 @@
-package magicbeanvm
+package midologic
 
 import (
 	"errors"
 	"fmt"
 	"slices"
-	"sudonters/zootler/magicbeanvm/ast"
-	"sudonters/zootler/magicbeanvm/optimizer"
-	"sudonters/zootler/magicbeanvm/symbols"
+	"sudonters/zootler/midologic/ast"
+	"sudonters/zootler/midologic/optimizer"
+	"sudonters/zootler/midologic/symbols"
 )
 
 const generatedConnectionsKey connectionsKey = "generated-connections"
 const currentLocationKey currentKey = "current-key"
+const generatorKey generatorKeyType = "connection-generator"
+
+type generatorKeyType string
+
+func CompilerWithConnectionGeneration(register func(*CompileEnv) func(*symbols.Sym)) ConfigureCompiler {
+	return func(outer *CompileEnv) {
+		outer.Symbols.Declare("at", symbols.COMPILER_FUNCTION)
+		outer.Symbols.Declare("here", symbols.COMPILER_FUNCTION)
+		connections := ConnectionGeneration(outer.Optimize.Context, outer.Symbols, register(outer))
+		outer.Optimize.Context.Store(generatorKey, connections)
+		outer.Optimize.AddOptimizer(func(inner *CompileEnv) ast.Rewriter {
+			connections := inner.Optimize.Context.Retrieve(generatorKey).(ConnectionGenerator)
+			return ast.Rewriter{Invoke: func(node ast.Invoke, rewriting ast.Rewriting) (ast.Node, error) {
+				symbol := ast.LookUpNodeInTable(inner.Symbols, node.Target)
+				if symbol == nil {
+					return node, nil
+				}
+
+				switch symbol.Name {
+				case "at":
+					return connections.At(node.Args, rewriting)
+				case "here":
+					return connections.Here(node.Args, rewriting)
+				default:
+					return node, nil
+				}
+			}}
+		})
+	}
+}
 
 func SetCurrentLocation(ctx *optimizer.Context, where string) {
 	ctx.Store(currentLocationKey, where)
 }
 
-func CompileGeneratedConnections(compiler *codegen) ([]CompiledSource, error) {
+func CompileGeneratedConnections(codegen *codegen) ([]CompiledSource, error) {
 	var compiled []CompiledSource
-	ctx := compiler.Optimize.Context
+	ctx := codegen.Optimize.Context
 	connections := SwapGeneratedConnections(ctx)
 	for size := connections.Size(); size > 0; size = connections.Size() {
-		var offset int
 		compiling := make([]CompiledSource, size)
+		var currentlyCompiling int
 		for source := range connections.All {
 			var compileErr error
-			compiling := &compiling[offset]
-			compiling.Source = *source
-			compiling.ByteCode, compileErr = compiler.CompileSource(&compiling.Source)
+			this := &compiling[currentlyCompiling]
+			this.Source = *source
+			this.ByteCode, compileErr = codegen.CompileSource(&this.Source)
 			if compileErr != nil {
 				return compiled, compileErr
 			}
-
-			offset++
+			currentlyCompiling++
 		}
-
 		compiled = slices.Concat(compiled, compiling)
 		connections = SwapGeneratedConnections(ctx)
 	}
@@ -54,11 +82,12 @@ func SwapGeneratedConnections(ctx *optimizer.Context) GeneratedConnections {
 	return conns
 }
 
-func ConnectionGeneration(ctx *optimizer.Context, tbl *symbols.Table) ConnectionGenerator {
+func ConnectionGeneration(ctx *optimizer.Context, symbolTable *symbols.Table, register func(*symbols.Sym)) ConnectionGenerator {
 	var conns ConnectionGenerator
-	conns.at, conns.here = tbl.Declare("at", symbols.FUNCTION), tbl.Declare("here", symbols.FUNCTION)
-	conns.tbl = tbl
+	conns.at, conns.here = symbolTable.Declare("at", symbols.COMPILER_FUNCTION), symbolTable.Declare("here", symbols.COMPILER_FUNCTION)
+	conns.symbols = symbolTable
 	conns.ctx = ctx
+	conns.register = register
 	ctx.Store(generatedConnectionsKey, GeneratedConnections{make(map[string][]generated), 0})
 	return conns
 }
@@ -112,11 +141,12 @@ type currentKey string
 
 type ConnectionGenerator struct {
 	at, here *symbols.Sym
-	tbl      *symbols.Table
+	symbols  *symbols.Table
 	ctx      *optimizer.Context
+	register func(*symbols.Sym)
 }
 
-func (this ConnectionGenerator) At(args []ast.Node) (ast.Node, error) {
+func (this ConnectionGenerator) At(args []ast.Node, _ ast.Rewriting) (ast.Node, error) {
 	if len(args) != 2 {
 		return nil, fmt.Errorf("expected 2 args for at, received %d", len(args))
 	}
@@ -124,10 +154,10 @@ func (this ConnectionGenerator) At(args []ast.Node) (ast.Node, error) {
 	if !ok {
 		return nil, fmt.Errorf("expected first argument to 'at' to be string: %#v", args[0])
 	}
-	return this.generate(string(origin), args[0]), nil
+	return this.generate(string(origin), args[1]), nil
 }
 
-func (this ConnectionGenerator) Here(args []ast.Node) (ast.Node, error) {
+func (this ConnectionGenerator) Here(args []ast.Node, _ ast.Rewriting) (ast.Node, error) {
 	if len(args) != 1 {
 		return nil, fmt.Errorf("expected 1 arg for here, received %d", len(args))
 	}
@@ -139,19 +169,20 @@ func (this ConnectionGenerator) Here(args []ast.Node) (ast.Node, error) {
 }
 
 func (this ConnectionGenerator) generate(originationName string, rule ast.Node) ast.Node {
-	origination := this.tbl.Declare(originationName, symbols.LOCATION)
+	origination := this.symbols.Declare(originationName, symbols.LOCATION)
 	connections := this.ctx.Retrieve(generatedConnectionsKey).(GeneratedConnections)
 	connection := connections.appendto(origination.Name)
 
 	destinationName := fmt.Sprintf("Token$%04d#%04d@%s", connections.generation, connection.rank, origination.Name)
-	destination := this.tbl.Declare(destinationName, symbols.EVENT)
+	destination := this.symbols.Declare(destinationName, symbols.EVENT)
+	this.register(destination)
 
 	connection.OriginatingRegion = origination.Name
 	connection.Destination = destinationName
 	connection.Ast = rule
 
 	return ast.Invoke{
-		Target: ast.IdentifierFrom(this.tbl.Declare("has", symbols.FUNCTION)),
+		Target: ast.IdentifierFrom(this.symbols.Declare("has", symbols.FUNCTION)),
 		Args: []ast.Node{
 			ast.IdentifierFrom(destination), ast.Number(1),
 		},

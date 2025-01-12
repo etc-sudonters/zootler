@@ -3,8 +3,9 @@ package components
 // break import cycles
 
 type (
+	PieceOfHeart         uint8 // pieces of heart = 1, heart container = 4, winner heart = 1
 	BossKey              struct{}
-	Bottle               struct{}
+	IsBottle             struct{}
 	Compass              struct{}
 	Count                float64
 	Drop                 struct{}

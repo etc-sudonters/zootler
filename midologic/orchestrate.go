@@ -1,16 +1,16 @@
-package magicbeanvm
+package midologic
 
 import (
 	"errors"
 	"fmt"
 	"sudonters/zootler/internal/ruleparser"
 	"sudonters/zootler/internal/settings"
-	"sudonters/zootler/magicbeanvm/ast"
-	"sudonters/zootler/magicbeanvm/compiler"
-	"sudonters/zootler/magicbeanvm/objects"
-	"sudonters/zootler/magicbeanvm/optimizer"
-	"sudonters/zootler/magicbeanvm/symbols"
-	"sudonters/zootler/magicbeanvm/vm"
+	"sudonters/zootler/midologic/ast"
+	"sudonters/zootler/midologic/compiler"
+	"sudonters/zootler/midologic/objects"
+	"sudonters/zootler/midologic/optimizer"
+	"sudonters/zootler/midologic/symbols"
+	"sudonters/zootler/midologic/vm"
 
 	"github.com/etc-sudonters/substrate/peruse"
 )
@@ -21,7 +21,7 @@ type SourceString string
 func (this SourceKind) AsSymbolKind() symbols.Kind {
 	switch this {
 	case SourceCheck:
-		return symbols.LOCATION
+		return symbols.TOKEN
 	case SourceEvent:
 		return symbols.EVENT
 	case SourceTransit:
@@ -63,13 +63,36 @@ type Source struct {
 
 type ConfigureCompiler func(*CompileEnv)
 
-func CompilerWithFunctions(f func(*CompileEnv) optimizer.CompilerFunctions) ConfigureCompiler {
+func CompilerWithFastOps(ops compiler.FastOps) ConfigureCompiler {
 	return func(env *CompileEnv) {
-		funcs := f(env)
-		env.Optimize.CompilerFuncs = funcs
-		env.Optimize.AddOptimizer(func(innerEnv *CompileEnv) ast.Rewriter {
-			return optimizer.RunCompilerFunctions(innerEnv.Symbols, innerEnv.Optimize.CompilerFuncs)
+		for name, fast := range ops {
+			env.Optimize.FastOps[name] = fast
+		}
+	}
+}
+
+func WithCompilerFunctions(create func(*CompileEnv) optimizer.CompilerFunctionTable) ConfigureCompiler {
+	return func(env *CompileEnv) {
+		funcs := create(env)
+
+		for name := range funcs {
+			env.Symbols.Declare(name, symbols.COMPILER_FUNCTION)
+		}
+
+		compiler := optimizer.NewCompilerFuncs(env.Symbols, funcs)
+		env.Optimize.AddOptimizer(func(*CompileEnv) ast.Rewriter {
+			return compiler
 		})
+	}
+}
+
+func WithBuiltInFunctions(create func(*CompileEnv) objects.BuiltInFunctions) ConfigureCompiler {
+	return func(env *CompileEnv) {
+		builtins := create(env)
+		for _, builtin := range builtins {
+			env.Symbols.Declare(builtin.Name, symbols.BUILT_IN_FUNCTION)
+			env.Objects.AddBuiltIn(builtin)
+		}
 	}
 }
 
@@ -83,8 +106,6 @@ func CompilerDefaults() ConfigureCompiler {
 	return func(env *CompileEnv) {
 		env.Optimize.Passes = 10
 
-		env.Symbols.DeclareMany(symbols.COMP_FUNC, optimizer.CompilerFuncNames())
-		env.Symbols.DeclareMany(symbols.BUILT_IN, objects.BuiltInFunctionNames())
 		env.Symbols.DeclareMany(symbols.GLOBAL, vm.GlobalNames())
 		env.Symbols.DeclareMany(symbols.SETTING, settings.Names())
 
@@ -115,6 +136,7 @@ func NewCompileEnv(configure ...ConfigureCompiler) CompileEnv {
 	env.Symbols = ptr(symbols.NewTable())
 	env.Objects = ptr(objects.NewTableBuilder())
 	env.Optimize.Context = ptr(optimizer.NewCtx())
+	env.Optimize.FastOps = make(compiler.FastOps)
 
 	for i := range configure {
 		configure[i](&env)
@@ -128,11 +150,10 @@ type Optimizer func(*CompileEnv) ast.Rewriter
 type Analyzer func(*CompileEnv) ast.Visitor
 
 type CompileEnv struct {
-	Grammar       peruse.Grammar[ruleparser.Tree]
-	Symbols       *symbols.Table
-	Functions     *ast.PartialFunctionTable
-	Objects       *objects.TableBuilder
-	CompilerFuncs optimizer.CompilerFunctions
+	Grammar   peruse.Grammar[ruleparser.Tree]
+	Symbols   *symbols.Table
+	Functions *ast.PartialFunctionTable
+	Objects   *objects.TableBuilder
 
 	Optimize     Optimize
 	Analysis     Analysis
@@ -157,10 +178,10 @@ func (this *Analysis) PostOptimize(v Analyzer) {
 }
 
 type Optimize struct {
-	CompilerFuncs optimizer.CompilerFunctions
-	Context       *optimizer.Context
-	Optimiziers   []Optimizer
-	Passes        int
+	Context     *optimizer.Context
+	Optimiziers []Optimizer
+	Passes      int
+	FastOps     compiler.FastOps
 }
 
 func (this *Optimize) AddOptimizer(o Optimizer) {
@@ -237,7 +258,7 @@ func (this codegen) CompileSource(src *Source) (compiler.ByteCode, error) {
 	}
 
 	var compileErr error
-	bytecode, compileErr = compiler.Compile(src.Ast, this.Symbols, this.Objects)
+	bytecode, compileErr = compiler.Compile(src.Ast, this.Symbols, this.Objects, this.Optimize.FastOps)
 	if compileErr != nil {
 		compileErr = fmt.Errorf("%w: %w", ErrCompile, compileErr)
 	}

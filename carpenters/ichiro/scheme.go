@@ -89,7 +89,7 @@ func BaseDDL() []DDL {
 		columns.BitColumnOf[components.BossKey],
 		columns.BitColumnOf[components.Boss],
 		columns.BitColumnOf[components.BossRoom],
-		columns.BitColumnOf[components.Bottle],
+		columns.BitColumnOf[components.IsBottle],
 		columns.BitColumnOf[components.BottomoftheWellMQ],
 		columns.BitColumnOf[components.BottomoftheWell],
 		columns.BitColumnOf[components.Chest],

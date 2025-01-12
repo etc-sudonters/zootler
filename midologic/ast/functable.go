@@ -3,7 +3,7 @@ package ast
 import (
 	"fmt"
 	"sudonters/zootler/internal/ruleparser"
-	"sudonters/zootler/magicbeanvm/symbols"
+	"sudonters/zootler/midologic/symbols"
 
 	"github.com/etc-sudonters/substrate/peruse"
 )
@@ -22,7 +22,7 @@ func BuildCompilingFunctionTable(symbolTable *symbols.Table, grammar peruse.Gram
 		switch head := head.(type) {
 		case Invoke:
 			decl.Symbol = LookUpNodeInTable(symbolTable, head.Target)
-			if decl.Symbol.Kind == symbols.BUILT_IN {
+			if decl.Symbol.Kind == symbols.BUILT_IN_FUNCTION {
 				continue
 			}
 			if decl.Symbol == nil {
@@ -36,7 +36,7 @@ func BuildCompilingFunctionTable(symbolTable *symbols.Table, grammar peruse.Gram
 			}
 		case Identifier:
 			decl.Symbol = symbolTable.LookUpByIndex(head.AsIndex())
-			if decl.Symbol.Kind == symbols.BUILT_IN {
+			if decl.Symbol.Kind == symbols.BUILT_IN_FUNCTION {
 				continue
 			}
 			decl.Params = nil
@@ -44,7 +44,7 @@ func BuildCompilingFunctionTable(symbolTable *symbols.Table, grammar peruse.Gram
 			panic(fmt.Errorf("expected identifier or invoke style declaration, got %#v", head))
 		}
 
-		decl.Symbol.SetKind(symbols.COMPILED_FUNC)
+		decl.Symbol.SetKind(symbols.SCRIPTED_FUNC)
 		id := IdentifierFrom(decl.Symbol)
 		bodies[id.Symbol.Name] = body
 		funcTable.add(decl.Symbol, decl)

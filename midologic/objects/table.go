@@ -4,6 +4,8 @@ type BuildTable func(*Table)
 
 func TableFrom(builder TableBuilder) BuildTable {
 	return func(tbl *Table) {
+		tbl.pointers = builder.pointers
+		tbl.builtins = builder.funcs
 		tbl.constants = make([]Object, len(builder.constants))
 		for obj, index := range builder.constants {
 			tbl.constants[index] = obj
@@ -11,9 +13,9 @@ func TableFrom(builder TableBuilder) BuildTable {
 	}
 }
 
-func TableWithBuiltIns(funcs BuiltInFunctionTable) BuildTable {
+func TableWithBuiltIns(funcs BuiltInFunctions) BuildTable {
 	return func(tbl *Table) {
-		tbl.BuiltIns = NewBuiltins(funcs)
+		tbl.builtins = funcs
 	}
 }
 
@@ -27,13 +29,18 @@ func NewTable(build ...BuildTable) Table {
 
 type Table struct {
 	constants []Object
-	BuiltIns  BuiltInFunctions
+	pointers  []Ptr
+	builtins  BuiltInFunctions
 }
 
 func (this *Table) Constant(index Index) Object {
 	return this.constants[int(index)]
 }
 
-func (this *Table) BuiltIn(index Index) *BuiltInFunc {
-	return this.BuiltIns.Get(index)
+func (this *Table) Pointer(index Index) Ptr {
+	return this.pointers[int(index)]
+}
+
+func (this *Table) BuiltIn(index Index) *BuiltInFunction {
+	return &this.builtins[int(index)]
 }
