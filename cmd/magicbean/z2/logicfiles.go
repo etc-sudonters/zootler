@@ -3,13 +3,9 @@ package z2
 import (
 	"io/fs"
 	"path/filepath"
-	"regexp"
 	"slices"
-	"strings"
 	"sudonters/zootler/internal"
 	"sudonters/zootler/internal/table"
-	"sudonters/zootler/mido/ast"
-	"sudonters/zootler/mido/symbols"
 
 	"github.com/etc-sudonters/substrate/slipup"
 )
@@ -20,27 +16,6 @@ type attachments struct {
 
 func (this *attachments) add(v table.Value) {
 	this.v = append(this.v, v)
-}
-
-func AliasTokens(symbols *symbols.Table, funcs *ast.PartialFunctionTable, names []string) {
-	for _, name := range names {
-		escaped := escape(name)
-		if _, exists := funcs.Get(escaped); exists {
-			continue
-		}
-		if _, exists := funcs.Get(name); exists {
-			continue
-		}
-		symbol := symbols.LookUpByName(name)
-		symbols.Alias(symbol, escaped)
-	}
-}
-
-var escaping = regexp.MustCompile("['()[\\]-]")
-
-func escape(name string) string {
-	name = escaping.ReplaceAllLiteralString(name, "")
-	return strings.ReplaceAll(name, " ", "_")
 }
 
 func ReadHelpers(path string) map[string]string {

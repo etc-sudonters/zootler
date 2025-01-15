@@ -48,3 +48,4 @@ zootlr
 !cmd/zootlr
 .worktrees
 inputs/
+.data/

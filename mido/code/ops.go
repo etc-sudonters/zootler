@@ -14,6 +14,7 @@ var definitions = map[Op]Defintion{
 	PUSH_TOKEN:   {"PUSH_TOKEN", PUSH_TOKEN, []int{2}},
 	PUSH_BUILTIN: {"PUSH_BUILTIN", PUSH_BUILTIN, []int{2}},
 	PUSH_SETTING: {"PUSH_SETTING", PUSH_SETTING, []int{2}},
+	PUSH_PTR:     {"PUSH_PTR", PUSH_PTR, []int{2}},
 	INVERT:       {"INVERT", INVERT, nil},
 	NEED_ALL:     {"NEED_ALL", NEED_ALL, []int{2}},
 	NEED_ANY:     {"NEED_ANY", NEED_ANY, []int{2}},
@@ -74,6 +75,7 @@ const (
 	PUSH_TOKEN      = 0x25
 	PUSH_BUILTIN    = 0x26
 	PUSH_SETTING    = 0x27
+	PUSH_PTR        = 0x28
 	INVERT          = 0x31
 	NEED_ALL        = 0x32
 	NEED_ANY        = 0x33

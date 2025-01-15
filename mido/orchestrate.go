@@ -10,10 +10,27 @@ import (
 	"sudonters/zootler/mido/objects"
 	"sudonters/zootler/mido/optimizer"
 	"sudonters/zootler/mido/symbols"
-	"sudonters/zootler/mido/vm"
 
 	"github.com/etc-sudonters/substrate/peruse"
 )
+
+func GlobalNames() []string {
+	return globalNames[:]
+}
+
+var globalNames = []string{
+	"Fire",
+	"Forest",
+	"Light",
+	"Shadow",
+	"Spirit",
+	"Water",
+	"adult",
+	"age",
+	"both",
+	"either",
+	"child",
+}
 
 type SourceKind string
 type SourceString string
@@ -80,12 +97,12 @@ func WithCompilerFunctions(create func(*CompileEnv) optimizer.CompilerFunctionTa
 	}
 }
 
-func WithBuiltInFunctionDefs(create func(*CompileEnv) objects.BuiltInFunctionDefs) ConfigureCompiler {
+func WithBuiltInFunctionDefs(create func(*CompileEnv) []objects.BuiltInFunctionDef) ConfigureCompiler {
 	return func(env *CompileEnv) {
 		builtins := create(env)
-		for _, builtin := range builtins {
-			env.Symbols.Declare(builtin.Name, symbols.BUILT_IN_FUNCTION)
-			env.Objects.DeclareBuiltIn(builtin.Name)
+		for i, builtin := range builtins {
+			symbol := env.Symbols.Declare(builtin.Name, symbols.BUILT_IN_FUNCTION)
+			env.Objects.AssociateSymbol(symbol, objects.PackTaggedPtr32(objects.PtrFunc, uint32(i)))
 		}
 	}
 }
@@ -100,7 +117,7 @@ func CompilerDefaults() ConfigureCompiler {
 	return func(env *CompileEnv) {
 		env.Optimize.Passes = 10
 
-		env.Symbols.DeclareMany(symbols.GLOBAL, vm.GlobalNames())
+		env.Symbols.DeclareMany(symbols.GLOBAL, GlobalNames())
 		env.Symbols.DeclareMany(symbols.SETTING, settings.Names())
 
 		env.OnSourceLoad(func(env *CompileEnv, src *Source) {
@@ -147,7 +164,7 @@ type CompileEnv struct {
 	Grammar   peruse.Grammar[ruleparser.Tree]
 	Symbols   *symbols.Table
 	Functions *ast.PartialFunctionTable
-	Objects   *objects.TableBuilder
+	Objects   *objects.Builder
 
 	Optimize     Optimize
 	Analysis     Analysis

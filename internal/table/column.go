@@ -9,11 +9,11 @@ import (
 	"github.com/etc-sudonters/substrate/mirrors"
 )
 
-var INVALID_ROWID RowId = math.MaxUint64
-var INVALID_COLUMNID ColumnId = math.MaxUint64
+var INVALID_ROWID RowId = math.MaxUint32
+var INVALID_COLUMNID ColumnId = math.MaxUint32
 
-type RowId uint64
-type ColumnId uint64
+type RowId uint32
+type ColumnId uint32
 type Value interface{}
 
 type ColumnFactory func() Column

@@ -6,7 +6,7 @@ import (
 )
 
 type TranslationLayer struct {
-	byaddr map[objects.Ptr]CollectionId
+	byaddr map[objects.Ptr32]CollectionId
 	byname map[string]CollectionId
 }
 
@@ -18,7 +18,7 @@ func (this TranslationLayer) FromName(name string) CollectionId {
 	return id
 }
 
-func (this TranslationLayer) FromPtr(ptr objects.Ptr) CollectionId {
+func (this TranslationLayer) FromPtr(ptr objects.Ptr32) CollectionId {
 	id, exists := this.byaddr[ptr]
 	if !exists {
 		panic(fmt.Errorf("bad token pointer deref: %s", ptr))
@@ -42,7 +42,7 @@ func (this TranslationLayerBuilder) Declare(name string, id CollectionId) {
 	this.byname[name] = id
 }
 
-func (this TranslationLayerBuilder) PointTo(name string, tag objects.PtrTag) objects.Ptr {
+func (this TranslationLayerBuilder) PointTo(name string, tag objects.PtrTag) objects.Ptr32 {
 	id, exists := this.byname[name]
 	if !exists {
 		panic(fmt.Errorf("%q is not declared in address table", name))

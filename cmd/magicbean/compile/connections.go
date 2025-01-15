@@ -16,7 +16,7 @@ type CompilerConnector struct {
 	tokens  z2.Tokens
 	regions z2.Regions
 	symbols *symbols.Table
-	objects *objects.TableBuilder
+	objects *objects.Builder
 }
 
 func (this CompilerConnector) AddConnectionTo(regionName string, rule ast.Node) (*symbols.Sym, error) {
@@ -36,8 +36,7 @@ func (this CompilerConnector) AddConnectionTo(regionName string, rule ast.Node) 
 	edge.Attach(z2.ParsedSource(rule), z2.Generated{})
 
 	symbol := this.symbols.Declare(string(token.Name), symbols.TOKEN)
-	this.objects.AddPointer(symbol.Name, objects.Pointer(objects.OpaquePointer(0xdead), objects.PtrToken))
-
+	this.objects.AssociateSymbol(symbol, objects.PackTaggedPtr32(objects.PtrToken, uint32(token.Entity())))
 	return symbol, nil
 }
 

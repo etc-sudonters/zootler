@@ -215,7 +215,7 @@ func (this Exploration) sumCollectionFor(kind table.ColumnId) int {
 }
 
 func (this *Exploration) has(args []objects.Object) (objects.Object, error) {
-	ptr, isPtr := args[0].(objects.Ptr)
+	ptr, isPtr := args[0].(objects.Ptr32)
 	qty, isQty := args[1].(objects.Number)
 
 	switch {
@@ -232,7 +232,7 @@ func (this *Exploration) has(args []objects.Object) (objects.Object, error) {
 
 func (this *Exploration) has_anyof(args []objects.Object) (objects.Object, error) {
 	for i, arg := range args {
-		ptr, isPtr := arg.(objects.Ptr)
+		ptr, isPtr := arg.(objects.Ptr32)
 		if !isPtr {
 			return nil, fmt.Errorf("expected arg %d to be pointer, got %T", i, arg)
 		}
@@ -259,7 +259,7 @@ func (this *Exploration) has_dungeon_rewards(args []objects.Object) (objects.Obj
 
 func (this *Exploration) has_every(args []objects.Object) (objects.Object, error) {
 	for i, arg := range args {
-		ptr, isPtr := arg.(objects.Ptr)
+		ptr, isPtr := arg.(objects.Ptr32)
 		if !isPtr {
 			return nil, fmt.Errorf("expected arg %d to be pointer, got %T", i, arg)
 		}

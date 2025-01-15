@@ -13,8 +13,8 @@ import (
 	"sudonters/zootler/mido/symbols"
 )
 
-var constBuiltInFunc objects.BuiltInFn = func([]objects.Object) (objects.Object, error) {
-	return objects.Boolean(true), nil
+func constBuiltInFunc([]objects.Object) (objects.Object, error) {
+	return objects.True, nil
 }
 
 func main() {
@@ -38,7 +38,7 @@ func main() {
 	compileEnv := mido.NewCompileEnv(
 		mido.CompilerWithConnectionGeneration(func(env *mido.CompileEnv) func(*symbols.Sym) {
 			return func(s *symbols.Sym) {
-				env.Objects.AddPointer(s.Name, objects.Pointer(objects.OpaquePointer(0xdead), objects.PtrToken))
+				env.Objects.AssociateSymbol(s, objects.PackPtr32(0xdeadbeef))
 			}
 		}),
 		mido.CompilerDefaults(),
@@ -57,8 +57,8 @@ func main() {
 				"at_night":               constCompileFunc,
 			}
 		}),
-		mido.WithBuiltInFunctionDefs(func(*mido.CompileEnv) objects.BuiltInFunctionDefs {
-			return objects.BuiltInFunctionDefs{
+		mido.WithBuiltInFunctionDefs(func(*mido.CompileEnv) []objects.BuiltInFunctionDef {
+			return []objects.BuiltInFunctionDef{
 				{Name: "has", Params: 2},
 				{Name: "has_anyof", Params: -1},
 				{Name: "has_every", Params: -1},
@@ -83,10 +83,12 @@ func main() {
 			aliasTokens(env.Symbols, env.Functions, rawTokens)
 			analysis.register(env)
 			for i := range rawTokens {
-				env.Objects.AddPointer(rawTokens[i], objects.Pointer(objects.OpaquePointer(i), objects.PtrToken))
+				symbol := env.Symbols.LookUpByName(rawTokens[i])
+				env.Objects.AssociateSymbol(symbol, objects.PackPtr32(uint32(i)))
 			}
 			for i, name := range settings.Names() {
-				env.Objects.AddPointer(name, objects.Pointer(objects.OpaquePointer(i), objects.PtrSetting))
+				symbol := env.Symbols.LookUpByName(name)
+				env.Objects.AssociateSymbol(symbol, objects.PackPtr32(uint32(i)))
 			}
 		},
 	)
@@ -114,7 +116,7 @@ func main() {
 		if declaration.Kind == mido.SourceEvent {
 			compileEnv.Symbols.Alias(symbol, escape(declaration.Destination))
 		}
-		compileEnv.Objects.AddPointer(symbol.Name, objects.Pointer(objects.OpaquePointer(0xdead), objects.PtrToken))
+		compileEnv.Objects.AssociateSymbol(symbol, objects.PackPtr32(0xdeadbeef))
 	}
 
 	for i := range source {
