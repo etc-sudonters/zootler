@@ -38,7 +38,7 @@ func main() {
 	compileEnv := mido.NewCompileEnv(
 		mido.CompilerWithConnectionGeneration(func(env *mido.CompileEnv) func(*symbols.Sym) {
 			return func(s *symbols.Sym) {
-				env.Objects.AssociateSymbol(s, objects.PackPtr32(0xdeadbeef))
+				env.Objects.AssociateSymbol(s, objects.PackTaggedPtr32(objects.PtrToken, 0xdeadbeef))
 			}
 		}),
 		mido.CompilerDefaults(),
@@ -115,8 +115,8 @@ func main() {
 		symbol := compileEnv.Symbols.Declare(declaration.Destination, declaration.Kind.AsSymbolKind())
 		if declaration.Kind == mido.SourceEvent {
 			compileEnv.Symbols.Alias(symbol, escape(declaration.Destination))
+			compileEnv.Objects.AssociateSymbol(symbol, objects.PackTaggedPtr32(objects.PtrToken, 0xdeadbeef))
 		}
-		compileEnv.Objects.AssociateSymbol(symbol, objects.PackPtr32(0xdeadbeef))
 	}
 
 	for i := range source {

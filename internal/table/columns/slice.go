@@ -94,7 +94,7 @@ func (row Slice) Len() int {
 }
 
 func (row Slice) scanMembers(v table.Value) (b bitset.Bitset32) {
-	bititer := bitset.Iter32(*row.members)
+	bititer := bitset.Iter32(row.members)
 	for id := range bititer.All {
 		value := row.components[id]
 		if value == nil {

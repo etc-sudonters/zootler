@@ -97,7 +97,7 @@ func (this *Builder) AssociateSymbol(symbol *symbols.Sym, ptr Object) Index {
 func (this *Builder) PtrFor(symbol *symbols.Sym) Index {
 	index, exists := this.ptrs[symbol.Index]
 	if !exists {
-		panic(fmt.Errorf("compile timedereference of null pointer %#v", symbol))
+		panic(fmt.Errorf("compile time dereference of null pointer %#v", symbol))
 	}
 
 	return index

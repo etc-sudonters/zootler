@@ -44,7 +44,7 @@ func (r *many) All(yield RowIter) {
 	vt := new(table.ValueTuple)
 	vt.Init(r.columns)
 
-	biter := bitset.Iter64(r.fill)
+	biter := bitset.Iter32(&r.fill)
 	for rowId := range biter.All {
 		vt.Load(table.RowId(rowId), r.columns)
 		if !yield(table.RowId(rowId), *vt) {

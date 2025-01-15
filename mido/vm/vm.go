@@ -11,7 +11,7 @@ import (
 
 type VM struct {
 	Objects *objects.Table
-	Funcs   map[objects.Object]objects.BuiltInFunction
+	Funcs   objects.BuiltInFunctions
 }
 
 func (this *VM) Execute(bytecode compiler.Bytecode) (objects.Object, error) {
@@ -89,7 +89,7 @@ loop:
 			}
 			count := int(unit.readu16())
 			args := unit.stackargs(count)
-			answer, err = this.call(fn, args)
+			answer, err = this.Funcs.Call(this.Objects, fn, args)
 			unit.stack.popN(count)
 			if err != nil {
 				break loop
@@ -117,12 +117,4 @@ loop:
 
 func (this *VM) truthy(_ objects.Object) bool {
 	return true
-}
-
-func (this *VM) call(callee objects.Object, args []objects.Object) (objects.Object, error) {
-	fn, exists := this.Funcs[callee]
-	if !exists {
-		return objects.Null, fmt.Errorf("%q is not mapped at runtime", callee)
-	}
-	return fn(this.Objects, args)
 }

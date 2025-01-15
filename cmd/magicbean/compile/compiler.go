@@ -30,8 +30,8 @@ func CreateCompileEnv(options ...mido.ConfigureCompiler) mido.CompileEnv {
 				"at_night":               constCompileFunc,
 			}
 		}),
-		mido.WithBuiltInFunctionDefs(func(*mido.CompileEnv) objects.BuiltInFunctionDefs {
-			return objects.BuiltInFunctionDefs{
+		mido.WithBuiltInFunctionDefs(func(*mido.CompileEnv) []objects.BuiltInFunctionDef {
+			return []objects.BuiltInFunctionDef{
 				{Name: "has", Params: 2},
 				{Name: "has_anyof", Params: -1},
 				{Name: "has_every", Params: -1},

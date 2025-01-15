@@ -2,9 +2,8 @@ package bundle
 
 import (
 	"errors"
+	"sudonters/zootler/internal/skelly/bitset"
 	"sudonters/zootler/internal/table"
-
-	"github.com/etc-sudonters/substrate/skelly/bitset"
 )
 
 var ErrExpectSingleRow = errors.New("expected exactly 1 row")
