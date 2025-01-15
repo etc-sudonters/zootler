@@ -6,11 +6,11 @@ import (
 	"math"
 	"reflect"
 	"sudonters/zootler/internal/bundle"
+	"sudonters/zootler/internal/skelly/bitset"
 	"sudonters/zootler/internal/table"
 	"sudonters/zootler/internal/table/columns"
 
 	"github.com/etc-sudonters/substrate/mirrors"
-	"github.com/etc-sudonters/substrate/skelly/bitset"
 	"github.com/etc-sudonters/substrate/slipup"
 )
 
@@ -60,11 +60,11 @@ type Lookup interface {
 
 type queryCore struct {
 	errs []error
-	load *bitset.Bitset64
+	load *bitset.Bitset32
 }
 
 func (b *queryCore) Load(typ table.ColumnId) {
-	b.load.Set(uint64(typ))
+	b.load.Set(uint32(typ))
 }
 
 type lookup struct {
@@ -78,36 +78,36 @@ func (l *lookup) Lookup(v table.Value) {
 
 type query struct {
 	queryCore
-	exists    *bitset.Bitset64
-	notExists *bitset.Bitset64
+	exists    *bitset.Bitset32
+	notExists *bitset.Bitset32
 }
 
 func (b *query) Load(typ table.ColumnId) {
-	b.exists.Set(uint64(typ))
-	b.load.Set(uint64(typ))
+	b.exists.Set(uint32(typ))
+	b.load.Set(uint32(typ))
 }
 
 func (b *query) Exists(typ table.ColumnId) {
-	b.exists.Set(uint64(typ))
+	b.exists.Set(uint32(typ))
 }
 
 func (b *query) NotExists(typ table.ColumnId) {
-	b.notExists.Set(uint64(typ))
+	b.notExists.Set(uint32(typ))
 }
 
 func makePredicate(b *query) predicate {
 	return predicate{
-		exists:    bitset.Copy(*b.exists),
-		notExists: bitset.Copy(*b.notExists),
+		exists:    bitset.Copy32(*b.exists),
+		notExists: bitset.Copy32(*b.notExists),
 	}
 }
 
 type predicate struct {
-	exists    bitset.Bitset64
-	notExists bitset.Bitset64
+	exists    bitset.Bitset32
+	notExists bitset.Bitset32
 }
 
-func (p predicate) admit(row *bitset.Bitset64) bool {
+func (p predicate) admit(row *bitset.Bitset32) bool {
 	if !p.exists.Intersect(*row).Eq(p.exists) {
 		return false
 	}
@@ -180,10 +180,10 @@ func (e engine) CreateQuery() Query {
 	return &query{
 		queryCore: queryCore{
 			errs: nil,
-			load: &bitset.Bitset64{},
+			load: &bitset.Bitset32{},
 		},
-		exists:    &bitset.Bitset64{},
-		notExists: &bitset.Bitset64{},
+		exists:    &bitset.Bitset32{},
+		notExists: &bitset.Bitset32{},
 	}
 }
 
@@ -191,7 +191,7 @@ func (e engine) CreateLookup() Lookup {
 	return &lookup{
 		queryCore: queryCore{
 			errs: nil,
-			load: &bitset.Bitset64{},
+			load: &bitset.Bitset32{},
 		},
 		lookups: nil,
 	}
@@ -241,11 +241,11 @@ func (e engine) Retrieve(b Query) (bundle.Interface, error) {
 	}
 
 	predicate := makePredicate(q)
-	fill := bitset.Bitset64{}
+	fill := bitset.Bitset32{}
 
 	for row, possessed := range e.tbl.Rows {
 		if predicate.admit(possessed) {
-			fill.Set(uint64(row))
+			fill.Set(uint32(row))
 		}
 	}
 
@@ -257,12 +257,12 @@ func (e engine) Retrieve(b Query) (bundle.Interface, error) {
 	return bundle.Bundle(fill, columns)
 }
 
-func saturatedSet(numBuckets uint64) bitset.Bitset64 {
-	buckets := make([]uint64, numBuckets)
+func saturatedSet(numBuckets uint32) bitset.Bitset32 {
+	buckets := make([]uint32, numBuckets)
 	for i := range buckets {
-		buckets[i] = math.MaxUint64
+		buckets[i] = math.MaxUint32
 	}
-	return bitset.FromRaw(buckets...)
+	return bitset.FromRaw32(buckets)
 }
 
 func (e engine) Lookup(l Lookup) (bundle.Interface, error) {
@@ -275,7 +275,7 @@ func (e engine) Lookup(l Lookup) (bundle.Interface, error) {
 		return nil, errors.Join(L.errs...)
 	}
 
-	entities := saturatedSet(uint64(len(e.tbl.Rows) / 64))
+	entities := saturatedSet(uint32(len(e.tbl.Rows) / 32))
 
 	for _, lookup := range L.lookups {
 		colId, colIdErr := e.intoColId(lookup)
@@ -286,7 +286,7 @@ func (e engine) Lookup(l Lookup) (bundle.Interface, error) {
 		entities = entities.Intersect(rows)
 	}
 
-	fill := bitset.Copy(entities)
+	fill := bitset.Copy32(entities)
 	var columns table.Columns
 	for _, col := range L.load.Elems() {
 		columns = append(columns, e.tbl.Cols[col])

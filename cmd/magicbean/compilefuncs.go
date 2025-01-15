@@ -3,9 +3,9 @@ package main
 import (
 	"fmt"
 	"sudonters/zootler/internal/settings"
-	"sudonters/zootler/midologic"
-	"sudonters/zootler/midologic/ast"
-	"sudonters/zootler/midologic/symbols"
+	"sudonters/zootler/mido"
+	"sudonters/zootler/mido/ast"
+	"sudonters/zootler/mido/symbols"
 )
 
 func wrongargcount(name string, expected, actual int) error {
@@ -63,7 +63,7 @@ func (this settingCompilerFuncs) loadsetting(nodes []ast.Node) (ast.Node, error)
 type compfuncs struct {
 	constCompileFuncs
 	settingCompilerFuncs
-	midologic.ConnectionGenerator
+	mido.ConnectionGenerator
 }
 
 type constCompileFuncs ast.Boolean

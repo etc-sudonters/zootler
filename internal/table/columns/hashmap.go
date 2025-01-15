@@ -2,9 +2,8 @@ package columns
 
 import (
 	"reflect"
+	"sudonters/zootler/internal/skelly/bitset"
 	"sudonters/zootler/internal/table"
-
-	"github.com/etc-sudonters/substrate/skelly/bitset"
 )
 
 func NewMap() *Map {
@@ -27,10 +26,10 @@ func (s *Map) Unset(e table.RowId) {
 	delete(s.entities, e)
 }
 
-func (s *Map) ScanFor(v table.Value) (b bitset.Bitset64) {
+func (s *Map) ScanFor(v table.Value) (b bitset.Bitset32) {
 	for id, value := range s.entities {
 		if reflect.DeepEqual(v, value) {
-			b.Set(uint64(id))
+			b.Set(uint32(id))
 		}
 	}
 

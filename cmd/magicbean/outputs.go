@@ -5,16 +5,16 @@ import (
 	"regexp"
 	"slices"
 	"strings"
-	"sudonters/zootler/midologic"
-	"sudonters/zootler/midologic/ast"
-	"sudonters/zootler/midologic/code"
-	"sudonters/zootler/midologic/symbols"
+	"sudonters/zootler/mido"
+	"sudonters/zootler/mido/ast"
+	"sudonters/zootler/mido/code"
+	"sudonters/zootler/mido/symbols"
 )
 
 var funcName = regexp.MustCompile("[^A-Z]")
 
-func DisassembleAll(compiled []midologic.CompiledSource) {
-	slices.SortFunc(compiled, func(a, b midologic.CompiledSource) int {
+func DisassembleAll(compiled []mido.CompiledSource) {
+	slices.SortFunc(compiled, func(a, b mido.CompiledSource) int {
 		switch cmp := strings.Compare(a.OriginatingRegion, b.OriginatingRegion); cmp {
 		case 0:
 			return strings.Compare(a.Destination, b.Destination)
@@ -89,12 +89,12 @@ func (this analysis) String() string {
 	return str.String()
 }
 
-func (this analysis) register(env *midologic.CompileEnv) {
-	env.Analysis.PostOptimize(func(env *midologic.CompileEnv) ast.Visitor {
+func (this analysis) register(env *mido.CompileEnv) {
+	env.Analysis.PostOptimize(func(env *mido.CompileEnv) ast.Visitor {
 		finder := findinvokes{env.Symbols, this.invokes}
 		return ast.Visitor{Invoke: finder.Invoke}
 	})
-	env.Analysis.PostOptimize(func(env *midologic.CompileEnv) ast.Visitor {
+	env.Analysis.PostOptimize(func(env *mido.CompileEnv) ast.Visitor {
 		return countnodes(this.nodes)
 	})
 }

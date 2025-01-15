@@ -2,22 +2,35 @@ package main
 
 import (
 	"fmt"
-	"sudonters/zootler/midologic"
-	"sudonters/zootler/midologic/ast"
-	"sudonters/zootler/midologic/code"
-	"sudonters/zootler/midologic/objects"
-	"sudonters/zootler/midologic/vm"
+	"sudonters/zootler/mido"
+	"sudonters/zootler/mido/ast"
+	"sudonters/zootler/mido/code"
+	"sudonters/zootler/mido/objects"
+	"sudonters/zootler/mido/vm"
 )
 
-func ExectuteAll(env *midologic.CompileEnv, compiled []midologic.CompiledSource) {
+func ExectuteAll(env *mido.CompileEnv, compiled []mido.CompiledSource) {
 	objTable := objects.NewTable(
-		objects.TableFrom(*env.Objects),
+		objects.BuildTableFrom(env.Objects),
+		objects.TableWithBuiltIns(objects.BuiltInFunctions{
+			{Name: "has", Params: 2, Fn: constBuiltInFunc},
+			{Name: "has_anyof", Params: -1, Fn: constBuiltInFunc},
+			{Name: "has_every", Params: -1, Fn: constBuiltInFunc},
+			{Name: "is_adult", Params: 0, Fn: constBuiltInFunc},
+			{Name: "is_child", Params: 0, Fn: constBuiltInFunc},
+			{Name: "has_bottle", Params: 0, Fn: constBuiltInFunc},
+			{Name: "has_dungeon_rewards", Params: 1, Fn: constBuiltInFunc},
+			{Name: "has_hearts", Params: 1, Fn: constBuiltInFunc},
+			{Name: "has_medallions", Params: 1, Fn: constBuiltInFunc},
+			{Name: "has_stones", Params: 1, Fn: constBuiltInFunc},
+			{Name: "is_starting_age", Params: 0, Fn: constBuiltInFunc},
+		}),
 	)
-	engine := vm.New(&objTable)
+	engine := vm.VM{&objTable}
 
 	for i := range compiled {
 		compiled := compiled[i]
-		result, err := engine.Execute(compiled.ExecutionUnit())
+		result, err := engine.Execute(compiled.ByteCode)
 
 		if err == nil && result != nil {
 			continue

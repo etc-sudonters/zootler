@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"math"
 	"reflect"
+	"sudonters/zootler/internal/skelly/bitset"
 
 	"github.com/etc-sudonters/substrate/mirrors"
-	"github.com/etc-sudonters/substrate/skelly/bitset"
 )
 
 var INVALID_ROWID RowId = math.MaxUint64
@@ -23,7 +23,7 @@ type Column interface {
 	Get(e RowId) Value
 	Set(e RowId, c Value)
 	Unset(e RowId)
-	ScanFor(Value) bitset.Bitset64
+	ScanFor(Value) bitset.Bitset32
 	Len() int
 }
 
@@ -68,6 +68,8 @@ func BuildColumn(col Column, typ reflect.Type) *ColumnBuilder {
 func BuildColumnOf[T Value](col Column) *ColumnBuilder {
 	return BuildColumn(col, mirrors.TypeOf[T]())
 }
+
+type DDL func() *ColumnBuilder
 
 type ColumnBuilder struct {
 	typ    reflect.Type

@@ -5,13 +5,17 @@ import (
 	"slices"
 	"strings"
 	"sudonters/zootler/internal/settings"
-	"sudonters/zootler/midologic"
-	"sudonters/zootler/midologic/ast"
-	"sudonters/zootler/midologic/compiler"
-	"sudonters/zootler/midologic/objects"
-	"sudonters/zootler/midologic/optimizer"
-	"sudonters/zootler/midologic/symbols"
+	"sudonters/zootler/mido"
+	"sudonters/zootler/mido/ast"
+	"sudonters/zootler/mido/compiler"
+	"sudonters/zootler/mido/objects"
+	"sudonters/zootler/mido/optimizer"
+	"sudonters/zootler/mido/symbols"
 )
+
+var constBuiltInFunc objects.BuiltInFn = func([]objects.Object) (objects.Object, error) {
+	return objects.Boolean(true), nil
+}
 
 func main() {
 	rawTokens, tokenErr := loadTokensNames(".data/data/items.json")
@@ -28,22 +32,18 @@ func main() {
 		return ast.Boolean(true), nil
 	}
 
-	var constBuiltInFunc objects.BuiltInFn = func([]objects.Object) (objects.Object, error) {
-		return objects.Boolean(true), nil
-	}
-
 	seedSettings := settings.Default()
 	_ = seedSettings
 	analysis := newanalysis()
-	compileEnv := midologic.NewCompileEnv(
-		midologic.CompilerWithConnectionGeneration(func(env *midologic.CompileEnv) func(*symbols.Sym) {
+	compileEnv := mido.NewCompileEnv(
+		mido.CompilerWithConnectionGeneration(func(env *mido.CompileEnv) func(*symbols.Sym) {
 			return func(s *symbols.Sym) {
 				env.Objects.AddPointer(s.Name, objects.Pointer(objects.OpaquePointer(0xdead), objects.PtrToken))
 			}
 		}),
-		midologic.CompilerDefaults(),
-		midologic.CompilerWithTokens(rawTokens),
-		midologic.WithCompilerFunctions(func(*midologic.CompileEnv) optimizer.CompilerFunctionTable {
+		mido.CompilerDefaults(),
+		mido.CompilerWithTokens(rawTokens),
+		mido.WithCompilerFunctions(func(*mido.CompileEnv) optimizer.CompilerFunctionTable {
 			return optimizer.CompilerFunctionTable{
 				"load_setting":           constCompileFunc,
 				"load_setting_2":         constCompileFunc,
@@ -57,25 +57,25 @@ func main() {
 				"at_night":               constCompileFunc,
 			}
 		}),
-		midologic.WithBuiltInFunctions(func(*midologic.CompileEnv) objects.BuiltInFunctions {
-			return objects.BuiltInFunctions{
-				{Name: "has", Params: 2, Fn: constBuiltInFunc},
-				{Name: "has_anyof", Params: -1, Fn: constBuiltInFunc},
-				{Name: "has_every", Params: -1, Fn: constBuiltInFunc},
-				{Name: "is_adult", Params: 0, Fn: constBuiltInFunc},
-				{Name: "is_child", Params: 0, Fn: constBuiltInFunc},
-				{Name: "has_bottle", Params: 0, Fn: constBuiltInFunc},
-				{Name: "has_dungeon_rewards", Params: 1, Fn: constBuiltInFunc},
-				{Name: "has_hearts", Params: 1, Fn: constBuiltInFunc},
-				{Name: "has_medallions", Params: 1, Fn: constBuiltInFunc},
-				{Name: "has_stones", Params: 1, Fn: constBuiltInFunc},
-				{Name: "is_starting_age", Params: 0, Fn: constBuiltInFunc},
+		mido.WithBuiltInFunctionDefs(func(*mido.CompileEnv) objects.BuiltInFunctionDefs {
+			return objects.BuiltInFunctionDefs{
+				{Name: "has", Params: 2},
+				{Name: "has_anyof", Params: -1},
+				{Name: "has_every", Params: -1},
+				{Name: "is_adult", Params: 0},
+				{Name: "is_child", Params: 0},
+				{Name: "has_bottle", Params: 0},
+				{Name: "has_dungeon_rewards", Params: 1},
+				{Name: "has_hearts", Params: 1},
+				{Name: "has_medallions", Params: 1},
+				{Name: "has_stones", Params: 1},
+				{Name: "is_starting_age", Params: 0},
 			}
 		}),
-		midologic.CompilerWithFastOps(compiler.FastOps{
+		mido.CompilerWithFastOps(compiler.FastOps{
 			"has": compiler.FastHasOp,
 		}),
-		func(env *midologic.CompileEnv) {
+		func(env *mido.CompileEnv) {
 			funcBuildErr := env.BuildFunctionTable(ReadHelpers(".data/logic/helpers.json"))
 			if funcBuildErr != nil {
 				panic(funcBuildErr)
@@ -94,9 +94,9 @@ func main() {
 	realSource, fakeSource := SourceRules(locations), FakeSourceRules()
 	_, _ = realSource, fakeSource
 	source := realSource
-	codeGen := midologic.Compiler(&compileEnv)
+	codeGen := mido.Compiler(&compileEnv)
 
-	compiled := make([]midologic.CompiledSource, len(source))
+	compiled := make([]mido.CompiledSource, len(source))
 	var failedCompiles []failedcompile
 
 	for i := range source {
@@ -104,14 +104,14 @@ func main() {
 		declaration.Source = source[i]
 
 		switch declaration.Kind {
-		case midologic.SourceTransit:
+		case mido.SourceTransit:
 			declaration.Source.Destination = fmt.Sprintf(
 				"%s -> %s",
 				declaration.OriginatingRegion, declaration.Destination,
 			)
 		}
 		symbol := compileEnv.Symbols.Declare(declaration.Destination, declaration.Kind.AsSymbolKind())
-		if declaration.Kind == midologic.SourceEvent {
+		if declaration.Kind == mido.SourceEvent {
 			compileEnv.Symbols.Alias(symbol, escape(declaration.Destination))
 		}
 		compileEnv.Objects.AddPointer(symbol.Name, objects.Pointer(objects.OpaquePointer(0xdead), objects.PtrToken))
@@ -119,7 +119,7 @@ func main() {
 
 	for i := range source {
 		var compileErr error
-		compiling := midologic.CompiledSource{
+		compiling := mido.CompiledSource{
 			Source: source[i],
 		}
 		compiling.ByteCode, compileErr = codeGen.CompileSource(&compiling.Source)
@@ -132,7 +132,7 @@ func main() {
 		}
 	}
 
-	connections, connectionErr := midologic.CompileGeneratedConnections(&codeGen)
+	connections, connectionErr := mido.CompileGeneratedConnections(&codeGen)
 	if connectionErr != nil {
 		panic(connectionErr)
 	}
@@ -154,7 +154,7 @@ func main() {
 
 type failedcompile struct {
 	err error
-	src *midologic.Source
+	src *mido.Source
 }
 
 func (this failedcompile) String() string {

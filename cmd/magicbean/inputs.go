@@ -7,9 +7,9 @@ import (
 	"slices"
 	"strings"
 	"sudonters/zootler/internal"
-	"sudonters/zootler/midologic"
-	"sudonters/zootler/midologic/ast"
-	"sudonters/zootler/midologic/symbols"
+	"sudonters/zootler/mido"
+	"sudonters/zootler/mido/ast"
+	"sudonters/zootler/mido/symbols"
 
 	"github.com/etc-sudonters/substrate/slipup"
 )
@@ -125,12 +125,12 @@ type loadingRule struct {
 	kind               symbols.Kind
 }
 
-func FakeSourceRules() []midologic.Source {
-	source := make([]midologic.Source, len(rules))
+func FakeSourceRules() []mido.Source {
+	source := make([]mido.Source, len(rules))
 	for i := range source {
-		source[i] = midologic.Source{
-			Kind:              midologic.SourceTransit,
-			String:            midologic.SourceString(rules[i].logic),
+		source[i] = mido.Source{
+			Kind:              mido.SourceTransit,
+			String:            mido.SourceString(rules[i].logic),
 			OriginatingRegion: rules[i].where,
 			Destination:       rules[i].where,
 		}
@@ -138,17 +138,17 @@ func FakeSourceRules() []midologic.Source {
 	return source
 }
 
-func SourceRules(locations []location) (source []midologic.Source) {
+func SourceRules(locations []location) (source []mido.Source) {
 	type pair struct {
-		kind   midologic.SourceKind
+		kind   mido.SourceKind
 		source map[string]string
 	}
 
 	for _, location := range locations {
 		pairs := []pair{
-			{midologic.SourceCheck, location.Locations},
-			{midologic.SourceEvent, location.Events},
-			{midologic.SourceTransit, location.Exits},
+			{mido.SourceCheck, location.Locations},
+			{mido.SourceEvent, location.Events},
+			{mido.SourceTransit, location.Exits},
 		}
 
 		for _, pair := range pairs {
@@ -163,12 +163,12 @@ func SourceRules(locations []location) (source []midologic.Source) {
 	return
 }
 
-func sourceRules(origin string, kind midologic.SourceKind, rules map[string]string) []midologic.Source {
-	chunk := make([]midologic.Source, 0, len(rules))
+func sourceRules(origin string, kind mido.SourceKind, rules map[string]string) []mido.Source {
+	chunk := make([]mido.Source, 0, len(rules))
 	for destination, rule := range rules {
-		chunk = append(chunk, midologic.Source{
+		chunk = append(chunk, mido.Source{
 			Kind:              kind,
-			String:            midologic.SourceString(rule),
+			String:            mido.SourceString(rule),
 			OriginatingRegion: origin,
 			Destination:       destination,
 		})

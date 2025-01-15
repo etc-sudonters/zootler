@@ -3,9 +3,8 @@ package columns
 import (
 	"fmt"
 	"reflect"
+	"sudonters/zootler/internal/skelly/bitset"
 	"sudonters/zootler/internal/table"
-
-	"github.com/etc-sudonters/substrate/skelly/bitset"
 )
 
 func SliceColumn[T any]() *table.ColumnBuilder {
@@ -19,12 +18,12 @@ func SizedSliceColumn[T any](size uint) *table.ColumnBuilder {
 func NewSlice() *Slice {
 	r := new(Slice)
 	r.components = make([]table.Value, 0)
-	r.members = &bitset.Bitset64{}
+	r.members = &bitset.Bitset32{}
 	return r
 }
 
 func SizedSlice(size uint) *Slice {
-	bitset := bitset.WithBucketsFor(uint64(size))
+	bitset := bitset.WithBucketsFor32(uint32(size))
 	r := new(Slice)
 	r.components = make([]table.Value, size)
 	r.members = &bitset
@@ -41,13 +40,13 @@ type Slice struct {
 	id         table.ColumnId
 	typ        reflect.Type
 	components []table.Value
-	members    *bitset.Bitset64
+	members    *bitset.Bitset32
 }
 
 func (row *Slice) Set(e table.RowId, c table.Value) {
 	row.ensureSize(int(e))
 	row.components[e] = c
-	row.members.Set(uint64(e))
+	row.members.Set(uint32(e))
 }
 
 func (row *Slice) Unset(e table.RowId) {
@@ -56,11 +55,11 @@ func (row *Slice) Unset(e table.RowId) {
 	}
 
 	row.components[e] = nil
-	row.members.Unset(uint64(e))
+	row.members.Unset(uint32(e))
 }
 
 func (row Slice) Get(e table.RowId) table.Value {
-	if !row.members.IsSet(uint64(e)) {
+	if !row.members.IsSet(uint32(e)) {
 		return nil
 	}
 
@@ -81,8 +80,8 @@ func (row *Slice) ensureSize(n int) {
 	row.components = expanded
 }
 
-func (row Slice) ScanFor(v table.Value) bitset.Bitset64 {
-	density := float64(row.members.Len()) / float64(len(row.components))
+func (row Slice) ScanFor(v table.Value) bitset.Bitset32 {
+	density := float32(row.members.Len()) / float32(len(row.components))
 	if density > 0.6 {
 		return row.scanValues(v)
 	} else {
@@ -94,8 +93,8 @@ func (row Slice) Len() int {
 	return row.members.Len()
 }
 
-func (row Slice) scanMembers(v table.Value) (b bitset.Bitset64) {
-    bititer := bitset.Iter64(*row.members)
+func (row Slice) scanMembers(v table.Value) (b bitset.Bitset32) {
+	bititer := bitset.Iter32(*row.members)
 	for id := range bititer.All {
 		value := row.components[id]
 		if value == nil {
@@ -103,20 +102,20 @@ func (row Slice) scanMembers(v table.Value) (b bitset.Bitset64) {
 		}
 
 		if reflect.DeepEqual(v, value) {
-			b.Set(uint64(id))
+			b.Set(uint32(id))
 		}
 	}
 
 	return
 }
 
-func (row Slice) scanValues(v table.Value) (b bitset.Bitset64) {
+func (row Slice) scanValues(v table.Value) (b bitset.Bitset32) {
 	for id, value := range row.components {
 		if value == nil || !reflect.DeepEqual(v, value) {
 			continue
 		}
 
-		b.Set(uint64(id))
+		b.Set(uint32(id))
 	}
 
 	return

@@ -1,8 +1,8 @@
-package magicbeanvm
+package magicbean
 
 import (
 	"fmt"
-	"sudonters/zootler/midologic/objects"
+	"sudonters/zootler/mido/objects"
 )
 
 type TranslationLayer struct {

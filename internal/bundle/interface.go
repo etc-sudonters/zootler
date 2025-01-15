@@ -2,9 +2,8 @@ package bundle
 
 import (
 	"fmt"
+	"sudonters/zootler/internal/skelly/bitset"
 	"sudonters/zootler/internal/table"
-
-	"github.com/etc-sudonters/substrate/skelly/bitset"
 )
 
 type RowIter = func(table.RowId, table.ValueTuple) bool
@@ -19,11 +18,11 @@ type Empty struct{}
 func (e Empty) All(RowIter) {}
 func (e Empty) Len() int    { return 0 }
 
-func Many(fill bitset.Bitset64, columns table.Columns) Interface {
+func Many(fill bitset.Bitset32, columns table.Columns) Interface {
 	return &many{fill, columns}
 }
 
-func Single(fill bitset.Bitset64, columns table.Columns) (Interface, error) {
+func Single(fill bitset.Bitset32, columns table.Columns) (Interface, error) {
 	if fill.Len() != 1 {
 		return nil, fmt.Errorf("%w: had %d", ErrExpectSingleRow, fill.Len())
 	}
@@ -37,7 +36,7 @@ func Single(fill bitset.Bitset64, columns table.Columns) (Interface, error) {
 }
 
 type many struct {
-	fill    bitset.Bitset64
+	fill    bitset.Bitset32
 	columns table.Columns
 }
 

@@ -14,7 +14,7 @@ type tracker[T any] interface {
 type Exploration[TLoc any, TEdge any] struct {
 	graph   *Graph[TLoc, TEdge]
 	tracker tracker[graph.Node]
-	visited bitset.Bitset64
+	visited bitset.Bitset32
 }
 
 func (expl *Exploration[TLoc, TEdge]) Accept(n graph.Destination) {

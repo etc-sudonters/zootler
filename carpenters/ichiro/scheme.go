@@ -12,10 +12,8 @@ import (
 	"github.com/etc-sudonters/substrate/slipup"
 )
 
-type DDL func() *table.ColumnBuilder
-
 type TableLoader struct {
-	Scheme []DDL
+	Scheme []table.DDL
 }
 
 func (tbl *TableLoader) Setup(z *app.Zootlr) error {
@@ -37,14 +35,14 @@ func (tbl *TableLoader) runDDL(z *app.Zootlr) error {
 	return nil
 }
 
-func indexed(ddl DDL, i table.Index) DDL {
+func indexed(ddl table.DDL, i table.Index) table.DDL {
 	return func() *table.ColumnBuilder {
 		return ddl().Index(i)
 	}
 }
 
-func BaseDDL() []DDL {
-	return []DDL{
+func BaseDDL() []table.DDL {
+	return []table.DDL{
 		indexed(
 			columns.SliceColumn[components.Name],
 			indexes.CreateUniqueHashIndex(NormalizedNameIndex[components.Name])),

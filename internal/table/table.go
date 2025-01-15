@@ -4,9 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"sudonters/zootler/internal/skelly/bitset"
 
 	"github.com/etc-sudonters/substrate/mirrors"
-	"github.com/etc-sudonters/substrate/skelly/bitset"
 )
 
 type ColumnMeta struct {
@@ -17,7 +17,7 @@ type ColumnMetas []ColumnMeta
 type ColumnIds []ColumnId
 type Columns []ColumnData
 type Values []Value
-type Row = bitset.Bitset64
+type Row = bitset.Bitset32
 type Rows []*Row
 type ColumnMap map[reflect.Type]Value
 type RowTuple struct {
@@ -93,7 +93,7 @@ type Table struct {
 	indexes map[ColumnId]Index
 }
 
-func (tbl *Table) Lookup(c ColumnId, v Value) bitset.Bitset64 {
+func (tbl *Table) Lookup(c ColumnId, v Value) bitset.Bitset32 {
 	if idx, ok := tbl.indexes[c]; ok {
 		return idx.Rows(v)
 	}
@@ -112,7 +112,7 @@ func (tbl *Table) CreateColumn(b *ColumnBuilder) (ColumnData, error) {
 
 func (tbl *Table) InsertRow() RowId {
 	id := RowId(len(tbl.Rows))
-	tbl.Rows = append(tbl.Rows, &bitset.Bitset64{})
+	tbl.Rows = append(tbl.Rows, &bitset.Bitset32{})
 	return id
 }
 
@@ -120,7 +120,7 @@ func (tbl *Table) SetValue(r RowId, c ColumnId, v Value) error {
 	col := tbl.Cols[c]
 	col.column.Set(r, v)
 	row := tbl.Rows[r]
-	row.Set(uint64(c))
+	row.Set(uint32(c))
 	if idx, ok := tbl.indexes[c]; ok {
 		idx.Set(r, v)
 	}
@@ -131,7 +131,7 @@ func (tbl *Table) UnsetValue(r RowId, c ColumnId) error {
 	col := tbl.Cols[c]
 	col.column.Unset(r)
 	row := tbl.Rows[r]
-	row.Unset(uint64(c))
+	row.Unset(uint32(c))
 	if idx, ok := tbl.indexes[c]; ok {
 		idx.Unset(r)
 	}
