@@ -74,9 +74,8 @@ func Phase4_Compile(ocm *zecs.Ocm, compiler *mido.CodeGen) error {
 	panic("not implemented")
 }
 
-func Phase5_CreateWorld(ocm *zecs.Ocm, settings *settings.Zootr) any {
-	g := buildgraph(ocm)
-	edges := buildedgetable(ocm)
-	_, _ = g, edges
+func Phase5_CreateWorld(ocm *zecs.Ocm, settings *settings.Zootr, objects objects.Table) any {
+	xplore := explorableworldfrom(ocm)
+	_ = xplore
 	panic("not implemented")
 }

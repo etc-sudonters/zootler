@@ -37,7 +37,7 @@ type Ptr objects.Object
 
 type Collectable struct{}
 type Location struct{}
-type ConnectionKind uint8
+type EdgeKind uint8
 type HintRegion string
 type AltHintRegion string
 type DungeonName string
@@ -49,9 +49,9 @@ type CollectableType string
 type CollectablePriority uint8
 
 const (
-	_                   ConnectionKind = 0
-	EdgeTransit                        = 0x69
-	ConnectionPlacement                = 0xBB
+	_             EdgeKind = 0
+	EdgeTransit            = 0x69
+	EdgePlacement          = 0xBB
 
 	PriorityJunk        CollectablePriority = 0
 	PriorityMajor                           = 0xE0
