@@ -1,4 +1,4 @@
-package bitset
+package bitset32
 
 import (
 	"iter"

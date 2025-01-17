@@ -1,11 +1,11 @@
 package indexes
 
 import (
-	"sudonters/zootler/internal/skelly/bitset"
+	"sudonters/zootler/internal/skelly/bitset32"
 	"sudonters/zootler/internal/table"
 )
 
-type hashbitmap[T comparable] map[T]bitset.Bitset32
+type hashbitmap[T comparable] map[T]bitset32.Bitset32
 
 func (h hashbitmap[T]) isset(key T, which uint32) bool {
 	members := h.membersetfor(key)
@@ -28,10 +28,10 @@ func (h hashbitmap[T]) unset(which uint32) {
 	}
 }
 
-func (h hashbitmap[T]) membersetfor(key T) bitset.Bitset32 {
+func (h hashbitmap[T]) membersetfor(key T) bitset32.Bitset32 {
 	members, ok := h[key]
 	if !ok {
-		members = bitset.Bitset32{}
+		members = bitset32.Bitset32{}
 	}
 
 	return members
@@ -66,10 +66,10 @@ func (h *HashIndex[T]) Unset(r table.RowId) {
 }
 
 // this bitset is intersected / & / AND'd
-func (h *HashIndex[T]) Rows(v table.Value) bitset.Bitset32 {
+func (h *HashIndex[T]) Rows(v table.Value) bitset32.Bitset32 {
 	idx, ok := h.hasher(v)
 	if !ok {
-		return bitset.Bitset32{}
+		return bitset32.Bitset32{}
 	}
-	return bitset.Copy32(h.members.membersetfor(idx))
+	return bitset32.Copy32(h.members.membersetfor(idx))
 }

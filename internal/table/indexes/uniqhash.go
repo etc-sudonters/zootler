@@ -1,7 +1,7 @@
 package indexes
 
 import (
-	"sudonters/zootler/internal/skelly/bitset"
+	"sudonters/zootler/internal/skelly/bitset32"
 	"sudonters/zootler/internal/table"
 
 	"github.com/etc-sudonters/substrate/mirrors"
@@ -60,7 +60,7 @@ func (h *UniqueHashIndex[TIndex]) Unset(e table.RowId) {
 	}
 }
 
-func (h *UniqueHashIndex[TIndex]) Rows(c table.Value) (b bitset.Bitset32) {
+func (h *UniqueHashIndex[TIndex]) Rows(c table.Value) (b bitset32.Bitset32) {
 	idx, hashed := h.hasher(c)
 	if hashed {
 		entity, exists := h.members[idx]

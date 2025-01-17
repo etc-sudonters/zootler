@@ -56,7 +56,7 @@ const (
 )
 
 type CompiledSource struct {
-	Source
+	CompilationSource
 	ByteCode compiler.Bytecode
 }
 
@@ -64,10 +64,11 @@ func ptr[T any](what T) *T {
 	return &what
 }
 
-type Source struct {
+type CompilationSource struct {
 	Kind              SourceKind
 	String            SourceString
 	Ast               ast.Node
+	Optimized         ast.Node
 	OriginatingRegion string
 	Destination       string
 }
@@ -120,9 +121,6 @@ func CompilerDefaults() ConfigureCompiler {
 		env.Symbols.DeclareMany(symbols.GLOBAL, GlobalNames())
 		env.Symbols.DeclareMany(symbols.SETTING, settings.Names())
 
-		env.OnSourceLoad(func(env *CompileEnv, src *Source) {
-			SetCurrentLocation(env.Optimize.Context, src.OriginatingRegion)
-		})
 		env.Optimize.AddOptimizer(func(env *CompileEnv) ast.Rewriter {
 			return optimizer.InlineCalls(env.Optimize.Context, env.Symbols, env.Functions)
 		})
@@ -156,7 +154,7 @@ func NewCompileEnv(configure ...ConfigureCompiler) CompileEnv {
 	return env
 }
 
-type SourceLoaded func(*CompileEnv, *Source)
+type SourceLoaded func(*CompileEnv, *CompilationSource)
 type Optimizer func(*CompileEnv) ast.Rewriter
 type Analyzer func(*CompileEnv) ast.Visitor
 
@@ -210,11 +208,12 @@ func (this *CompileEnv) BuildFunctionTable(declarations map[string]string) error
 	return nil
 }
 
-func Compiler(env *CompileEnv) codegen {
+func Compiler(env *CompileEnv) CodeGen {
 	optimizers := env.Optimize.Optimiziers
 	analysis := env.Analysis
-	codegen := codegen{
-		CompileEnv:    env,
+	codegen := CodeGen{
+		Context:       env.Optimize.Context,
+		env:           env,
 		rewriters:     make([]ast.Rewriter, len(optimizers)),
 		preanalyzers:  make([]ast.Visitor, len(analysis.pre)),
 		postanalyzers: make([]ast.Visitor, len(analysis.post)),
@@ -231,45 +230,74 @@ func Compiler(env *CompileEnv) codegen {
 	return codegen
 }
 
-type codegen struct {
-	*CompileEnv
+type CodeGen struct {
+	Context       *optimizer.Context
+	env           *CompileEnv
 	rewriters     []ast.Rewriter
 	preanalyzers  []ast.Visitor
 	postanalyzers []ast.Visitor
 }
 
-func (this codegen) CompileSource(src *Source) (compiler.Bytecode, error) {
+func (this CodeGen) Parse(source string) (ast.Node, error) {
+	ast, err := ast.Parse(source, this.env.Symbols, this.env.Grammar)
+	return ast, err
+}
+
+func (this CodeGen) Optimize(node ast.Node) (ast.Node, error) {
+	var rewriteErr error
+	for range this.env.Optimize.Passes {
+		node, rewriteErr = ast.RewriteWithEvery(node, this.rewriters)
+		if rewriteErr != nil {
+			rewriteErr = fmt.Errorf("%w: %w", ErrOptimization, rewriteErr)
+			break
+		}
+	}
+
+	return node, rewriteErr
+}
+
+func (this CodeGen) Compile(node ast.Node) (compiler.Bytecode, error) {
+	bytecode, compileErr := compiler.Compile(node, this.env.Symbols, this.env.Objects, this.env.Optimize.FastOps)
+	if compileErr != nil {
+		compileErr = fmt.Errorf("%w: %w", ErrCompile, compileErr)
+	}
+	return bytecode, compileErr
+
+}
+
+func (this CodeGen) CompileSource(src *CompilationSource) (compiler.Bytecode, error) {
 	var bytecode compiler.Bytecode
-	for i := range this.onSourceLoad {
-		this.onSourceLoad[i](this.CompileEnv, src)
+	for i := range this.env.onSourceLoad {
+		this.env.onSourceLoad[i](this.env, src)
 	}
 
 	if src.Ast == nil {
 		var astErr error
-		src.Ast, astErr = ast.Parse(string(src.String), this.Symbols, this.Grammar)
+		src.Ast, astErr = ast.Parse(string(src.String), this.env.Symbols, this.env.Grammar)
 		if astErr != nil {
 			return bytecode, fmt.Errorf("%w: %w", ErrParse, astErr)
 		}
 	}
 
-	for i := range this.Analysis.pre {
+	for i := range this.env.Analysis.pre {
 		this.preanalyzers[i].Visit(src.Ast)
 	}
 
-	for range this.Optimize.Passes {
+	src.Optimized = src.Ast
+	for range this.env.Optimize.Passes {
 		var rewriteErr error
-		src.Ast, rewriteErr = ast.RewriteWithEvery(src.Ast, this.rewriters)
+		src.Optimized, rewriteErr = ast.RewriteWithEvery(src.Optimized, this.rewriters)
 		if rewriteErr != nil {
 			return bytecode, fmt.Errorf("%w: %w", ErrOptimization, rewriteErr)
 		}
 	}
 
-	for i := range this.Analysis.post {
+	for i := range this.env.Analysis.post {
 		this.postanalyzers[i].Visit(src.Ast)
 	}
 
 	var compileErr error
-	bytecode, compileErr = compiler.Compile(src.Ast, this.Symbols, this.Objects, this.Optimize.FastOps)
+	bytecode, compileErr = compiler.Compile(src.Ast, this.env.Symbols, this.env.Objects, this.env.Optimize.FastOps)
 	if compileErr != nil {
 		compileErr = fmt.Errorf("%w: %w", ErrCompile, compileErr)
 	}

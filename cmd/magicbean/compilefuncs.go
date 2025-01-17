@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"sudonters/zootler/internal/settings"
-	"sudonters/zootler/mido"
 	"sudonters/zootler/mido/ast"
 	"sudonters/zootler/mido/symbols"
 )
@@ -63,7 +62,6 @@ func (this settingCompilerFuncs) loadsetting(nodes []ast.Node) (ast.Node, error)
 type compfuncs struct {
 	constCompileFuncs
 	settingCompilerFuncs
-	mido.ConnectionGenerator
 }
 
 type constCompileFuncs ast.Boolean

@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"slices"
 	"strings"
 	"sudonters/zootler/internal/settings"
 	"sudonters/zootler/mido"
@@ -10,7 +9,6 @@ import (
 	"sudonters/zootler/mido/compiler"
 	"sudonters/zootler/mido/objects"
 	"sudonters/zootler/mido/optimizer"
-	"sudonters/zootler/mido/symbols"
 )
 
 func constBuiltInFunc([]objects.Object) (objects.Object, error) {
@@ -36,11 +34,6 @@ func main() {
 	_ = seedSettings
 	analysis := newanalysis()
 	compileEnv := mido.NewCompileEnv(
-		mido.CompilerWithConnectionGeneration(func(env *mido.CompileEnv) func(*symbols.Sym) {
-			return func(s *symbols.Sym) {
-				env.Objects.AssociateSymbol(s, objects.PackTaggedPtr32(objects.PtrToken, 0xdeadbeef))
-			}
-		}),
 		mido.CompilerDefaults(),
 		mido.CompilerWithTokens(rawTokens),
 		mido.WithCompilerFunctions(func(*mido.CompileEnv) optimizer.CompilerFunctionTable {
@@ -103,11 +96,11 @@ func main() {
 
 	for i := range source {
 		declaration := &compiled[i]
-		declaration.Source = source[i]
+		declaration.CompilationSource = source[i]
 
 		switch declaration.Kind {
 		case mido.SourceTransit:
-			declaration.Source.Destination = fmt.Sprintf(
+			declaration.CompilationSource.Destination = fmt.Sprintf(
 				"%s -> %s",
 				declaration.OriginatingRegion, declaration.Destination,
 			)
@@ -122,24 +115,17 @@ func main() {
 	for i := range source {
 		var compileErr error
 		compiling := mido.CompiledSource{
-			Source: source[i],
+			CompilationSource: source[i],
 		}
-		compiling.ByteCode, compileErr = codeGen.CompileSource(&compiling.Source)
+		compiling.ByteCode, compileErr = codeGen.CompileSource(&compiling.CompilationSource)
 		compiled[i] = compiling
 		if compileErr != nil {
 			failedCompiles = append(failedCompiles, failedcompile{
 				err: compileErr,
-				src: &compiled[i].Source,
+				src: &compiled[i].CompilationSource,
 			})
 		}
 	}
-
-	connections, connectionErr := mido.CompileGeneratedConnections(&codeGen)
-	if connectionErr != nil {
-		panic(connectionErr)
-	}
-
-	compiled = slices.Concat(compiled, connections)
 
 	ExectuteAll(&compileEnv, compiled)
 	DisassembleAll(compiled)
@@ -156,7 +142,7 @@ func main() {
 
 type failedcompile struct {
 	err error
-	src *mido.Source
+	src *mido.CompilationSource
 }
 
 func (this failedcompile) String() string {

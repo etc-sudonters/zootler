@@ -1,29 +1,42 @@
-package z2
+package magicbean
 
 import (
 	"fmt"
-	"sudonters/zootler/internal/table"
 	"sudonters/zootler/mido/ast"
 	"sudonters/zootler/mido/compiler"
 	"sudonters/zootler/mido/objects"
+	"sudonters/zootler/zecs"
 )
 
-type HeldAt Entity
-type HoldsToken Entity
-type FixedPlacement struct{}
-type EmptyPlacement struct{}
+type Name string
+
+func NameF(tpl string, v ...any) Name {
+	return Name(fmt.Sprintf(tpl, v...))
+}
+
+type Transit struct{ From, To zecs.Entity }
+type Region struct{}
+type Placement struct{}
+type DefaultPlacement zecs.Entity
+type Token struct{}
+type Fixed struct{}
+
+type ScriptDecl string
+type ScriptBody string
+
+type StringRule string
+type ParsedRule ast.Node
+type OptimizedRule ast.Node
+type CompiledRule compiler.Bytecode
+
+type HeldAt zecs.Entity
+type HoldsToken zecs.Entity
+type Empty struct{}
 type Generated struct{}
 type Ptr objects.Object
 
-type Entity table.RowId
 type Collectable struct{}
 type Location struct{}
-type Name string
-type Connection struct{ From, To Entity }
-type StringSource string
-type ParsedSource ast.Node
-type OptimizedSource ast.Node
-type CompiledSource compiler.Bytecode
 type ConnectionKind uint8
 type HintRegion string
 type AltHintRegion string
@@ -36,10 +49,9 @@ type CollectableType string
 type CollectablePriority uint8
 
 const (
-	_               ConnectionKind = 0
-	ConnectionCheck                = 0xBB
-	ConnectionEvent                = 0xA0
-	ConnectionExit                 = 0x69
+	_                   ConnectionKind = 0
+	EdgeTransit                        = 0x69
+	ConnectionPlacement                = 0xBB
 
 	PriorityJunk        CollectablePriority = 0
 	PriorityMajor                           = 0xE0
@@ -65,7 +77,3 @@ type Song struct{}
 type TCGSmallKey struct{}
 type TCGSmallKeyRing struct{}
 type GoldSkulltulaToken struct{}
-
-func NameF(tpl string, v ...any) Name {
-	return Name(fmt.Sprintf(tpl, v...))
-}

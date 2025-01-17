@@ -1,4 +1,4 @@
-package bitset
+package bitset32
 
 import (
 	"math/bits"
@@ -209,14 +209,4 @@ func (this Bitset32) IsEmpty() bool {
 		}
 	}
 	return true
-
-}
-
-func (this Bitset32) IsSuperSetOf(other Bitset32) bool {
-	intersect := this.Intersect(other)
-	return intersect.Eq(other)
-}
-
-func (this Bitset32) IsSubSetOf(other Bitset32) bool {
-	return other.IsSuperSetOf(this)
 }

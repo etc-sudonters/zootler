@@ -4,6 +4,7 @@ import (
 	"io/fs"
 	"path/filepath"
 	"sudonters/zootler/internal"
+	"sudonters/zootler/mido/objects"
 
 	"github.com/etc-sudonters/substrate/slipup"
 )
@@ -25,25 +26,47 @@ type Regions struct {
 
 func (this *Regions) RegionNamed(name Name) Region {
 	proxy := this.Regions.Entity(name)
-	proxy.Attach(Location{})
+	proxy.Attach(Location{}, objects.PtrLoc)
 	return Region{proxy, name}
 }
 
-func (this *Regions) Connect(from, to *Region) Edge {
+func (this *Regions) Connect(from, to Region, kind ConnectionKind) Edge {
 	connection := Connection{from.id, to.id}
 	edge := this.Connections.Entity(connection)
+	edge.Attach(kind, NameF("%s -> %s", from.Name, to.Name), objects.PtrEdge)
 	return Edge{edge, connection}
 }
 
 type RegionLoader struct {
 	Regions
+	Tokens Tokens
 }
 
 func (this *RegionLoader) Load(raw region) {
 	region := this.RegionNamed(Name(raw.RegionName))
-	this.attachAll(&region, ConnectionExit, raw.Exits)
-	this.attachAll(&region, ConnectionCheck, raw.Locations)
-	this.attachAll(&region, ConnectionEvent, raw.Events)
+
+	for exit, rule := range raw.Exits {
+		exit := this.RegionNamed(Name(exit))
+		edge := this.Connect(region, exit, ConnectionExit)
+		edge.Attach(StringSource(rule))
+	}
+
+	for location, rule := range raw.Locations {
+		location := this.RegionNamed(Name(location))
+		location.Attach(EmptyPlacement{})
+		edge := this.Connect(region, location, ConnectionCheck)
+		edge.Attach(StringSource(rule))
+	}
+
+	for event, rule := range raw.Events {
+		eventName := Name(event)
+		location := this.RegionNamed(NameF("%s %s", raw.RegionName, eventName))
+		token := this.Tokens.Entity(eventName)
+		edge := this.Connect(region, location, ConnectionCheck)
+		edge.Attach(StringSource(rule))
+		location.Attach(HoldsToken(token.Entity()), FixedPlacement{}, Generated{})
+		token.Attach(HeldAt(location.Entity()), FixedPlacement{})
+	}
 
 	var attachments attachments
 
@@ -76,14 +99,6 @@ func (this *RegionLoader) Load(raw region) {
 	}
 
 	region.AttachAll(attachments.v)
-}
-
-func (this *RegionLoader) attachAll(region *Region, kind ConnectionKind, connections map[string]string) {
-	for to, rule := range connections {
-		destination := this.RegionNamed(Name(to))
-		edge := this.Connect(region, &destination)
-		edge.Attach(kind, StringSource(rule))
-	}
 }
 
 func LoadRegionsFromFile(loader *RegionLoader, path string) error {

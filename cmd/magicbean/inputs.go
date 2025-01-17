@@ -125,10 +125,10 @@ type loadingRule struct {
 	kind               symbols.Kind
 }
 
-func FakeSourceRules() []mido.Source {
-	source := make([]mido.Source, len(rules))
+func FakeSourceRules() []mido.CompilationSource {
+	source := make([]mido.CompilationSource, len(rules))
 	for i := range source {
-		source[i] = mido.Source{
+		source[i] = mido.CompilationSource{
 			Kind:              mido.SourceTransit,
 			String:            mido.SourceString(rules[i].logic),
 			OriginatingRegion: rules[i].where,
@@ -138,7 +138,7 @@ func FakeSourceRules() []mido.Source {
 	return source
 }
 
-func SourceRules(locations []location) (source []mido.Source) {
+func SourceRules(locations []location) (source []mido.CompilationSource) {
 	type pair struct {
 		kind   mido.SourceKind
 		source map[string]string
@@ -163,10 +163,10 @@ func SourceRules(locations []location) (source []mido.Source) {
 	return
 }
 
-func sourceRules(origin string, kind mido.SourceKind, rules map[string]string) []mido.Source {
-	chunk := make([]mido.Source, 0, len(rules))
+func sourceRules(origin string, kind mido.SourceKind, rules map[string]string) []mido.CompilationSource {
+	chunk := make([]mido.CompilationSource, 0, len(rules))
 	for destination, rule := range rules {
-		chunk = append(chunk, mido.Source{
+		chunk = append(chunk, mido.CompilationSource{
 			Kind:              kind,
 			String:            mido.SourceString(rule),
 			OriginatingRegion: origin,

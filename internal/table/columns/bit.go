@@ -1,12 +1,12 @@
 package columns
 
 import (
-	"sudonters/zootler/internal/skelly/bitset"
+	"sudonters/zootler/internal/skelly/bitset32"
 	"sudonters/zootler/internal/table"
 )
 
 func NewBit(singleton table.Value) *Bit {
-	return &Bit{t: singleton, members: &bitset.Bitset32{}}
+	return &Bit{t: singleton, members: &bitset32.Bitset32{}}
 }
 
 /*
@@ -16,7 +16,7 @@ func NewBit(singleton table.Value) *Bit {
  */
 type Bit struct {
 	t       table.Value
-	members *bitset.Bitset32
+	members *bitset32.Bitset32
 }
 
 func (m Bit) Get(e table.RowId) table.Value {
@@ -34,8 +34,8 @@ func (m *Bit) Unset(e table.RowId) {
 	m.members.Unset(uint32(e))
 }
 
-func (m *Bit) ScanFor(c table.Value) bitset.Bitset32 {
-	return bitset.Copy32(*m.members)
+func (m *Bit) ScanFor(c table.Value) bitset32.Bitset32 {
+	return bitset32.Copy32(*m.members)
 }
 
 func (m *Bit) Len() int {

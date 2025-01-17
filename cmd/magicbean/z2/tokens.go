@@ -1,5 +1,7 @@
 package z2
 
+import "sudonters/zootler/mido/objects"
+
 type Token struct {
 	proxy
 	Name
@@ -11,7 +13,7 @@ type Tokens struct {
 
 func (this Tokens) Entity(name Name) Token {
 	entity := this.Entities.Entity(name)
-	entity.Attach(Collectable{})
+	entity.Attach(Collectable{}, objects.PtrToken)
 	return Token{entity, name}
 }
 

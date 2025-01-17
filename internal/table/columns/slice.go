@@ -3,7 +3,7 @@ package columns
 import (
 	"fmt"
 	"reflect"
-	"sudonters/zootler/internal/skelly/bitset"
+	"sudonters/zootler/internal/skelly/bitset32"
 	"sudonters/zootler/internal/table"
 )
 
@@ -18,12 +18,12 @@ func SizedSliceColumn[T any](size uint) *table.ColumnBuilder {
 func NewSlice() *Slice {
 	r := new(Slice)
 	r.components = make([]table.Value, 0)
-	r.members = &bitset.Bitset32{}
+	r.members = &bitset32.Bitset32{}
 	return r
 }
 
 func SizedSlice(size uint) *Slice {
-	bitset := bitset.WithBucketsFor32(uint32(size))
+	bitset := bitset32.WithBucketsFor32(uint32(size))
 	r := new(Slice)
 	r.components = make([]table.Value, size)
 	r.members = &bitset
@@ -40,7 +40,7 @@ type Slice struct {
 	id         table.ColumnId
 	typ        reflect.Type
 	components []table.Value
-	members    *bitset.Bitset32
+	members    *bitset32.Bitset32
 }
 
 func (row *Slice) Set(e table.RowId, c table.Value) {
@@ -80,7 +80,7 @@ func (row *Slice) ensureSize(n int) {
 	row.components = expanded
 }
 
-func (row Slice) ScanFor(v table.Value) bitset.Bitset32 {
+func (row Slice) ScanFor(v table.Value) bitset32.Bitset32 {
 	density := float32(row.members.Len()) / float32(len(row.components))
 	if density > 0.6 {
 		return row.scanValues(v)
@@ -93,8 +93,8 @@ func (row Slice) Len() int {
 	return row.members.Len()
 }
 
-func (row Slice) scanMembers(v table.Value) (b bitset.Bitset32) {
-	bititer := bitset.Iter32(row.members)
+func (row Slice) scanMembers(v table.Value) (b bitset32.Bitset32) {
+	bititer := bitset32.Iter32(row.members)
 	for id := range bititer.All {
 		value := row.components[id]
 		if value == nil {
@@ -109,7 +109,7 @@ func (row Slice) scanMembers(v table.Value) (b bitset.Bitset32) {
 	return
 }
 
-func (row Slice) scanValues(v table.Value) (b bitset.Bitset32) {
+func (row Slice) scanValues(v table.Value) (b bitset32.Bitset32) {
 	for id, value := range row.components {
 		if value == nil || !reflect.DeepEqual(v, value) {
 			continue

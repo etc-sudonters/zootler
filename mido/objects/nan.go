@@ -26,6 +26,7 @@ const (
 	PtrSetting PtrTag = 0xC0
 	PtrFunc    PtrTag = 0xF0
 	PtrLoc     PtrTag = 0xAC
+	PtrEdge    PtrTag = 0x23
 
 	True         = ztrue
 	False        = zfalse

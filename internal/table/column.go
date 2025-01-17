@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"math"
 	"reflect"
-	"sudonters/zootler/internal/skelly/bitset"
+	"sudonters/zootler/internal/skelly/bitset32"
 
 	"github.com/etc-sudonters/substrate/mirrors"
 )
@@ -23,7 +23,7 @@ type Column interface {
 	Get(e RowId) Value
 	Set(e RowId, c Value)
 	Unset(e RowId)
-	ScanFor(Value) bitset.Bitset32
+	ScanFor(Value) bitset32.Bitset32
 	Len() int
 }
 

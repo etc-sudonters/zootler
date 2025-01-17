@@ -5,6 +5,18 @@ import (
 	"sudonters/zootler/internal/table"
 )
 
+type AttachingComponents struct {
+	v table.Values
+}
+
+func (this *AttachingComponents) Add(v table.Value) {
+	this.v = append(this.v, v)
+}
+
+func (this *AttachingComponents) Components() table.Values {
+	return this.v
+}
+
 type proxy struct {
 	q  query.Engine
 	id Entity
