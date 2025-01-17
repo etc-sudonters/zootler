@@ -2,18 +2,24 @@ package ast
 
 import (
 	"fmt"
+	"strings"
 	"sudonters/zootler/internal/ruleparser"
 	"sudonters/zootler/mido/symbols"
 
 	"github.com/etc-sudonters/substrate/peruse"
 )
 
-func BuildCompilingFunctionTable(symbolTable *symbols.Table, grammar peruse.Grammar[ruleparser.Tree], decls map[string]string) (PartialFunctionTable, error) {
-	funcTable := PartialFunctionTable{make(map[string]PartialFunction, len(decls))}
+func FastScriptNameFromDecl(decl string) string {
+	parts := strings.Split(decl, "(")
+	return parts[0]
+}
+
+func BuildScriptedFuncTable(symbolTable *symbols.Table, grammar peruse.Grammar[ruleparser.Tree], decls map[string]string) (ScriptedFunctions, error) {
+	funcTable := ScriptedFunctions{make(map[string]ScriptedFunction, len(decls))}
 	bodies := make(map[string]string, len(decls))
 
 	for header, body := range decls {
-		var decl PartialFunction
+		var decl ScriptedFunction
 		head, declErr := Parse(header, symbolTable, grammar)
 		if declErr != nil {
 			panic(declErr)
@@ -63,22 +69,30 @@ func BuildCompilingFunctionTable(symbolTable *symbols.Table, grammar peruse.Gram
 	return funcTable, nil
 }
 
-type PartialFunction struct {
+type ScriptedFunction struct {
 	Symbol *symbols.Sym
 	Params []Identifier
 	Body   Node
 }
 
-type PartialFunctionTable struct {
-	tbl map[string]PartialFunction
+type ScriptedFunctions struct {
+	tbl map[string]ScriptedFunction
 }
 
-func (this *PartialFunctionTable) Get(name string) (PartialFunction, bool) {
+func (this *ScriptedFunctions) All(yield func(string, ScriptedFunction) bool) {
+	for name, sf := range this.tbl {
+		if !yield(name, sf) {
+			return
+		}
+	}
+}
+
+func (this *ScriptedFunctions) Get(name string) (ScriptedFunction, bool) {
 	fn, exists := this.tbl[name]
 	return fn, exists
 }
 
-func (this *PartialFunctionTable) add(sym *symbols.Sym, body PartialFunction) {
+func (this *ScriptedFunctions) add(sym *symbols.Sym, body ScriptedFunction) {
 	if _, exists := this.tbl[sym.Name]; exists {
 		return
 	}

@@ -12,7 +12,7 @@ const (
 	FunctionTableKey funcTableKey = "function-table"
 )
 
-func InlineCalls(ctx *Context, syms *symbols.Table, funcs *ast.PartialFunctionTable) ast.Rewriter {
+func InlineCalls(ctx *Context, syms *symbols.Table, funcs *ast.ScriptedFunctions) ast.Rewriter {
 	replacer := replacer{
 		scopes: make([]map[ast.Identifier]ast.Node, 16),
 		sp:     -1,
@@ -26,7 +26,7 @@ func InlineCalls(ctx *Context, syms *symbols.Table, funcs *ast.PartialFunctionTa
 type inliner struct {
 	ctx      *Context
 	symbols  *symbols.Table
-	funcs    *ast.PartialFunctionTable
+	funcs    *ast.ScriptedFunctions
 	replacer *replacer
 }
 

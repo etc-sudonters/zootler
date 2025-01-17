@@ -40,10 +40,9 @@ func Phase3_ConfigureCompiler(ocm *zecs.Ocm, settings *settings.Zootr, options .
 	defaults := []mido.ConfigureCompiler{
 		mido.CompilerDefaults(),
 		func(env *mido.CompileEnv) {
-			panicWhenErr(loadsymbols(ocm, env.Symbols))
-			panicWhenErr(loadptrs(ocm, env.Objects))
+			panicWhenErr(loadsymbols(ocm, env.Symbols, env.Objects))
 			panicWhenErr(loadscripts(ocm, env))
-			panicWhenErr(aliassymbols(ocm, env.Symbols, env.Functions))
+			panicWhenErr(aliassymbols(ocm, env.Symbols, env.ScriptedFuncs))
 		},
 		installSettings(settings),
 		installConnectionGenerator(ocm),

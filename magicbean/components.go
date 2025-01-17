@@ -9,6 +9,7 @@ import (
 )
 
 type Name string
+type AliasingName string
 
 func NameF(tpl string, v ...any) Name {
 	return Name(fmt.Sprintf(tpl, v...))
@@ -22,12 +23,13 @@ type Token struct{}
 type Fixed struct{}
 
 type ScriptDecl string
-type ScriptBody string
+type ScriptSource string
+type ScriptParsed ast.Node
 
-type StringRule string
-type ParsedRule ast.Node
-type OptimizedRule ast.Node
-type CompiledRule compiler.Bytecode
+type RuleSource string
+type RuleParsed ast.Node
+type RuleOptimized ast.Node
+type RuleCompiled compiler.Bytecode
 
 type HeldAt zecs.Entity
 type HoldsToken zecs.Entity

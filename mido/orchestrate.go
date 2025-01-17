@@ -37,10 +37,8 @@ type SourceString string
 
 func (this SourceKind) AsSymbolKind() symbols.Kind {
 	switch this {
-	case SourceCheck:
+	case SourceCheck, SourceEvent:
 		return symbols.TOKEN
-	case SourceEvent:
-		return symbols.EVENT
 	case SourceTransit:
 		return symbols.TRANSIT
 	default:
@@ -122,13 +120,13 @@ func CompilerDefaults() ConfigureCompiler {
 		env.Symbols.DeclareMany(symbols.SETTING, settings.Names())
 
 		env.Optimize.AddOptimizer(func(env *CompileEnv) ast.Rewriter {
-			return optimizer.InlineCalls(env.Optimize.Context, env.Symbols, env.Functions)
+			return optimizer.InlineCalls(env.Optimize.Context, env.Symbols, env.ScriptedFuncs)
 		})
 		env.Optimize.AddOptimizer(func(env *CompileEnv) ast.Rewriter {
 			return optimizer.FoldConstants(env.Symbols)
 		})
 		env.Optimize.AddOptimizer(func(env *CompileEnv) ast.Rewriter {
-			return optimizer.InvokeBareFuncs(env.Symbols, env.Functions)
+			return optimizer.InvokeBareFuncs(env.Symbols, env.ScriptedFuncs)
 		})
 		env.Optimize.AddOptimizer(func(env *CompileEnv) ast.Rewriter {
 			return optimizer.CollapseHas(env.Symbols)
@@ -159,10 +157,10 @@ type Optimizer func(*CompileEnv) ast.Rewriter
 type Analyzer func(*CompileEnv) ast.Visitor
 
 type CompileEnv struct {
-	Grammar   peruse.Grammar[ruleparser.Tree]
-	Symbols   *symbols.Table
-	Functions *ast.PartialFunctionTable
-	Objects   *objects.Builder
+	Grammar       peruse.Grammar[ruleparser.Tree]
+	Symbols       *symbols.Table
+	ScriptedFuncs *ast.ScriptedFunctions
+	Objects       *objects.Builder
 
 	Optimize     Optimize
 	Analysis     Analysis
@@ -197,14 +195,14 @@ func (this *Optimize) AddOptimizer(o Optimizer) {
 	this.Optimiziers = append(this.Optimiziers, o)
 }
 
-func (this *CompileEnv) BuildFunctionTable(declarations map[string]string) error {
+func (this *CompileEnv) BuildScriptedFuncs(declarations map[string]string) error {
 	var err error
-	var funcs ast.PartialFunctionTable
-	funcs, err = ast.BuildCompilingFunctionTable(this.Symbols, this.Grammar, declarations)
+	var funcs ast.ScriptedFunctions
+	funcs, err = ast.BuildScriptedFuncTable(this.Symbols, this.Grammar, declarations)
 	if err != nil {
 		return err
 	}
-	this.Functions = &funcs
+	this.ScriptedFuncs = &funcs
 	return nil
 }
 

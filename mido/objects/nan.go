@@ -21,12 +21,13 @@ const (
 	F64     = nantag(^quiet)
 	Func    = nantag(ptr32 | Object(PtrFunc)<<32)
 
-	PtrToken   PtrTag = 0xE0
-	PtrEvent   PtrTag = 0xE0
 	PtrSetting PtrTag = 0xC0
 	PtrFunc    PtrTag = 0xF0
-	PtrLoc     PtrTag = 0xAC
-	PtrEdge    PtrTag = 0x23
+
+	PtrToken  PtrTag = 0xE0
+	PtrRegion PtrTag = 0xAC
+	PtrTrans  PtrTag = 0xDF
+	PtrPlace  PtrTag = 0xE9
 
 	True         = ztrue
 	False        = zfalse

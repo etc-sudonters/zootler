@@ -6,6 +6,7 @@ import (
 	"sudonters/zootler/cmd/magicbean/z16"
 	"sudonters/zootler/internal"
 	"sudonters/zootler/magicbean"
+	"sudonters/zootler/mido/ast"
 	"sudonters/zootler/zecs"
 
 	"github.com/etc-sudonters/substrate/slipup"
@@ -75,7 +76,7 @@ func (this LoadPaths) readrelationsdir(store func(relations) error) error {
 func storeScripts(ocm *zecs.Ocm, paths LoadPaths) error {
 	eng := ocm.Engine()
 	for decl, source := range paths.readscripts() {
-		eng.InsertRow(magicbean.ScriptDecl(decl), magicbean.ScriptBody(source))
+		eng.InsertRow(magicbean.ScriptDecl(decl), magicbean.ScriptSource(source), name(ast.FastScriptNameFromDecl(decl)))
 	}
 	return nil
 }
@@ -184,13 +185,13 @@ func storeRelations(nodes z16.Nodes, tokens z16.Tokens, paths LoadPaths) error {
 
 		for exit, rule := range raw.Exits {
 			transit := region.Connects(nodes.Region(name(exit)))
-			transit.Edge.Attach(magicbean.StringRule(rule), magicbean.EdgeTransit)
+			transit.Edge.Attach(magicbean.RuleSource(rule), magicbean.EdgeTransit)
 		}
 
 		for location, rule := range raw.Locations {
 			placement := nodes.Placement(name(location))
 			edge := region.Has(placement)
-			edge.Attach(magicbean.StringRule(rule))
+			edge.Attach(magicbean.RuleSource(rule))
 		}
 
 		for event, rule := range raw.Events {
@@ -199,7 +200,7 @@ func storeRelations(nodes z16.Nodes, tokens z16.Tokens, paths LoadPaths) error {
 			placement := nodes.Placement(namef("%s %s", raw.RegionName, event))
 			placement.Owns(token)
 			edge := region.Has(placement)
-			edge.Attach(magicbean.StringRule(rule))
+			edge.Attach(magicbean.RuleSource(rule))
 		}
 
 		var attachments zecs.Attaching

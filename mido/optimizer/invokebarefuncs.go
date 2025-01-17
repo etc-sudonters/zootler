@@ -6,7 +6,7 @@ import (
 	"sudonters/zootler/mido/symbols"
 )
 
-func InvokeBareFuncs(symbols *symbols.Table, funcs *ast.PartialFunctionTable) ast.Rewriter {
+func InvokeBareFuncs(symbols *symbols.Table, funcs *ast.ScriptedFunctions) ast.Rewriter {
 	promote := invokebarefuncs{symbols, funcs}
 	return ast.Rewriter{
 		Invoke:     ast.DontRewrite[ast.Invoke](),
@@ -16,7 +16,7 @@ func InvokeBareFuncs(symbols *symbols.Table, funcs *ast.PartialFunctionTable) as
 
 type invokebarefuncs struct {
 	symbols *symbols.Table
-	funcs   *ast.PartialFunctionTable
+	funcs   *ast.ScriptedFunctions
 }
 
 func (this invokebarefuncs) Identifier(node ast.Identifier, _ ast.Rewriting) (ast.Node, error) {

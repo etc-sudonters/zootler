@@ -39,16 +39,16 @@ func (this *Ocm) Engine() query.Engine {
 	return this.eng
 }
 
-func (this *Ocm) Query() q {
-	return q{this, this.eng.CreateQuery()}
+func (this *Ocm) Query() Q {
+	return Q{this, this.eng.CreateQuery()}
 }
 
-type q struct {
+type Q struct {
 	set *Ocm
 	q   query.Query
 }
 
-func (this *q) Build(build BuildQuery, builds ...BuildQuery) *q {
+func (this *Q) Build(build BuildQuery, builds ...BuildQuery) *Q {
 	build(this)
 	for _, b := range builds {
 		b(this)
@@ -56,25 +56,25 @@ func (this *q) Build(build BuildQuery, builds ...BuildQuery) *q {
 	return this
 }
 
-type BuildQuery func(*q)
+type BuildQuery func(*Q)
 
-func Load[T Value](this *q) {
+func Load[T Value](this *Q) {
 	this.q.Load(query.MustAsColumnId[T](this.set.eng))
 }
 
-func With[T Value](this *q) {
+func With[T Value](this *Q) {
 	this.q.Exists(query.MustAsColumnId[T](this.set.eng))
 }
 
-func WithOut[T Value](this *q) {
+func WithOut[T Value](this *Q) {
 	this.q.NotExists(query.MustAsColumnId[T](this.set.eng))
 }
 
-func (this *q) Execute() (RowSet, error) {
+func (this *Q) Execute() (RowSet, error) {
 	return this.set.eng.Retrieve(this.q)
 }
 
-func (this *q) Rows(yield bundle.RowIter) {
+func (this *Q) Rows(yield bundle.RowIter) {
 	rows, err := this.Execute()
 	if err != nil {
 		panic(err)

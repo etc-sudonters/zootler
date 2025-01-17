@@ -69,11 +69,11 @@ func main() {
 			"has": compiler.FastHasOp,
 		}),
 		func(env *mido.CompileEnv) {
-			funcBuildErr := env.BuildFunctionTable(ReadHelpers(".data/logic/helpers.json"))
+			funcBuildErr := env.BuildScriptedFuncs(ReadHelpers(".data/logic/helpers.json"))
 			if funcBuildErr != nil {
 				panic(funcBuildErr)
 			}
-			aliasTokens(env.Symbols, env.Functions, rawTokens)
+			aliasTokens(env.Symbols, env.ScriptedFuncs, rawTokens)
 			analysis.register(env)
 			for i := range rawTokens {
 				symbol := env.Symbols.LookUpByName(rawTokens[i])

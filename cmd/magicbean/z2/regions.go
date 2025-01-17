@@ -4,7 +4,6 @@ import (
 	"io/fs"
 	"path/filepath"
 	"sudonters/zootler/internal"
-	"sudonters/zootler/mido/objects"
 
 	"github.com/etc-sudonters/substrate/slipup"
 )
@@ -26,14 +25,12 @@ type Regions struct {
 
 func (this *Regions) RegionNamed(name Name) Region {
 	proxy := this.Regions.Entity(name)
-	proxy.Attach(Location{}, objects.PtrLoc)
 	return Region{proxy, name}
 }
 
 func (this *Regions) Connect(from, to Region, kind ConnectionKind) Edge {
 	connection := Connection{from.id, to.id}
 	edge := this.Connections.Entity(connection)
-	edge.Attach(kind, NameF("%s -> %s", from.Name, to.Name), objects.PtrEdge)
 	return Edge{edge, connection}
 }
 

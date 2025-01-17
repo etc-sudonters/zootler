@@ -84,14 +84,14 @@ func fakeLoadingRules() ([]loadingRule, error) {
 			parent: item.where,
 			name:   item.where,
 			body:   item.logic,
-			kind:   symbols.LOCATION,
+			kind:   symbols.PLACEMENT,
 		})
 	}
 
 	return fake, nil
 }
 
-func aliasTokens(symbols *symbols.Table, funcs *ast.PartialFunctionTable, names []string) {
+func aliasTokens(symbols *symbols.Table, funcs *ast.ScriptedFunctions, names []string) {
 	for _, name := range names {
 		escaped := escape(name)
 		if _, exists := funcs.Get(escaped); exists {
@@ -234,8 +234,8 @@ func loaddir(logicDir string) ([]loadingRule, error) {
 				rules map[string]string
 				kind  symbols.Kind
 			}{
-				{node.Locations, symbols.LOCATION},
-				{node.Events, symbols.EVENT},
+				{node.Locations, symbols.PLACEMENT},
+				{node.Events, symbols.TOKEN},
 				{node.Exits, symbols.TRANSIT},
 			}
 

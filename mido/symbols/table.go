@@ -113,11 +113,6 @@ func (s *Sym) SetKind(t Kind) {
 	switch {
 	case t == UNKNOWN || t == ALIAS:
 		return
-		// event is more specific than token
-	case t == EVENT && s.Kind == TOKEN:
-		s.Kind = EVENT
-	case s.Kind == EVENT && t == TOKEN:
-		return
 		// aliased over
 	case t == SCRIPTED_FUNC && s.Kind == TOKEN:
 		s.Kind = SCRIPTED_FUNC
@@ -145,14 +140,16 @@ const (
 	BUILT_IN_FUNCTION      = "BUILT_IN_FUNCTION"
 	COMPILER_FUNCTION      = "COMPILER_FUNCTION"
 	FUNCTION               = "FUNCTION"
-	GLOBAL                 = "GLOBAL"
-	LOCATION               = "LOCATION"
-	EVENT                  = "EVENT"
-	SETTING                = "SETTING"
-	TOKEN                  = "TOKEN"
-	UNKNOWN                = "UNKNOWN"
 	SCRIPTED_FUNC          = "SCRIPTED_FUNC"
-	TRANSIT                = "TRANSIT"
-	ALIAS                  = "ALIAS"
-	LOCAL                  = "LOCAL"
+
+	GLOBAL  = "GLOBAL"
+	SETTING = "SETTING"
+	ALIAS   = "ALIAS"
+	LOCAL   = "LOCAL"
+	UNKNOWN = "UNKNOWN"
+
+	REGION    = "REGION"
+	PLACEMENT = "PLACEMENT"
+	TOKEN     = "TOKEN"
+	TRANSIT   = "TRANSIT"
 )

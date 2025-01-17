@@ -9,7 +9,7 @@ import (
 type ExplorableEdge struct {
 	Kind   EdgeKind
 	Entity zecs.Entity
-	Rule   CompiledRule
+	Rule   RuleCompiled
 }
 
 type ExplorableWorld struct {

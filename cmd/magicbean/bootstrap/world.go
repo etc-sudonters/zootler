@@ -11,7 +11,7 @@ func explorableworldfrom(ocm *zecs.Ocm) magicbean.ExplorableWorld {
 	var world magicbean.ExplorableWorld
 	q := ocm.Query()
 	q.Build(
-		zecs.Load[magicbean.CompiledRule],
+		zecs.Load[magicbean.RuleCompiled],
 		zecs.Load[magicbean.EdgeKind],
 		zecs.Load[magicbean.Transit],
 	)
@@ -29,7 +29,7 @@ func explorableworldfrom(ocm *zecs.Ocm) magicbean.ExplorableWorld {
 		directed.AddEdge(graph.Origination(trans.From), graph.Destination(trans.To))
 		world.Edges[trans] = magicbean.ExplorableEdge{
 			Entity: entity,
-			Rule:   tup.Values[0].(magicbean.CompiledRule),
+			Rule:   tup.Values[0].(magicbean.RuleCompiled),
 			Kind:   tup.Values[1].(magicbean.EdgeKind),
 		}
 	}

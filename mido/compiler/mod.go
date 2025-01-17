@@ -110,7 +110,7 @@ func (this *compiler) Identifier(node ast.Identifier, visit ast.Visiting) error 
 	symbol := this.symbols.LookUpByIndex(node.AsIndex())
 	ptr := this.objects.PtrFor(symbol)
 	switch symbol.Kind {
-	case symbols.BUILT_IN_FUNCTION, symbols.TOKEN, symbols.EVENT, symbols.SETTING:
+	case symbols.BUILT_IN_FUNCTION, symbols.TOKEN, symbols.SETTING:
 		this.emit(code.PUSH_CONST, int(ptr))
 	default:
 		return fmt.Errorf("uncompilable identifier: %s", symbol)
