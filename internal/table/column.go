@@ -23,7 +23,7 @@ type Column interface {
 	Get(e RowId) Value
 	Set(e RowId, c Value)
 	Unset(e RowId)
-	ScanFor(Value) bitset32.Bitset32
+	ScanFor(Value) bitset32.Bitset
 	Len() int
 }
 

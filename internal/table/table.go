@@ -17,7 +17,7 @@ type ColumnMetas []ColumnMeta
 type ColumnIds []ColumnId
 type Columns []ColumnData
 type Values []Value
-type Row = bitset32.Bitset32
+type Row = bitset32.Bitset
 type Rows []*Row
 type ColumnMap map[reflect.Type]Value
 type RowTuple struct {
@@ -93,7 +93,7 @@ type Table struct {
 	indexes map[ColumnId]Index
 }
 
-func (tbl *Table) Lookup(c ColumnId, v Value) bitset32.Bitset32 {
+func (tbl *Table) Lookup(c ColumnId, v Value) bitset32.Bitset {
 	if idx, ok := tbl.indexes[c]; ok {
 		return idx.Rows(v)
 	}
@@ -112,7 +112,7 @@ func (tbl *Table) CreateColumn(b *ColumnBuilder) (ColumnData, error) {
 
 func (tbl *Table) InsertRow() RowId {
 	id := RowId(len(tbl.Rows))
-	tbl.Rows = append(tbl.Rows, &bitset32.Bitset32{})
+	tbl.Rows = append(tbl.Rows, &bitset32.Bitset{})
 	return id
 }
 

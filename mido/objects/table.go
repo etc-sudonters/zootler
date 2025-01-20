@@ -23,7 +23,7 @@ type Table struct {
 }
 
 func (this Table) DecodeString(obj Object) string {
-	if !obj.Is(str32) {
+	if !obj.Is(Str32) {
 		panic("non-string dereference")
 	}
 

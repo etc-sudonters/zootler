@@ -6,11 +6,16 @@ import (
 	"sudonters/zootler/cmd/magicbean/bootstrap"
 	"sudonters/zootler/internal/query"
 	"sudonters/zootler/internal/settings"
+	"sudonters/zootler/internal/skelly/bitset32"
 	"sudonters/zootler/magicbean"
 	"sudonters/zootler/mido"
 	"sudonters/zootler/mido/objects"
 	"sudonters/zootler/zecs"
 )
+
+func consttrue(*objects.Table, []objects.Object) (objects.Object, error) {
+	return objects.PackedTrue, nil
+}
 
 func main() {
 	paths := bootstrap.LoadPaths{
@@ -24,15 +29,57 @@ func main() {
 	stopProfiling := profileto("zootr.prof")
 	defer stopProfiling()
 
-	ocm, world := setup(paths, &theseSettings)
-	_, _ = ocm, world
-	eng := ocm.Engine()
+	artifacts := setup(paths, &theseSettings)
+	eng := artifacts.Ocm.Engine()
 	tbl, err := query.ExtractTable(eng)
 	bootstrap.PanicWhenErr(err)
 	displaycolstats(tbl)
+
+	{
+		q := artifacts.Ocm.Query()
+		q.Build(zecs.With[magicbean.Region], zecs.Load[magicbean.Name])
+		roots := bitset32.Bitset{}
+
+		for ent, tup := range q.Rows {
+			name := tup.Values[0].(magicbean.Name)
+			if name == "Root" {
+				bitset32.Set(&roots, ent)
+				break
+			}
+		}
+
+		for range 10 {
+			artifacts.World.ExploreAvailableEdges(magicbean.Exploration{
+				Workset: bitset32.Copy(roots),
+				Visited: bitset32.Bitset{},
+				VM: mido.VM{
+					Objects: &artifacts.Objects,
+					Funcs: objects.BuiltInFunctions{
+						consttrue,
+						consttrue,
+						consttrue,
+						consttrue,
+						consttrue,
+						consttrue,
+						consttrue,
+						consttrue,
+						consttrue,
+						consttrue,
+						consttrue,
+					},
+				},
+			})
+		}
+	}
 }
 
-func setup(paths bootstrap.LoadPaths, settings *settings.Zootr) (zecs.Ocm, magicbean.ExplorableWorld) {
+type Artifacts struct {
+	Ocm     zecs.Ocm
+	World   magicbean.ExplorableWorld
+	Objects objects.Table
+}
+
+func setup(paths bootstrap.LoadPaths, settings *settings.Zootr) (artifacts Artifacts) {
 	ocm := bootstrap.Phase1_InitializeStorage(nil)
 	bootstrap.PanicWhenErr(bootstrap.Phase2_ImportFromFiles(&ocm, paths))
 
@@ -46,7 +93,11 @@ func setup(paths bootstrap.LoadPaths, settings *settings.Zootr) (zecs.Ocm, magic
 
 	world := bootstrap.Phase5_CreateWorld(&ocm, settings, objects.TableFrom(compileEnv.Objects))
 
-	return ocm, world
+	artifacts.Ocm = ocm
+	artifacts.World = world
+	artifacts.Objects = objects.TableFrom(compileEnv.Objects)
+
+	return artifacts
 }
 
 func noop() {}

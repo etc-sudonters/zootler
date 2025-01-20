@@ -14,8 +14,7 @@ type VM struct {
 	Funcs   objects.BuiltInFunctions
 }
 
-func (this *VM) Execute(bytecode compiler.Bytecode) (objects.Object, error) {
-	var err error
+func (this *VM) Execute(bytecode compiler.Bytecode) (obj objects.Object, err error) {
 	result := objects.Null
 	unit := execution{0, bytecode, newstack[objects.Object](256)}
 	EOT := unit.endOfTape()

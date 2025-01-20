@@ -42,10 +42,10 @@ type Query interface {
 }
 
 type query struct {
-	load      *bitset32.Bitset32
+	load      *bitset32.Bitset
 	cols      table.ColumnIds
-	exists    *bitset32.Bitset32
-	notExists *bitset32.Bitset32
+	exists    *bitset32.Bitset
+	notExists *bitset32.Bitset
 }
 
 func (b *query) Load(typ table.ColumnId) {
@@ -65,16 +65,16 @@ func (b *query) NotExists(typ table.ColumnId) {
 func makePredicate(b *query) predicate {
 	return predicate{
 		exists:    b.exists.Union(*b.load),
-		notExists: bitset32.Copy32(*b.notExists),
+		notExists: bitset32.Copy(*b.notExists),
 	}
 }
 
 type predicate struct {
-	exists    bitset32.Bitset32
-	notExists bitset32.Bitset32
+	exists    bitset32.Bitset
+	notExists bitset32.Bitset
 }
 
-func (p predicate) admit(row *bitset32.Bitset32) bool {
+func (p predicate) admit(row *bitset32.Bitset) bool {
 	if !p.exists.Intersect(*row).Eq(p.exists) {
 		return false
 	}
@@ -144,9 +144,9 @@ func (e *engine) ColumnIdFor(t reflect.Type) (table.ColumnId, bool) {
 func (e engine) CreateQuery() Query {
 	return &query{
 		cols:      nil,
-		load:      &bitset32.Bitset32{},
-		exists:    &bitset32.Bitset32{},
-		notExists: &bitset32.Bitset32{},
+		load:      &bitset32.Bitset{},
+		exists:    &bitset32.Bitset{},
+		notExists: &bitset32.Bitset{},
 	}
 }
 
@@ -190,7 +190,7 @@ func (e engine) Retrieve(b Query) (bundle.Interface, error) {
 	}
 
 	predicate := makePredicate(q)
-	fill := bitset32.Bitset32{}
+	fill := bitset32.Bitset{}
 
 	for row, possessed := range e.tbl.Rows {
 		if predicate.admit(possessed) {
@@ -206,12 +206,12 @@ func (e engine) Retrieve(b Query) (bundle.Interface, error) {
 	return bundle.Bundle(fill, columns)
 }
 
-func saturatedSet(numBuckets uint32) bitset32.Bitset32 {
+func saturatedSet(numBuckets uint32) bitset32.Bitset {
 	buckets := make([]uint32, numBuckets)
 	for i := range buckets {
 		buckets[i] = math.MaxUint32
 	}
-	return bitset32.FromRaw32(buckets)
+	return bitset32.FromRaw(buckets)
 }
 
 func (e *engine) SetValues(r table.RowId, vs table.Values) error {

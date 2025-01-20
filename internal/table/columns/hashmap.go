@@ -30,7 +30,7 @@ func (s *Map) Unset(e table.RowId) {
 	delete(s.entities, e)
 }
 
-func (s *Map) ScanFor(v table.Value) (b bitset32.Bitset32) {
+func (s *Map) ScanFor(v table.Value) (b bitset32.Bitset) {
 	for id, value := range s.entities {
 		if reflect.DeepEqual(v, value) {
 			b.Set(uint32(id))

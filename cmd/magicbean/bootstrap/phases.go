@@ -4,8 +4,6 @@ import (
 	"slices"
 	"sudonters/zootler/cmd/magicbean/z16"
 	"sudonters/zootler/internal/settings"
-	"sudonters/zootler/internal/table"
-	"sudonters/zootler/internal/table/columns"
 	"sudonters/zootler/magicbean"
 	"sudonters/zootler/mido"
 	"sudonters/zootler/mido/compiler"
@@ -19,79 +17,10 @@ func PanicWhenErr(err error) {
 	}
 }
 
-func sizedslice[T zecs.Value](size uint32) zecs.DDL {
-	return func() *table.ColumnBuilder {
-		return columns.SizedSliceColumn[T](size)
-	}
-}
-
-func sizedbit[T zecs.Value](size uint32) zecs.DDL {
-	return func() *table.ColumnBuilder {
-		return columns.SizedBitColumnOf[T](size)
-	}
-}
-
-func sizedhash[T zecs.Value](capacity uint32) zecs.DDL {
-	return func() *table.ColumnBuilder {
-		return columns.SizedHashMapColumn[T](capacity)
-	}
-}
-
 func Phase1_InitializeStorage(ddl []zecs.DDL) zecs.Ocm {
 	ocm, err := zecs.New()
 	PanicWhenErr(err)
-	PanicWhenErr(zecs.Apply(&ocm, []zecs.DDL{
-		sizedslice[magicbean.Name](9000),
-		sizedbit[magicbean.Placement](5000),
-		sizedhash[magicbean.Connection](3300),
-		sizedhash[magicbean.RuleSource](2500),
-		sizedhash[magicbean.RuleParsed](2500),
-		sizedhash[magicbean.RuleOptimized](2500),
-		sizedhash[magicbean.RuleCompiled](2500),
-		sizedhash[magicbean.DefaultPlacement](2200),
-
-		columns.HashMapColumn[magicbean.Ptr],
-		columns.HashMapColumn[magicbean.EdgeKind],
-		columns.HashMapColumn[magicbean.CollectablePriority],
-		columns.HashMapColumn[magicbean.HeldAt],
-		columns.HashMapColumn[magicbean.HoldsToken],
-		columns.HashMapColumn[magicbean.HintRegion],
-		columns.HashMapColumn[magicbean.AltHintRegion],
-		columns.HashMapColumn[magicbean.DungeonName],
-		columns.HashMapColumn[magicbean.Savewarp],
-		columns.HashMapColumn[magicbean.Scene],
-		columns.HashMapColumn[magicbean.ScriptDecl],
-		columns.HashMapColumn[magicbean.ScriptSource],
-		columns.HashMapColumn[magicbean.ScriptParsed],
-		columns.HashMapColumn[magicbean.AliasingName],
-		columns.BitColumnOf[magicbean.Token],
-		columns.BitColumnOf[magicbean.Region],
-		columns.BitColumnOf[magicbean.IsBossRoom],
-		columns.BitColumnOf[magicbean.Empty],
-		columns.BitColumnOf[magicbean.Generated],
-		columns.BitColumnOf[magicbean.Collectable],
-		columns.BitColumnOf[magicbean.Location],
-		columns.BitColumnOf[magicbean.TimePassess],
-		columns.BitColumnOf[magicbean.BossKey],
-		columns.BitColumnOf[magicbean.Compass],
-		columns.BitColumnOf[magicbean.Drop],
-		columns.BitColumnOf[magicbean.DungeonReward],
-		columns.BitColumnOf[magicbean.Event],
-		columns.BitColumnOf[magicbean.GanonBossKey],
-		columns.BitColumnOf[magicbean.HideoutSmallKey],
-		columns.BitColumnOf[magicbean.HideoutSmallKeyRing],
-		columns.BitColumnOf[magicbean.Item],
-		columns.BitColumnOf[magicbean.Map],
-		columns.BitColumnOf[magicbean.Refill],
-		columns.BitColumnOf[magicbean.Shop],
-		columns.BitColumnOf[magicbean.SilverRupee],
-		columns.BitColumnOf[magicbean.SmallKey],
-		columns.BitColumnOf[magicbean.SmallKeyRing],
-		columns.BitColumnOf[magicbean.Song],
-		columns.BitColumnOf[magicbean.TCGSmallKey],
-		columns.BitColumnOf[magicbean.TCGSmallKeyRing],
-		columns.BitColumnOf[magicbean.GoldSkulltulaToken],
-	}))
+	PanicWhenErr(zecs.Apply(&ocm, staticddl()))
 	return ocm
 }
 
@@ -109,7 +38,7 @@ func Phase3_ConfigureCompiler(ocm *zecs.Ocm, theseSettings *settings.Zootr, opti
 	defaults := []mido.ConfigureCompiler{
 		mido.CompilerDefaults(),
 		func(env *mido.CompileEnv) {
-			PanicWhenErr(loadsymbols(ocm, env.Symbols, env.Objects))
+			PanicWhenErr(loadsymbols(ocm, env.Symbols))
 			PanicWhenErr(loadscripts(ocm, env))
 			PanicWhenErr(aliassymbols(ocm, env.Symbols))
 		},
@@ -133,6 +62,9 @@ func Phase3_ConfigureCompiler(ocm *zecs.Ocm, theseSettings *settings.Zootr, opti
 		mido.CompilerWithFastOps(compiler.FastOps{
 			"has": compiler.FastHasOp,
 		}),
+		func(env *mido.CompileEnv) {
+			createptrs(ocm, env.Symbols, env.Objects)
+		},
 	}
 	defaults = slices.Concat(defaults, options)
 	return mido.NewCompileEnv(defaults...)

@@ -51,8 +51,8 @@ type CollectablePriority uint8
 
 const (
 	_             EdgeKind = 0
-	EdgeTransit            = 0x69
-	EdgePlacement          = 0xBB
+	EdgeTransit   EdgeKind = 0x69
+	EdgePlacement EdgeKind = 0xBB
 
 	PriorityJunk        CollectablePriority = 0
 	PriorityMajor       CollectablePriority = 0xE0

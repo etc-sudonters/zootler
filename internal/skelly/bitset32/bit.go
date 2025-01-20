@@ -4,49 +4,49 @@ import (
 	"math/bits"
 )
 
-func Buckets32(i uint32) int {
+func Buckets(i uint32) int {
 	return int(i / 32)
 }
 
-func BitIndex32(i uint32) uint32 {
+func BitIndex(i uint32) uint32 {
 	return 1 << (i % 32)
 }
 
-func New32(i int) Bitset32 {
-	var b Bitset32
+func New(i int) Bitset {
+	var b Bitset
 	b.buckets = make([]uint32, i)
 	return b
 }
 
-func Create32(members ...uint32) Bitset32 {
-	b := New32(0)
+func Create(members ...uint32) Bitset {
+	b := New(0)
 	for _, m := range members {
 		b.Set(m)
 	}
 	return b
 }
 
-func WithBucketsFor32(i uint32) Bitset32 {
-	return New32(Buckets32(i))
+func WithBucketsFor(i uint32) Bitset {
+	return New(Buckets(i))
 }
 
-func FromRaw32(parts []uint32) Bitset32 {
-	var b Bitset32
+func FromRaw(parts []uint32) Bitset {
+	var b Bitset
 	b.buckets = parts
 	return b
 }
 
-func ToRawParts32(b Bitset32) []uint32 {
+func ToRawParts(b Bitset) []uint32 {
 	ret := make([]uint32, len(b.buckets))
 	copy(ret, b.buckets)
 	return ret
 }
 
-type Bitset32 struct {
+type Bitset struct {
 	buckets []uint32
 }
 
-func IsEmpty32(b Bitset32) bool {
+func IsEmpty(b Bitset) bool {
 	for i := range b.buckets {
 		if b.buckets[i] != 0 {
 			return false
@@ -55,14 +55,14 @@ func IsEmpty32(b Bitset32) bool {
 	return true
 }
 
-func Copy32(b Bitset32) Bitset32 {
-	var n Bitset32
+func Copy(b Bitset) Bitset {
+	var n Bitset
 	n.buckets = make([]uint32, len(b.buckets))
 	copy(n.buckets, b.buckets)
 	return n
 }
 
-func (this *Bitset32) resize(bucket int) {
+func (this *Bitset) resize(bucket int) {
 	if bucket < len(this.buckets) {
 		return
 	}
@@ -72,46 +72,46 @@ func (this *Bitset32) resize(bucket int) {
 	this.buckets = buckets
 }
 
-func (this *Bitset32) Set(i uint32) bool {
-	idx := Buckets32(i)
-	bit := BitIndex32(i)
+func (this *Bitset) Set(i uint32) bool {
+	idx := Buckets(i)
+	bit := BitIndex(i)
 	this.resize(idx)
 	bucket := this.buckets[idx]
 	this.buckets[idx] = bucket | bit
 	return bucket&bit == 0
 }
 
-func (this Bitset32) Unset(i uint32) {
-	bucket := Buckets32(i)
+func (this Bitset) Unset(i uint32) {
+	bucket := Buckets(i)
 
 	if bucket >= len(this.buckets) {
 		return
 	}
 
-	this.buckets[bucket] &= ^BitIndex32(i)
+	this.buckets[bucket] &= ^BitIndex(i)
 }
 
-func (this Bitset32) IsSet(i uint32) bool {
-	bucket := Buckets32(i)
+func (this Bitset) IsSet(i uint32) bool {
+	bucket := Buckets(i)
 	if bucket >= len(this.buckets) {
 		return false
 	}
 
-	bit := BitIndex32(i)
+	bit := BitIndex(i)
 	return bit == (bit & this.buckets[bucket])
 }
 
-func (this Bitset32) Complement() Bitset32 {
-	n := Copy32(this)
+func (this Bitset) Complement() Bitset {
+	n := Copy(this)
 	for i, bits := range n.buckets {
 		n.buckets[i] = ^bits
 	}
 	return n
 }
 
-func (this Bitset32) Intersect(n Bitset32) Bitset32 {
+func (this Bitset) Intersect(n Bitset) Bitset {
 	buckets := min(len(this.buckets), len(n.buckets))
-	r := Bitset32{}
+	r := Bitset{}
 	r.buckets = make([]uint32, buckets)
 
 	for i := range r.buckets {
@@ -121,12 +121,12 @@ func (this Bitset32) Intersect(n Bitset32) Bitset32 {
 	return r
 }
 
-func (this Bitset32) Union(n Bitset32) Bitset32 {
+func (this Bitset) Union(n Bitset) Bitset {
 	if len(n.buckets) > len(this.buckets) {
 		this, n = n, this
 	}
 
-	ret := Copy32(this)
+	ret := Copy(this)
 	for i, bits := range n.buckets {
 		ret.buckets[i] |= bits
 	}
@@ -134,14 +134,14 @@ func (this Bitset32) Union(n Bitset32) Bitset32 {
 	return ret
 }
 
-func (this Bitset32) Difference(n Bitset32) Bitset32 {
+func (this Bitset) Difference(n Bitset) Bitset {
 	buckets := make([]uint32, max(len(this.buckets), len(n.buckets)))
 	copy(buckets, n.buckets)
 	n.buckets = buckets
 	return this.Intersect(n.Complement())
 }
 
-func (this Bitset32) Eq(n Bitset32) bool {
+func (this Bitset) Eq(n Bitset) bool {
 	hi, lo := this.buckets, n.buckets
 
 	if len(lo) > len(hi) {
@@ -162,7 +162,7 @@ func (this Bitset32) Eq(n Bitset32) bool {
 	return true
 }
 
-func (this Bitset32) Len() int {
+func (this Bitset) Len() int {
 	var count int
 
 	for _, bucket := range this.buckets {
@@ -174,7 +174,7 @@ func (this Bitset32) Len() int {
 	return count
 }
 
-func (this Bitset32) Elems() []uint32 {
+func (this Bitset) Elems() []uint32 {
 	var elems []uint32
 
 	for k, bucket := range this.buckets {
@@ -189,7 +189,7 @@ func (this Bitset32) Elems() []uint32 {
 	return elems
 }
 
-func (this Bitset32) Pop() uint32 {
+func (this Bitset) Pop() uint32 {
 	for k, bucket := range this.buckets {
 		if bucket == 0 {
 			continue
@@ -202,7 +202,7 @@ func (this Bitset32) Pop() uint32 {
 	return 0
 }
 
-func (this Bitset32) IsEmpty() bool {
+func (this Bitset) IsEmpty() bool {
 	for _, bucket := range this.buckets {
 		if bucket != 0 {
 			return false

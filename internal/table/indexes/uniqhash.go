@@ -60,7 +60,7 @@ func (h *UniqueHashIndex[TIndex]) Unset(e table.RowId) {
 	}
 }
 
-func (h *UniqueHashIndex[TIndex]) Rows(c table.Value) (b bitset32.Bitset32) {
+func (h *UniqueHashIndex[TIndex]) Rows(c table.Value) (b bitset32.Bitset) {
 	idx, hashed := h.hasher(c)
 	if hashed {
 		entity, exists := h.members[idx]

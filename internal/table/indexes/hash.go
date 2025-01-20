@@ -5,7 +5,7 @@ import (
 	"sudonters/zootler/internal/table"
 )
 
-type hashbitmap[T comparable] map[T]bitset32.Bitset32
+type hashbitmap[T comparable] map[T]bitset32.Bitset
 
 func (h hashbitmap[T]) isset(key T, which uint32) bool {
 	members := h.membersetfor(key)
@@ -28,10 +28,10 @@ func (h hashbitmap[T]) unset(which uint32) {
 	}
 }
 
-func (h hashbitmap[T]) membersetfor(key T) bitset32.Bitset32 {
+func (h hashbitmap[T]) membersetfor(key T) bitset32.Bitset {
 	members, ok := h[key]
 	if !ok {
-		members = bitset32.Bitset32{}
+		members = bitset32.Bitset{}
 	}
 
 	return members
@@ -66,10 +66,10 @@ func (h *HashIndex[T]) Unset(r table.RowId) {
 }
 
 // this bitset is intersected / & / AND'd
-func (h *HashIndex[T]) Rows(v table.Value) bitset32.Bitset32 {
+func (h *HashIndex[T]) Rows(v table.Value) bitset32.Bitset {
 	idx, ok := h.hasher(v)
 	if !ok {
-		return bitset32.Bitset32{}
+		return bitset32.Bitset{}
 	}
-	return bitset32.Copy32(h.members.membersetfor(idx))
+	return bitset32.Copy(h.members.membersetfor(idx))
 }

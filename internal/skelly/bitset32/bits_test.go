@@ -22,7 +22,7 @@ func TestSetsBits(t *testing.T) {
 		129,
 	}
 
-	b := Bitset32{}
+	b := Bitset{}
 	for i := range numbers {
 		b.Set(numbers[i])
 	}
@@ -37,7 +37,7 @@ func TestSetsBits(t *testing.T) {
 func TestClearsBits(t *testing.T) {
 	expected := []uint32{2, 0, 2}
 
-	b := Bitset32{}
+	b := Bitset{}
 	numbers := []uint32{1, 65, 129}
 	for i := range numbers {
 		b.Set(numbers[i])
@@ -52,7 +52,7 @@ func TestClearsBits(t *testing.T) {
 }
 
 func TestTestBits(t *testing.T) {
-	var b Bitset32
+	var b Bitset
 	b.buckets = []uint32{2, 2, 2}
 
 	if !b.IsSet(1) {
@@ -72,7 +72,7 @@ func TestTestBits(t *testing.T) {
 }
 
 func TestComplement(t *testing.T) {
-	b := Bitset32{}
+	b := Bitset{}
 	b.Set(1)
 	b.Set(65)
 	b.Set(129)
@@ -86,8 +86,8 @@ func TestComplement(t *testing.T) {
 }
 
 func TestIntersect(t *testing.T) {
-	b1 := Bitset32{}
-	b2 := Bitset32{}
+	b1 := Bitset{}
+	b2 := Bitset{}
 
 	shared := []uint32{1, 65, 129}
 	b1.Set(144)
@@ -106,9 +106,9 @@ func TestIntersect(t *testing.T) {
 }
 
 func TestUnion(t *testing.T) {
-	b1 := Bitset32{}
-	b2 := Bitset32{}
-	b3 := Bitset32{}
+	b1 := Bitset{}
+	b2 := Bitset{}
+	b3 := Bitset{}
 
 	b1.Set(1)
 	b2.Set(65)
@@ -116,14 +116,14 @@ func TestUnion(t *testing.T) {
 
 	b := b1.Union(b2).Union(b3)
 
-	if !b.Eq(FromRaw32(2, 2, 2)) {
+	if !b.Eq(FromRaw(2, 2, 2)) {
 		t.Fail()
 	}
 }
 
 func TestDifference(t *testing.T) {
-	b1 := Bitset32{}
-	b2 := Bitset32{}
+	b1 := Bitset{}
+	b2 := Bitset{}
 
 	b1.Set(1)
 	b1.Set(65)
@@ -131,7 +131,7 @@ func TestDifference(t *testing.T) {
 	b2.Set(129)
 
 	b1DiffB2 := b1.Difference(b2)
-	expected := FromRaw32(2, 0, 0)
+	expected := FromRaw(2, 0, 0)
 
 	if !b1DiffB2.Eq(expected) {
 		t.Log("expected only 1 to be set")
@@ -139,7 +139,7 @@ func TestDifference(t *testing.T) {
 	}
 
 	b2DiffB1 := b2.Difference(b1)
-	expected = FromRaw32(0, 0, 2)
+	expected = FromRaw(0, 0, 2)
 
 	if !b2DiffB1.Eq(expected) {
 		t.Log("expected only 129 to be set")
@@ -148,7 +148,7 @@ func TestDifference(t *testing.T) {
 }
 
 func TestLength(t *testing.T) {
-	b := Bitset32{}
+	b := Bitset{}
 	r := rand.New(rng.NewXoshiro256PPFromU32(0xbf58476d1ce4e5b9))
 	for range 5000 {
 		for !b.Set(r.Uint32N(math.MaxUint16)) {
@@ -160,7 +160,7 @@ func TestLength(t *testing.T) {
 }
 
 func TestElems(t *testing.T) {
-	b := Bitset32{}
+	b := Bitset{}
 	b.Set(1)
 	b.Set(65)
 	b.Set(129)
@@ -180,7 +180,7 @@ func TestElems(t *testing.T) {
 		}
 	}
 
-	b = WithBucketsFor32(10000)
+	b = WithBucketsFor(10000)
 	expected = make([]uint32, 0, 5000)
 
 	for i := 0; i < 10000; i += 2 {
@@ -209,9 +209,9 @@ func TestElems(t *testing.T) {
 }
 
 func TestEq(t *testing.T) {
-	b1 := Bitset32{}
+	b1 := Bitset{}
 	b1.Set(32)
-	b2 := Copy32(b1)
+	b2 := Copy(b1)
 	b2.resize(3)
 
 	if !b1.Eq(b2) {

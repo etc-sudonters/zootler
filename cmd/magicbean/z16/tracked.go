@@ -65,13 +65,13 @@ func (this Nodes) Placement(name name) Placement {
 func (this Region) Connects(other Region) Transit {
 	directed := directed{From: this.Entity(), To: other.Entity()}
 	transit := Transit{this.parent.transit.For(directed), directed}
-	transit.Edge.Attach(namef("%s -> %s", this.name, other.name))
+	transit.Edge.Attach(namef("%s -> %s", this.name, other.name), magicbean.EdgeTransit)
 	return transit
 }
 
 func (this Region) Has(node Placement) zecs.Proxy {
 	edge := this.parent.transit.For(directed{From: this.Entity(), To: node.Entity()})
-	edge.Attach(namef("%s -> %s", this.name, node.name))
+	edge.Attach(namef("%s -> %s", this.name, node.name), magicbean.EdgePlacement)
 	return edge
 }
 

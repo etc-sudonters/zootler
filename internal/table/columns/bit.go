@@ -6,11 +6,11 @@ import (
 )
 
 func NewBit(singleton table.Value) *Bit {
-	return &Bit{t: singleton, members: &bitset32.Bitset32{}}
+	return &Bit{t: singleton, members: &bitset32.Bitset{}}
 }
 
 func NewSizedBit(singleton table.Value, capacity uint32) *Bit {
-	members := bitset32.WithBucketsFor32(capacity)
+	members := bitset32.WithBucketsFor(capacity)
 	return &Bit{t: singleton, members: &members}
 }
 
@@ -21,7 +21,7 @@ func NewSizedBit(singleton table.Value, capacity uint32) *Bit {
  */
 type Bit struct {
 	t       table.Value
-	members *bitset32.Bitset32
+	members *bitset32.Bitset
 }
 
 func (m Bit) Get(e table.RowId) table.Value {
@@ -39,8 +39,8 @@ func (m *Bit) Unset(e table.RowId) {
 	m.members.Unset(uint32(e))
 }
 
-func (m *Bit) ScanFor(c table.Value) bitset32.Bitset32 {
-	return bitset32.Copy32(*m.members)
+func (m *Bit) ScanFor(c table.Value) bitset32.Bitset {
+	return bitset32.Copy(*m.members)
 }
 
 func (m *Bit) Len() int {

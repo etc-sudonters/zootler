@@ -5,22 +5,22 @@ import (
 	"math/bits"
 )
 
-type IterOf32[T ~uint32] interface {
+type IterOf[T ~uint32] interface {
 	All(func(T) bool)
 	Buckets(func(uint32) bool)
 	UntilEmpty(func(T) bool)
 }
 
-func Iter32(b *Bitset32) iter32 {
+func Iter(b *Bitset) iter32 {
 	return iter32{b}
 }
 
-func Iter32T[T ~uint32](b *Bitset32) iter32T[T] {
-	return iter32T[T]{Iter32(b)}
+func IterT[T ~uint32](b *Bitset) iter32T[T] {
+	return iter32T[T]{Iter(b)}
 }
 
 type iter32 struct {
-	set *Bitset32
+	set *Bitset
 }
 
 func (i iter32) All(yield func(v uint32) bool) {
@@ -28,7 +28,7 @@ func (i iter32) All(yield func(v uint32) bool) {
 }
 
 func (i iter32) Buckets(yield func(v uint32) bool) {
-	parts := ToRawParts32(*i.set)
+	parts := ToRawParts(*i.set)
 	for _, bucket := range parts {
 		if !yield(bucket) {
 			break
@@ -64,9 +64,9 @@ func (i iter32T[T]) All(yield func(v T) bool) {
 	}
 }
 
-func all(set *Bitset32) iter.Seq[uint32] {
+func all(set *Bitset) iter.Seq[uint32] {
 	return func(yield func(v uint32) bool) {
-		parts := ToRawParts32(*set)
+		parts := ToRawParts(*set)
 	iter:
 		for p, part := range parts {
 			for part != 0 {

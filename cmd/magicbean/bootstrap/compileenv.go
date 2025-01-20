@@ -15,16 +15,46 @@ import (
 	"sudonters/zootler/zecs"
 )
 
-func loadsymbols(ocm *zecs.Ocm, syms *symbols.Table, objs *objects.Builder) error {
+var kind2tag = map[symbols.Kind]uint16{
+	symbols.REGION:  objects.PtrRegion,
+	symbols.TRANSIT: objects.PtrTrans,
+	symbols.TOKEN:   objects.PtrToken,
+}
+
+func createptrs(ocm *zecs.Ocm, syms *symbols.Table, objs *objects.Builder) {
+	q := ocm.Query()
+	q.Build(zecs.Load[symbols.Kind], zecs.WithOut[magicbean.Ptr], zecs.Load[magicbean.Name])
+
+	for ent, tup := range q.Rows {
+		kind := tup.Values[0].(symbols.Kind)
+		tag, exists := kind2tag[kind]
+		if !exists {
+			continue
+		}
+		name := tup.Values[1].(magicbean.Name)
+		symbol := syms.LookUpByName(string(name))
+
+		if symbol == nil {
+			panic(fmt.Errorf("found %s in ocm but not in symbols", name))
+		}
+
+		entity := ocm.Proxy(ent)
+		ptr := objects.PackPtr32(tag, uint32(ent))
+		objs.AssociateSymbol(symbol, ptr)
+		entity.Attach(magicbean.Ptr(ptr))
+	}
+}
+
+func loadsymbols(ocm *zecs.Ocm, syms *symbols.Table) error {
 	batches := []tagging{
-		{kind: symbols.TOKEN, tag: objects.PtrToken, q: []zecs.BuildQuery{zecs.With[magicbean.Token]}},
-		{kind: symbols.REGION, tag: objects.PtrRegion, q: []zecs.BuildQuery{zecs.With[magicbean.Region]}},
-		{kind: symbols.TRANSIT, tag: objects.PtrTrans, q: []zecs.BuildQuery{zecs.With[magicbean.Connection]}},
-		{kind: symbols.SCRIPTED_FUNC, tag: objects.PtrFunc, q: []zecs.BuildQuery{zecs.With[magicbean.ScriptDecl]}},
+		{kind: symbols.REGION, q: []zecs.BuildQuery{zecs.With[magicbean.Region]}},
+		{kind: symbols.TRANSIT, q: []zecs.BuildQuery{zecs.With[magicbean.Connection]}},
+		{kind: symbols.TOKEN, q: []zecs.BuildQuery{zecs.With[magicbean.Token]}},
+		{kind: symbols.SCRIPTED_FUNC, q: []zecs.BuildQuery{zecs.With[magicbean.ScriptDecl]}},
 	}
 
 	for _, batch := range batches {
-		batch.tagall(ocm, syms, objs)
+		batch.tagall(ocm, syms)
 	}
 
 	return nil
@@ -32,22 +62,20 @@ func loadsymbols(ocm *zecs.Ocm, syms *symbols.Table, objs *objects.Builder) erro
 
 type tagging struct {
 	kind symbols.Kind
-	tag  uint16
 	q    []zecs.BuildQuery
 }
 
-func (this tagging) tagall(ocm *zecs.Ocm, syms *symbols.Table, objs *objects.Builder) {
+func (this tagging) tagall(ocm *zecs.Ocm, syms *symbols.Table) {
 	q := ocm.Query()
 	q.Build(zecs.Load[name], this.q...)
 	rows, err := q.Execute()
 	PanicWhenErr(err)
-	for entity, tup := range rows.All {
+	for ent, tup := range rows.All {
+		entity := ocm.Proxy(ent)
 		name := string(tup.Values[0].(name))
-		symbol := syms.Declare(name, this.kind)
-		ptr := objects.PackPtr32(this.tag, uint32(entity))
-		objs.AssociateSymbol(symbol, ptr)
+		syms.Declare(name, this.kind)
+		entity.Attach(this.kind)
 	}
-
 }
 
 func loadscripts(ocm *zecs.Ocm, env *mido.CompileEnv) error {
@@ -169,7 +197,7 @@ type ConnectionGenerator struct {
 
 func (this ConnectionGenerator) AddConnectionTo(region string, rule ast.Node) (*symbols.Sym, error) {
 	hash := ast.Hash(rule)
-	suffix := fmt.Sprintf("#%s#%32x", region, hash)
+	suffix := fmt.Sprintf("#%s#%16x", region, hash)
 	tokenName := magicbean.NameF("Token%s", suffix)
 
 	if symbol := this.Symbols.LookUpByName(string(tokenName)); symbol != nil {

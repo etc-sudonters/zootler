@@ -18,12 +18,12 @@ func SizedSliceColumn[T any](size uint32) *table.ColumnBuilder {
 func NewSlice() *Slice {
 	r := new(Slice)
 	r.components = make([]table.Value, 0)
-	r.members = &bitset32.Bitset32{}
+	r.members = &bitset32.Bitset{}
 	return r
 }
 
 func SizedSlice(size uint32) *Slice {
-	bitset := bitset32.WithBucketsFor32(size)
+	bitset := bitset32.WithBucketsFor(size)
 	r := new(Slice)
 	r.components = make([]table.Value, size)
 	r.members = &bitset
@@ -40,7 +40,7 @@ type Slice struct {
 	id         table.ColumnId
 	typ        reflect.Type
 	components []table.Value
-	members    *bitset32.Bitset32
+	members    *bitset32.Bitset
 }
 
 func (row *Slice) Set(e table.RowId, c table.Value) {
@@ -80,7 +80,7 @@ func (row *Slice) ensureSize(n int) {
 	row.components = expanded
 }
 
-func (row Slice) ScanFor(v table.Value) bitset32.Bitset32 {
+func (row Slice) ScanFor(v table.Value) bitset32.Bitset {
 	density := float32(row.members.Len()) / float32(len(row.components))
 	if density > 0.6 {
 		return row.scanValues(v)
@@ -97,8 +97,8 @@ func (row Slice) Capacity() int {
 	return len(row.components)
 }
 
-func (row Slice) scanMembers(v table.Value) (b bitset32.Bitset32) {
-	bititer := bitset32.Iter32(row.members)
+func (row Slice) scanMembers(v table.Value) (b bitset32.Bitset) {
+	bititer := bitset32.Iter(row.members)
 	for id := range bititer.All {
 		value := row.components[id]
 		if value == nil {
@@ -113,7 +113,7 @@ func (row Slice) scanMembers(v table.Value) (b bitset32.Bitset32) {
 	return
 }
 
-func (row Slice) scanValues(v table.Value) (b bitset32.Bitset32) {
+func (row Slice) scanValues(v table.Value) (b bitset32.Bitset) {
 	for id, value := range row.components {
 		if value == nil || !reflect.DeepEqual(v, value) {
 			continue
