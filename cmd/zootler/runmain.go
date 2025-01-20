@@ -1,76 +1,42 @@
 package main
 
 import (
+	"context"
 	"os"
-	"runtime/pprof"
-	"sudonters/zootler/cmd/magicbean/bootstrap"
-	"sudonters/zootler/internal/query"
+	"path/filepath"
 	"sudonters/zootler/internal/settings"
-	"sudonters/zootler/internal/skelly/bitset32"
+
+	"github.com/etc-sudonters/substrate/stageleft"
+
+	"runtime/pprof"
+	"sudonters/zootler/cmd/zootler/bootstrap"
+	"sudonters/zootler/internal/query"
 	"sudonters/zootler/magicbean"
 	"sudonters/zootler/mido"
 	"sudonters/zootler/mido/objects"
 	"sudonters/zootler/zecs"
 )
 
-func consttrue(*objects.Table, []objects.Object) (objects.Object, error) {
-	return objects.PackedTrue, nil
-}
-
-func main() {
-	paths := bootstrap.LoadPaths{
-		Tokens:     ".data/data/items.json",
-		Placements: ".data/data/locations.json",
-		Scripts:    ".data/logic/helpers.json",
-		Relations:  ".data/logic/glitchless/",
-	}
-	theseSettings := settings.Default()
-
-	stopProfiling := profileto("zootr.prof")
+func runMain(ctx context.Context, opts cliOptions) stageleft.ExitCode {
+	stopProfiling := profileto(opts.profile)
 	defer stopProfiling()
 
+	paths := bootstrap.LoadPaths{
+		Tokens:     filepath.Join(opts.dataDir, "items.json"),
+		Placements: filepath.Join(opts.dataDir, "locations.json"),
+		Scripts:    filepath.Join(opts.logicDir, "..", "helpers.json"),
+		Relations:  opts.logicDir,
+	}
+
+	theseSettings := settings.Default()
 	artifacts := setup(paths, &theseSettings)
 	eng := artifacts.Ocm.Engine()
 	tbl, err := query.ExtractTable(eng)
 	bootstrap.PanicWhenErr(err)
+
+	explore(&artifacts)
 	displaycolstats(tbl)
-
-	{
-		q := artifacts.Ocm.Query()
-		q.Build(zecs.With[magicbean.Region], zecs.Load[magicbean.Name])
-		roots := bitset32.Bitset{}
-
-		for ent, tup := range q.Rows {
-			name := tup.Values[0].(magicbean.Name)
-			if name == "Root" {
-				bitset32.Set(&roots, ent)
-				break
-			}
-		}
-
-		for range 10 {
-			artifacts.World.ExploreAvailableEdges(magicbean.Exploration{
-				Workset: bitset32.Copy(roots),
-				Visited: bitset32.Bitset{},
-				VM: mido.VM{
-					Objects: &artifacts.Objects,
-					Funcs: objects.BuiltInFunctions{
-						consttrue,
-						consttrue,
-						consttrue,
-						consttrue,
-						consttrue,
-						consttrue,
-						consttrue,
-						consttrue,
-						consttrue,
-						consttrue,
-						consttrue,
-					},
-				},
-			})
-		}
-	}
+	return stageleft.ExitCode(0)
 }
 
 type Artifacts struct {

@@ -2,7 +2,7 @@ package bootstrap
 
 import (
 	"slices"
-	"sudonters/zootler/cmd/magicbean/z16"
+	"sudonters/zootler/cmd/zootler/z16"
 	"sudonters/zootler/internal/settings"
 	"sudonters/zootler/magicbean"
 	"sudonters/zootler/mido"

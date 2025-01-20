@@ -3,7 +3,7 @@ package bootstrap
 import (
 	"io/fs"
 	"path/filepath"
-	"sudonters/zootler/cmd/magicbean/z16"
+	"sudonters/zootler/cmd/zootler/z16"
 	"sudonters/zootler/internal"
 	"sudonters/zootler/magicbean"
 	"sudonters/zootler/mido/ast"
@@ -16,8 +16,8 @@ var namef = magicbean.NameF
 
 type name = magicbean.Name
 
-type FilePath string
-type DirPath string
+type FilePath = string
+type DirPath = string
 
 type LoadPaths struct {
 	Tokens, Placements, Scripts FilePath
