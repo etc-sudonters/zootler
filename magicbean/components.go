@@ -15,7 +15,7 @@ func NameF(tpl string, v ...any) Name {
 	return Name(fmt.Sprintf(tpl, v...))
 }
 
-type Transit struct{ From, To zecs.Entity }
+type Connection struct{ From, To zecs.Entity }
 type Region struct{}
 type Placement struct{}
 type DefaultPlacement zecs.Entity
@@ -24,11 +24,11 @@ type Fixed struct{}
 
 type ScriptDecl string
 type ScriptSource string
-type ScriptParsed ast.Node
+type ScriptParsed struct{ ast.Node }
 
 type RuleSource string
-type RuleParsed ast.Node
-type RuleOptimized ast.Node
+type RuleParsed struct{ ast.Node }
+type RuleOptimized struct{ ast.Node }
 type RuleCompiled compiler.Bytecode
 
 type HeldAt zecs.Entity
@@ -47,7 +47,6 @@ type IsBossRoom struct{}
 type Savewarp string
 type Scene string
 type TimePassess struct{}
-type CollectableType string
 type CollectablePriority uint8
 
 const (
@@ -56,8 +55,8 @@ const (
 	EdgePlacement          = 0xBB
 
 	PriorityJunk        CollectablePriority = 0
-	PriorityMajor                           = 0xE0
-	PriorityAdvancement                     = 0xF0
+	PriorityMajor       CollectablePriority = 0xE0
+	PriorityAdvancement CollectablePriority = 0xF0
 )
 
 type BossKey struct{}

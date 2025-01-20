@@ -4,47 +4,96 @@ import (
 	"slices"
 	"sudonters/zootler/cmd/magicbean/z16"
 	"sudonters/zootler/internal/settings"
+	"sudonters/zootler/internal/table/columns"
+	"sudonters/zootler/magicbean"
 	"sudonters/zootler/mido"
 	"sudonters/zootler/mido/compiler"
 	"sudonters/zootler/mido/objects"
 	"sudonters/zootler/zecs"
 )
 
-func panicWhenErr(err error) {
+func PanicWhenErr(err error) {
 	if err != nil {
 		panic(err)
 	}
 }
 
-func Phase1_InitializeStorage(ddl ...zecs.DDL) zecs.Ocm {
+func Phase1_InitializeStorage(ddl []zecs.DDL) zecs.Ocm {
 	ocm, err := zecs.New()
-	panicWhenErr(err)
-	panicWhenErr(zecs.Apply(&ocm, []zecs.DDL{
-		nil,
+	PanicWhenErr(err)
+	PanicWhenErr(zecs.Apply(&ocm, []zecs.DDL{
+		columns.SliceColumn[magicbean.Name],
+		columns.SliceColumn[magicbean.Connection],
+		columns.SliceColumn[magicbean.RuleSource],
+		columns.SliceColumn[magicbean.RuleParsed],
+		columns.SliceColumn[magicbean.RuleOptimized],
+		columns.SliceColumn[magicbean.RuleCompiled],
+		columns.SliceColumn[magicbean.Ptr],
+		columns.SliceColumn[magicbean.EdgeKind],
+		columns.SliceColumn[magicbean.CollectablePriority],
+		columns.SliceColumn[magicbean.HeldAt],
+		columns.SliceColumn[magicbean.HoldsToken],
+		columns.SliceColumn[magicbean.HintRegion],
+		columns.SliceColumn[magicbean.DefaultPlacement],
+		columns.HashMapColumn[magicbean.AltHintRegion],
+		columns.HashMapColumn[magicbean.DungeonName],
+		columns.HashMapColumn[magicbean.Savewarp],
+		columns.HashMapColumn[magicbean.Scene],
+		columns.HashMapColumn[magicbean.ScriptDecl],
+		columns.HashMapColumn[magicbean.ScriptSource],
+		columns.HashMapColumn[magicbean.ScriptParsed],
+		columns.HashMapColumn[magicbean.AliasingName],
+		columns.BitColumnOf[magicbean.Token],
+		columns.BitColumnOf[magicbean.Region],
+		columns.BitColumnOf[magicbean.Placement],
+		columns.BitColumnOf[magicbean.IsBossRoom],
+		columns.BitColumnOf[magicbean.Empty],
+		columns.BitColumnOf[magicbean.Generated],
+		columns.BitColumnOf[magicbean.Collectable],
+		columns.BitColumnOf[magicbean.Location],
+		columns.BitColumnOf[magicbean.TimePassess],
+		columns.BitColumnOf[magicbean.BossKey],
+		columns.BitColumnOf[magicbean.Compass],
+		columns.BitColumnOf[magicbean.Drop],
+		columns.BitColumnOf[magicbean.DungeonReward],
+		columns.BitColumnOf[magicbean.Event],
+		columns.BitColumnOf[magicbean.GanonBossKey],
+		columns.BitColumnOf[magicbean.HideoutSmallKey],
+		columns.BitColumnOf[magicbean.HideoutSmallKeyRing],
+		columns.BitColumnOf[magicbean.Item],
+		columns.BitColumnOf[magicbean.Map],
+		columns.BitColumnOf[magicbean.Refill],
+		columns.BitColumnOf[magicbean.Shop],
+		columns.BitColumnOf[magicbean.SilverRupee],
+		columns.BitColumnOf[magicbean.SmallKey],
+		columns.BitColumnOf[magicbean.SmallKeyRing],
+		columns.BitColumnOf[magicbean.Song],
+		columns.BitColumnOf[magicbean.TCGSmallKey],
+		columns.BitColumnOf[magicbean.TCGSmallKeyRing],
+		columns.BitColumnOf[magicbean.GoldSkulltulaToken],
 	}))
-	panicWhenErr(zecs.Apply(&ocm, ddl))
 	return ocm
 }
 
 func Phase2_ImportFromFiles(ocm *zecs.Ocm, paths LoadPaths) error {
 	tokens := z16.NewTokens(ocm)
-	nodes := z16.NewRegions(ocm)
-	panicWhenErr(storeScripts(ocm, paths))
-	panicWhenErr(storeTokens(tokens, paths))
-	panicWhenErr(storeplacements(nodes, tokens, paths))
-	panicWhenErr(storeRelations(nodes, tokens, paths))
+	nodes := z16.NewNodes(ocm)
+	PanicWhenErr(storeScripts(ocm, paths))
+	PanicWhenErr(storeTokens(tokens, paths))
+	PanicWhenErr(storePlacements(nodes, tokens, paths))
+	PanicWhenErr(storeRelations(nodes, tokens, paths))
 	return nil
 }
 
-func Phase3_ConfigureCompiler(ocm *zecs.Ocm, settings *settings.Zootr, options ...mido.ConfigureCompiler) mido.CompileEnv {
+func Phase3_ConfigureCompiler(ocm *zecs.Ocm, theseSettings *settings.Zootr, options ...mido.ConfigureCompiler) mido.CompileEnv {
 	defaults := []mido.ConfigureCompiler{
 		mido.CompilerDefaults(),
 		func(env *mido.CompileEnv) {
-			panicWhenErr(loadsymbols(ocm, env.Symbols, env.Objects))
-			panicWhenErr(loadscripts(ocm, env))
-			panicWhenErr(aliassymbols(ocm, env.Symbols, env.ScriptedFuncs))
+			PanicWhenErr(loadsymbols(ocm, env.Symbols, env.Objects))
+			PanicWhenErr(loadscripts(ocm, env))
+			PanicWhenErr(aliassymbols(ocm, env.Symbols))
 		},
-		installSettings(settings),
+		installSettings(theseSettings),
 		installConnectionGenerator(ocm),
 		mido.WithBuiltInFunctionDefs(func(*mido.CompileEnv) []objects.BuiltInFunctionDef {
 			return []objects.BuiltInFunctionDef{
@@ -70,7 +119,10 @@ func Phase3_ConfigureCompiler(ocm *zecs.Ocm, settings *settings.Zootr, options .
 }
 
 func Phase4_Compile(ocm *zecs.Ocm, compiler *mido.CodeGen) error {
-	panic("not implemented")
+	PanicWhenErr(parseall(ocm, compiler))
+	PanicWhenErr(optimizeall(ocm, compiler))
+	PanicWhenErr(compileall(ocm, compiler))
+	return nil
 }
 
 func Phase5_CreateWorld(ocm *zecs.Ocm, settings *settings.Zootr, objects objects.Table) any {

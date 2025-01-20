@@ -42,7 +42,6 @@ type Query interface {
 }
 
 type query struct {
-	errs      []error
 	load      *bitset32.Bitset32
 	cols      table.ColumnIds
 	exists    *bitset32.Bitset32
@@ -65,7 +64,7 @@ func (b *query) NotExists(typ table.ColumnId) {
 
 func makePredicate(b *query) predicate {
 	return predicate{
-		exists:    b.exists.Intersect(*b.load),
+		exists:    b.exists.Union(*b.load),
 		notExists: bitset32.Copy32(*b.notExists),
 	}
 }
@@ -144,7 +143,6 @@ func (e *engine) ColumnIdFor(t reflect.Type) (table.ColumnId, bool) {
 
 func (e engine) CreateQuery() Query {
 	return &query{
-		errs:      nil,
 		cols:      nil,
 		load:      &bitset32.Bitset32{},
 		exists:    &bitset32.Bitset32{},
@@ -189,10 +187,6 @@ func (e engine) Retrieve(b Query) (bundle.Interface, error) {
 	q, ok := b.(*query)
 	if !ok {
 		return nil, fmt.Errorf("%T: %w", b, ErrInvalidQuery)
-	}
-
-	if q.errs != nil {
-		return nil, errors.Join(q.errs...)
 	}
 
 	predicate := makePredicate(q)

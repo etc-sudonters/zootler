@@ -26,25 +26,25 @@ type LoadPaths struct {
 
 func (this LoadPaths) readscripts() map[string]string {
 	scripts, err := internal.ReadJsonFileStringMap(string(this.Scripts))
-	panicWhenErr(err)
+	PanicWhenErr(err)
 	return scripts
 }
 
 func (this LoadPaths) readtokens() []token {
 	tokens, err := internal.ReadJsonFileAs[[]token](string(this.Tokens))
-	panicWhenErr(err)
+	PanicWhenErr(err)
 	return tokens
 }
 
 func (this LoadPaths) readplacements() []placement {
 	regions, err := internal.ReadJsonFileAs[[]placement](string(this.Placements))
-	panicWhenErr(err)
+	PanicWhenErr(err)
 	return regions
 }
 
 func readrelations(path string) []relations {
 	relations, err := internal.ReadJsonFileAs[[]relations](path)
-	panicWhenErr(err)
+	PanicWhenErr(err)
 	return relations
 }
 
@@ -67,7 +67,7 @@ func (this LoadPaths) readrelationsdir(store func(relations) error) error {
 
 		for _, relations := range readrelations(path) {
 			storeErr := store(relations)
-			panicWhenErr(storeErr)
+			PanicWhenErr(storeErr)
 		}
 		return nil
 	})
@@ -163,12 +163,12 @@ func storeTokens(tokens z16.Tokens, paths LoadPaths) error {
 			}
 		}
 
-		panicWhenErr(token.AttachFrom(attachments))
+		PanicWhenErr(token.AttachFrom(attachments))
 	}
 	return nil
 }
 
-func storeplacements(nodes z16.Nodes, tokens z16.Tokens, paths LoadPaths) error {
+func storePlacements(nodes z16.Nodes, tokens z16.Tokens, paths LoadPaths) error {
 	for _, raw := range paths.readplacements() {
 		place := nodes.Placement(name(raw.Name))
 		if raw.Default != "" {
@@ -189,7 +189,8 @@ func storeRelations(nodes z16.Nodes, tokens z16.Tokens, paths LoadPaths) error {
 		}
 
 		for location, rule := range raw.Locations {
-			placement := nodes.Placement(name(location))
+			placename := namef("%s %s", raw.RegionName, location)
+			placement := nodes.Placement(placename)
 			edge := region.Has(placement)
 			edge.Attach(magicbean.RuleSource(rule))
 		}

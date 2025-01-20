@@ -14,5 +14,5 @@ type ExplorableEdge struct {
 
 type ExplorableWorld struct {
 	Graph graph.Directed
-	Edges map[Transit]ExplorableEdge
+	Edges map[Connection]ExplorableEdge
 }

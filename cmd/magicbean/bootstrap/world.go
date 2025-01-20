@@ -13,19 +13,19 @@ func explorableworldfrom(ocm *zecs.Ocm) magicbean.ExplorableWorld {
 	q.Build(
 		zecs.Load[magicbean.RuleCompiled],
 		zecs.Load[magicbean.EdgeKind],
-		zecs.Load[magicbean.Transit],
+		zecs.Load[magicbean.Connection],
 	)
 
 	rows, err := q.Execute()
-	panicWhenErr(err)
+	PanicWhenErr(err)
 
-	world.Edges = make(map[magicbean.Transit]magicbean.ExplorableEdge, rows.Len())
+	world.Edges = make(map[magicbean.Connection]magicbean.ExplorableEdge, rows.Len())
 	world.Graph = graph.WithCapacity(rows.Len() * 2)
 
 	directed := graph.Builder{world.Graph}
 
 	for entity, tup := range rows.All {
-		trans := tup.Values[2].(magicbean.Transit)
+		trans := tup.Values[2].(magicbean.Connection)
 		directed.AddEdge(graph.Origination(trans.From), graph.Destination(trans.To))
 		world.Edges[trans] = magicbean.ExplorableEdge{
 			Entity: entity,

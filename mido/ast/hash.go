@@ -3,7 +3,16 @@ package ast
 import (
 	"fmt"
 	"hash"
+	"hash/fnv"
 )
+
+func Hash(node Node) uint64 {
+	h := fnv.New64()
+	if err := Hash64(node, h); err != nil {
+		panic(err)
+	}
+	return h.Sum64()
+}
 
 func Hash64(node Node, h64 hash.Hash64) error {
 	hasher := hash64{h64}

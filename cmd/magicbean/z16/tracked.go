@@ -6,7 +6,7 @@ import (
 )
 
 type namedents = zecs.Tracked[magicbean.Name]
-type directed = magicbean.Transit
+type directed = magicbean.Connection
 type name = magicbean.Name
 
 var namef = magicbean.NameF
@@ -15,7 +15,7 @@ func named[T zecs.Value](ocm *zecs.Ocm) namedents {
 	return zecs.Tracking[name](ocm, zecs.With[T])
 }
 
-func NewRegions(ocm *zecs.Ocm) Nodes {
+func NewNodes(ocm *zecs.Ocm) Nodes {
 	var this Nodes
 	this.regions = named[magicbean.Region](ocm)
 	this.placements = named[magicbean.Placement](ocm)
@@ -51,11 +51,15 @@ type Transit struct {
 }
 
 func (this Nodes) Region(name name) Region {
-	return Region{this.regions.For(name), name, this}
+	region := this.regions.For(name)
+	region.Attach(magicbean.Region{})
+	return Region{region, name, this}
 }
 
 func (this Nodes) Placement(name name) Placement {
-	return Placement{this.placements.For(name), name}
+	place := this.placements.For(name)
+	place.Attach(magicbean.Placement{})
+	return Placement{place, name}
 }
 
 func (this Region) Connects(other Region) Transit {
@@ -99,5 +103,7 @@ type Token struct {
 }
 
 func (this Tokens) Named(name name) Token {
-	return Token{this.tokens.For(name), name}
+	token := this.tokens.For(name)
+	token.Attach(magicbean.Token{})
+	return Token{token, name}
 }

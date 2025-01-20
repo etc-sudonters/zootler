@@ -42,9 +42,9 @@ loop:
 			err = errors.Join(errors.New("execution halted"), err)
 			break loop
 		case code.PUSH_T:
-			unit.stack.push(objects.True)
+			unit.stack.push(objects.PackedTrue)
 		case code.PUSH_F:
-			unit.stack.push(objects.False)
+			unit.stack.push(objects.PackedFalse)
 		case code.PUSH_CONST:
 			index := unit.readIndex()
 			unit.stack.push(this.Objects.AtIndex(index))
@@ -79,17 +79,13 @@ loop:
 			ptr := unit.readIndex()
 			qty := unit.readu8()
 			_, _ = ptr, qty
-			unit.stack.push(objects.True)
+			unit.stack.push(objects.PackedTrue)
 		case code.INVOKE:
 			answer := objects.Null
-			fn := unit.stack.pop()
-			if !fn.Is(objects.Func) {
-				err = fmt.Errorf("cannot call %v", fn)
-				break loop
-			}
+			obj := unit.stack.pop()
 			count := int(unit.readu16())
 			args := unit.stackargs(count)
-			answer, err = this.Funcs.Call(this.Objects, fn, args)
+			answer, err = this.Funcs.Call(this.Objects, obj, args)
 			unit.stack.popN(count)
 			if err != nil {
 				break loop

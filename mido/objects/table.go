@@ -23,12 +23,12 @@ type Table struct {
 }
 
 func (this Table) DecodeString(obj Object) string {
-	if !obj.Is(Str32) {
+	if !obj.Is(str32) {
 		panic("non-string dereference")
 	}
 
 	len, offset := UnpackStr32(obj)
-	return string(this.strings[offset : offset+len])
+	return string(this.strings[offset : offset+uint32(len)])
 }
 
 func (this Table) AtIndex(idx Index) Object {
@@ -61,7 +61,7 @@ func (this *Builder) InternNumber(number float64) Index {
 		return idx
 	}
 
-	idx := this.insert(PackFloat64(number))
+	idx := this.insert(PackF64(number))
 	this.nums[number] = idx
 	return idx
 }
@@ -111,7 +111,7 @@ func (this *Builder) InternStr(str string) Index {
 	offset := len(this.strings)
 	bytes := []byte(str)
 	this.strings = slices.Concat(this.strings, bytes)
-	idx := this.insert(PackStr32(len(bytes), offset))
+	idx := this.insert(PackStr32(uint16(len(bytes)), uint32(offset)))
 	this.strs[str] = idx
 	return idx
 }

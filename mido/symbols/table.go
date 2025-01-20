@@ -119,9 +119,12 @@ func (s *Sym) SetKind(t Kind) {
 		// function is least specific
 	case t == FUNCTION && (s.Kind == BUILT_IN_FUNCTION || s.Kind == COMPILER_FUNCTION || s.Kind == SCRIPTED_FUNC):
 		return
+	case (t == BUILT_IN_FUNCTION) && (s.Kind == FUNCTION || s.Kind == SCRIPTED_FUNC):
+		s.Kind = BUILT_IN_FUNCTION
+	case (t == COMPILER_FUNCTION) && (s.Kind == FUNCTION || s.Kind == SCRIPTED_FUNC):
+		s.Kind = COMPILER_FUNCTION
 	case s.Kind == UNKNOWN:
 		s.Kind = t
-		// rudimentary type checking
 	case s.Kind != t:
 		panic(fmt.Errorf("$%04X %q redeclared with different kind: %q -> %q", s.Index, s.Name, s.Kind, t))
 	}
