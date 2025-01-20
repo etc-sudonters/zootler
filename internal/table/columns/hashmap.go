@@ -7,7 +7,11 @@ import (
 )
 
 func NewMap() *Map {
-	return &Map{make(map[table.RowId]table.Value)}
+	return NewMapWithCapacity(16)
+}
+
+func NewMapWithCapacity(capacity uint32) *Map {
+	return &Map{make(map[table.RowId]table.Value, capacity)}
 }
 
 type Map struct {
@@ -42,4 +46,8 @@ func (s *Map) Len() int {
 
 func HashMapColumn[T any]() *table.ColumnBuilder {
 	return table.BuildColumnOf[T](NewMap())
+}
+
+func SizedHashMapColumn[T any](capacity uint32) *table.ColumnBuilder {
+	return table.BuildColumnOf[T](NewMapWithCapacity(capacity))
 }

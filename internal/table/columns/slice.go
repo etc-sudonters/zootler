@@ -11,7 +11,7 @@ func SliceColumn[T any]() *table.ColumnBuilder {
 	return table.BuildColumnOf[T](NewSlice())
 }
 
-func SizedSliceColumn[T any](size uint) *table.ColumnBuilder {
+func SizedSliceColumn[T any](size uint32) *table.ColumnBuilder {
 	return table.BuildColumnOf[T](SizedSlice(size))
 }
 
@@ -22,8 +22,8 @@ func NewSlice() *Slice {
 	return r
 }
 
-func SizedSlice(size uint) *Slice {
-	bitset := bitset32.WithBucketsFor32(uint32(size))
+func SizedSlice(size uint32) *Slice {
+	bitset := bitset32.WithBucketsFor32(size)
 	r := new(Slice)
 	r.components = make([]table.Value, size)
 	r.members = &bitset
@@ -91,6 +91,10 @@ func (row Slice) ScanFor(v table.Value) bitset32.Bitset32 {
 
 func (row Slice) Len() int {
 	return row.members.Len()
+}
+
+func (row Slice) Capacity() int {
+	return len(row.components)
 }
 
 func (row Slice) scanMembers(v table.Value) (b bitset32.Bitset32) {

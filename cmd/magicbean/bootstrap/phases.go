@@ -4,6 +4,7 @@ import (
 	"slices"
 	"sudonters/zootler/cmd/magicbean/z16"
 	"sudonters/zootler/internal/settings"
+	"sudonters/zootler/internal/table"
 	"sudonters/zootler/internal/table/columns"
 	"sudonters/zootler/magicbean"
 	"sudonters/zootler/mido"
@@ -18,23 +19,43 @@ func PanicWhenErr(err error) {
 	}
 }
 
+func sizedslice[T zecs.Value](size uint32) zecs.DDL {
+	return func() *table.ColumnBuilder {
+		return columns.SizedSliceColumn[T](size)
+	}
+}
+
+func sizedbit[T zecs.Value](size uint32) zecs.DDL {
+	return func() *table.ColumnBuilder {
+		return columns.SizedBitColumnOf[T](size)
+	}
+}
+
+func sizedhash[T zecs.Value](capacity uint32) zecs.DDL {
+	return func() *table.ColumnBuilder {
+		return columns.SizedHashMapColumn[T](capacity)
+	}
+}
+
 func Phase1_InitializeStorage(ddl []zecs.DDL) zecs.Ocm {
 	ocm, err := zecs.New()
 	PanicWhenErr(err)
 	PanicWhenErr(zecs.Apply(&ocm, []zecs.DDL{
-		columns.SliceColumn[magicbean.Name],
-		columns.SliceColumn[magicbean.Connection],
-		columns.SliceColumn[magicbean.RuleSource],
-		columns.SliceColumn[magicbean.RuleParsed],
-		columns.SliceColumn[magicbean.RuleOptimized],
-		columns.SliceColumn[magicbean.RuleCompiled],
-		columns.SliceColumn[magicbean.Ptr],
-		columns.SliceColumn[magicbean.EdgeKind],
-		columns.SliceColumn[magicbean.CollectablePriority],
-		columns.SliceColumn[magicbean.HeldAt],
-		columns.SliceColumn[magicbean.HoldsToken],
-		columns.SliceColumn[magicbean.HintRegion],
-		columns.SliceColumn[magicbean.DefaultPlacement],
+		sizedslice[magicbean.Name](9000),
+		sizedbit[magicbean.Placement](5000),
+		sizedhash[magicbean.Connection](3300),
+		sizedhash[magicbean.RuleSource](2500),
+		sizedhash[magicbean.RuleParsed](2500),
+		sizedhash[magicbean.RuleOptimized](2500),
+		sizedhash[magicbean.RuleCompiled](2500),
+		sizedhash[magicbean.DefaultPlacement](2200),
+
+		columns.HashMapColumn[magicbean.Ptr],
+		columns.HashMapColumn[magicbean.EdgeKind],
+		columns.HashMapColumn[magicbean.CollectablePriority],
+		columns.HashMapColumn[magicbean.HeldAt],
+		columns.HashMapColumn[magicbean.HoldsToken],
+		columns.HashMapColumn[magicbean.HintRegion],
 		columns.HashMapColumn[magicbean.AltHintRegion],
 		columns.HashMapColumn[magicbean.DungeonName],
 		columns.HashMapColumn[magicbean.Savewarp],
@@ -45,7 +66,6 @@ func Phase1_InitializeStorage(ddl []zecs.DDL) zecs.Ocm {
 		columns.HashMapColumn[magicbean.AliasingName],
 		columns.BitColumnOf[magicbean.Token],
 		columns.BitColumnOf[magicbean.Region],
-		columns.BitColumnOf[magicbean.Placement],
 		columns.BitColumnOf[magicbean.IsBossRoom],
 		columns.BitColumnOf[magicbean.Empty],
 		columns.BitColumnOf[magicbean.Generated],
@@ -93,7 +113,7 @@ func Phase3_ConfigureCompiler(ocm *zecs.Ocm, theseSettings *settings.Zootr, opti
 			PanicWhenErr(loadscripts(ocm, env))
 			PanicWhenErr(aliassymbols(ocm, env.Symbols))
 		},
-		installSettings(theseSettings),
+		installCompilerFunctions(theseSettings),
 		installConnectionGenerator(ocm),
 		mido.WithBuiltInFunctionDefs(func(*mido.CompileEnv) []objects.BuiltInFunctionDef {
 			return []objects.BuiltInFunctionDef{
@@ -125,8 +145,7 @@ func Phase4_Compile(ocm *zecs.Ocm, compiler *mido.CodeGen) error {
 	return nil
 }
 
-func Phase5_CreateWorld(ocm *zecs.Ocm, settings *settings.Zootr, objects objects.Table) any {
+func Phase5_CreateWorld(ocm *zecs.Ocm, settings *settings.Zootr, objects objects.Table) magicbean.ExplorableWorld {
 	xplore := explorableworldfrom(ocm)
-	_ = xplore
-	panic("not implemented")
+	return xplore
 }

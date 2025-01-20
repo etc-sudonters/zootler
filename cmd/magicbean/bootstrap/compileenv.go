@@ -111,7 +111,7 @@ func aliassymbols(ocm *zecs.Ocm, syms *symbols.Table) error {
 	return nil
 }
 
-func installSettings(_ *settings.Zootr) mido.ConfigureCompiler {
+func installCompilerFunctions(_ *settings.Zootr) mido.ConfigureCompiler {
 	return func(env *mido.CompileEnv) {
 		for i, name := range settings.Names() {
 			symbol := env.Symbols.Declare(name, symbols.SETTING)

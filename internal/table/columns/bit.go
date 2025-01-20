@@ -9,6 +9,11 @@ func NewBit(singleton table.Value) *Bit {
 	return &Bit{t: singleton, members: &bitset32.Bitset32{}}
 }
 
+func NewSizedBit(singleton table.Value, capacity uint32) *Bit {
+	members := bitset32.WithBucketsFor32(capacity)
+	return &Bit{t: singleton, members: &members}
+}
+
 /*
  * Column backed by a bitset, consequently rows stored in this column do not
  * express unique values. Instead the presence of a row is handled by a
@@ -49,4 +54,13 @@ func BitColumnOf[T any]() *table.ColumnBuilder {
 
 func BitColumnUsing[T any](t T) *table.ColumnBuilder {
 	return table.BuildColumnOf[T](NewBit(t))
+}
+
+func SizedBitColumnOf[T any](capacity uint32) *table.ColumnBuilder {
+	var t T
+	return SizedBitColumnUsing(t, capacity)
+}
+
+func SizedBitColumnUsing[T any](t T, capacity uint32) *table.ColumnBuilder {
+	return table.BuildColumnOf[T](NewSizedBit(t, capacity))
 }
