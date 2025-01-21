@@ -38,7 +38,13 @@ func Lower(tbl *symbols.Table, node ruleparser.Tree) (Node, error) {
 	case *ruleparser.BinOp:
 		switch node.Op {
 		case ruleparser.BinOpContains:
-			return createCall(tbl, "load_setting_2", node.Right, node.Left)
+			if ident, isIdent := node.Right.(*ruleparser.Identifier); isIdent && ident.Value == "dungeon_shortcuts" {
+				if literal, isLiteral := node.Left.(*ruleparser.Literal); isLiteral && literal.Kind == ruleparser.LiteralStr {
+					return createCall(tbl, "region_has_shortcuts", literal)
+				}
+			}
+
+			return nil, fmt.Errorf("invalid contains construction: %#v", node)
 		case ruleparser.BinOpEq, ruleparser.BinOpNotEq, ruleparser.BinOpLt:
 			lhs, lhsErr := Lower(tbl, node.Left)
 			rhs, rhsErr := Lower(tbl, node.Right)
@@ -123,7 +129,13 @@ func Lower(tbl *symbols.Table, node ruleparser.Tree) (Node, error) {
 			return nil, CouldNotLowerTree{node, UnknownLiteral}
 		}
 	case *ruleparser.Subscript:
-		return createCall(tbl, "load_setting_2", node.Target, node.Index)
+		if target, isIdent := node.Target.(*ruleparser.Identifier); isIdent && target.Value == "skipped_trials" {
+			if trial, isIdent := node.Index.(*ruleparser.Identifier); isIdent {
+				return createCall(tbl, "is_trial_skipped", ruleparser.StringLiteral(trial.Value))
+			}
+		}
+
+		return nil, fmt.Errorf("invalid subscript construction %#v", node)
 	case *ruleparser.Tuple:
 		return createCall(tbl, "has", node.Elems...)
 	case *ruleparser.UnaryOp:

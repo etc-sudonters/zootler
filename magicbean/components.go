@@ -74,7 +74,18 @@ type Shop struct{}
 type SilverRupee struct{}
 type SmallKey struct{}
 type SmallKeyRing struct{}
-type Song struct{}
 type TCGSmallKey struct{}
 type TCGSmallKeyRing struct{}
 type GoldSkulltulaToken struct{}
+type Bottle struct{}
+type HeartPieceCount float64
+type Medallion struct{}
+type Stone struct{}
+type OcarinaButton rune
+type Song string
+
+type SilverRupeeGroup string
+type SilverRupeeCount float64
+
+type SmallKeyGroup string
+type SmallKeyCount float64

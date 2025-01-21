@@ -139,8 +139,56 @@ func aliassymbols(ocm *zecs.Ocm, syms *symbols.Table) error {
 	return nil
 }
 
-func installCompilerFunctions(_ *settings.Zootr) mido.ConfigureCompiler {
+func installCompilerFunctions(these *settings.Zootr) mido.ConfigureCompiler {
+
 	return func(env *mido.CompileEnv) {
+		hasNotesForSong := env.Symbols.Declare("has_notes_for_song", symbols.BUILT_IN_FUNCTION)
+		checkTod := env.Symbols.Declare("check_tod", symbols.BUILT_IN_FUNCTION)
+		isTrickEnabled := func(args []ast.Node, _ ast.Rewriting) (ast.Node, error) {
+			switch arg := args[0].(type) {
+			case ast.String:
+				return ast.Boolean(these.Tricks.Enabled[string(arg)]), nil
+			default:
+				return nil, fmt.Errorf("is_trick_enabled expects string as first argument got %#v", arg)
+			}
+		}
+
+		hasAllNotesForSong := func(args []ast.Node, _ ast.Rewriting) (ast.Node, error) {
+			if !these.Shuffling.OcarinaNotes {
+				return ast.Boolean(true), nil
+			}
+
+			return ast.Invoke{
+				Target: ast.IdentifierFrom(hasNotesForSong),
+				Args:   args,
+			}, nil
+		}
+
+		isTrialSkipped := func(args []ast.Node, _ ast.Rewriting) (ast.Node, error) {
+			return ast.Boolean(false), nil
+		}
+
+		regionHasShortcuts := func(args []ast.Node, _ ast.Rewriting) (ast.Node, error) {
+			return ast.Boolean(false), nil
+		}
+
+		needsTodChecks := func(tod string) optimizer.CompilerFunction {
+			return func(args []ast.Node, _ ast.Rewriting) (ast.Node, error) {
+				if !these.Entrances.AffectedTodChecks() {
+					return ast.Boolean(true), nil
+				}
+
+				return ast.Invoke{
+					Target: ast.IdentifierFrom(checkTod),
+					Args:   []ast.Node{ast.String(tod)},
+				}, nil
+			}
+		}
+
+		hadNightStart := ConstCompileFunc(these.Starting.TimeOfDay.IsNight())
+
+		trueFunc := ConstCompileFunc(true)
+
 		for i, name := range settings.Names() {
 			symbol := env.Symbols.Declare(name, symbols.SETTING)
 			env.Objects.AssociateSymbol(
@@ -151,16 +199,16 @@ func installCompilerFunctions(_ *settings.Zootr) mido.ConfigureCompiler {
 
 		mido.WithCompilerFunctions(func(*mido.CompileEnv) optimizer.CompilerFunctionTable {
 			return optimizer.CompilerFunctionTable{
-				"load_setting":           constCompileFunc,
-				"load_setting_2":         constCompileFunc,
-				"compare_setting":        constCompileFunc,
-				"region_has_shortcuts":   constCompileFunc,
-				"is_trick_enabled":       constCompileFunc,
-				"had_night_start":        constCompileFunc,
-				"has_all_notes_for_song": constCompileFunc,
-				"at_dampe_time":          constCompileFunc,
-				"at_day":                 constCompileFunc,
-				"at_night":               constCompileFunc,
+				"load_setting":           trueFunc,
+				"compare_setting":        trueFunc,
+				"region_has_shortcuts":   regionHasShortcuts,
+				"is_trick_enabled":       isTrickEnabled,
+				"had_night_start":        hadNightStart,
+				"has_all_notes_for_song": hasAllNotesForSong,
+				"at_dampe_time":          needsTodChecks("dampe"),
+				"at_day":                 needsTodChecks("day"),
+				"at_night":               needsTodChecks("night"),
+				"is_trial_skipped":       isTrialSkipped,
 			}
 		})(env)
 	}
@@ -220,6 +268,9 @@ func (this ConnectionGenerator) AddConnectionTo(region string, rule ast.Node) (*
 	return symbol, nil
 }
 
-func constCompileFunc([]ast.Node, ast.Rewriting) (ast.Node, error) {
-	return ast.Boolean(true), nil
+func ConstCompileFunc(b bool) optimizer.CompilerFunction {
+	node := ast.Boolean(b)
+	return func(n []ast.Node, r ast.Rewriting) (ast.Node, error) {
+		return node, nil
+	}
 }

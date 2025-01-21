@@ -53,6 +53,14 @@ func staticddl() []zecs.DDL {
 		columns.HashMapColumn[magicbean.ScriptSource],
 		columns.HashMapColumn[magicbean.ScriptParsed],
 		columns.HashMapColumn[magicbean.AliasingName],
+		columns.HashMapColumn[magicbean.HeartPieceCount],
+		columns.HashMapColumn[magicbean.OcarinaButton],
+		columns.HashMapColumn[magicbean.Song],
+		columns.HashMapColumn[magicbean.SmallKeyCount],
+		columns.HashMapColumn[magicbean.SmallKeyGroup],
+		columns.HashMapColumn[magicbean.SilverRupeeCount],
+		columns.HashMapColumn[magicbean.SilverRupeeGroup],
+
 		columns.BitColumnOf[magicbean.Token],
 		columns.BitColumnOf[magicbean.Region],
 		columns.BitColumnOf[magicbean.IsBossRoom],
@@ -76,9 +84,11 @@ func staticddl() []zecs.DDL {
 		columns.BitColumnOf[magicbean.SilverRupee],
 		columns.BitColumnOf[magicbean.SmallKey],
 		columns.BitColumnOf[magicbean.SmallKeyRing],
-		columns.BitColumnOf[magicbean.Song],
 		columns.BitColumnOf[magicbean.TCGSmallKey],
 		columns.BitColumnOf[magicbean.TCGSmallKeyRing],
 		columns.BitColumnOf[magicbean.GoldSkulltulaToken],
+		columns.BitColumnOf[magicbean.Medallion],
+		columns.BitColumnOf[magicbean.Stone],
+		columns.BitColumnOf[magicbean.Bottle],
 	}
 }

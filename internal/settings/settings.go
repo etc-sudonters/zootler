@@ -188,6 +188,10 @@ type EntranceRandomizer struct {
 	WarpSongs        bool
 }
 
+func (this EntranceRandomizer) AffectedTodChecks() bool {
+	return this.Overworld || (this.Interior != InteriorShuffleOff)
+}
+
 type Dungeons struct {
 	Trials        TrialsEnabled
 	Shortcuts     DungeonShortcuts

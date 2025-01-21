@@ -393,6 +393,18 @@ const (
 	StartingTimeOfDayWitching
 )
 
+func (this StartingTimeOfDay) IsNight() bool {
+	switch this {
+	case StartingTimeOfDayEvening,
+		StartingTimeOfDaySunset,
+		StartingTimeOfDayMidnight,
+		StartingTimeOfDayWitching:
+		return true
+	default:
+		return false
+	}
+}
+
 const (
 	ItemPoolMinimal ItemPool = iota
 	ItemPoolScarce

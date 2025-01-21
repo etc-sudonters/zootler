@@ -45,19 +45,7 @@ func Phase3_ConfigureCompiler(ocm *zecs.Ocm, theseSettings *settings.Zootr, opti
 		installCompilerFunctions(theseSettings),
 		installConnectionGenerator(ocm),
 		mido.WithBuiltInFunctionDefs(func(*mido.CompileEnv) []objects.BuiltInFunctionDef {
-			return []objects.BuiltInFunctionDef{
-				{Name: "has", Params: 2},
-				{Name: "has_anyof", Params: -1},
-				{Name: "has_every", Params: -1},
-				{Name: "is_adult", Params: 0},
-				{Name: "is_child", Params: 0},
-				{Name: "has_bottle", Params: 0},
-				{Name: "has_dungeon_rewards", Params: 1},
-				{Name: "has_hearts", Params: 1},
-				{Name: "has_medallions", Params: 1},
-				{Name: "has_stones", Params: 1},
-				{Name: "is_starting_age", Params: 0},
-			}
+			return magicbean.CreateBuiltInDefs()
 		}),
 		mido.CompilerWithFastOps(compiler.FastOps{
 			"has": compiler.FastHasOp,

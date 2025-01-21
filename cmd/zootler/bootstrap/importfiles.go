@@ -3,6 +3,8 @@ package bootstrap
 import (
 	"io/fs"
 	"path/filepath"
+	"regexp"
+	"strings"
 	"sudonters/zootler/cmd/zootler/z16"
 	"sudonters/zootler/internal"
 	"sudonters/zootler/magicbean"
@@ -115,12 +117,6 @@ func storeTokens(tokens z16.Tokens, paths LoadPaths) error {
 		case "GanonBossKey", "ganonbosskey":
 			attachments.Add(magicbean.GanonBossKey{})
 			break
-		case "HideoutSmallKey", "hideoutsmallkey":
-			attachments.Add(magicbean.HideoutSmallKey{})
-			break
-		case "HideoutSmallKeyRing", "hideoutsmallkeyring":
-			attachments.Add(magicbean.HideoutSmallKeyRing{})
-			break
 		case "Item", "item":
 			attachments.Add(magicbean.Item{})
 			break
@@ -134,22 +130,38 @@ func storeTokens(tokens z16.Tokens, paths LoadPaths) error {
 			attachments.Add(magicbean.Shop{})
 			break
 		case "SilverRupee", "silverrupee":
-			attachments.Add(magicbean.SilverRupee{})
+			matches := silverRupeeGroup.FindStringSubmatch(raw.Name)
+			if len(matches) >= 3 {
+				attachments.Add(magicbean.SilverRupeeGroup(matches[2]))
+			}
+			if strings.Contains(raw.Name, "Pouch") {
+				attachments.Add(magicbean.SilverRupeeCount(0xFF))
+			} else {
+				attachments.Add(magicbean.SilverRupeeCount(1))
+			}
+
 			break
-		case "SmallKey", "smallkey":
-			attachments.Add(magicbean.SmallKey{})
+		case "SmallKey", "smallkey",
+			"HideoutSmallKey", "hideoutsmallkey",
+			"TCGSmallKey", "tcgsmallkey":
+			matches := smallKeyGroup.FindStringSubmatch(raw.Name)
+			if len(matches) >= 3 {
+				attachments.Add(magicbean.SmallKeyGroup(matches[2]))
+			}
+
+			attachments.Add(magicbean.SmallKeyCount(1))
 			break
-		case "SmallKeyRing", "smallkeyring":
-			attachments.Add(magicbean.SmallKeyRing{})
+		case "SmallKeyRing", "smallkeyring",
+			"HideoutSmallKeyRing", "hideoutsmallkeyring",
+			"TCGSmallKeyRing", "tcgsmallkeyring":
+			matches := smallKeyGroup.FindStringSubmatch(raw.Name)
+			if len(matches) >= 3 {
+				attachments.Add(magicbean.SmallKeyGroup(matches[2]))
+			}
+			attachments.Add(magicbean.SmallKeyCount(0xFF))
 			break
 		case "Song", "song":
-			attachments.Add(magicbean.Song{})
-			break
-		case "TCGSmallKey", "tcgsmallkey":
-			attachments.Add(magicbean.TCGSmallKey{})
-			break
-		case "TCGSmallKeyRing", "tcgsmallkeyring":
-			attachments.Add(magicbean.TCGSmallKeyRing{})
+			attachments.Add(magicbean.Song(""))
 			break
 		case "GoldSkulltulaToken", "goldskulltulatoken":
 			attachments.Add(magicbean.GoldSkulltulaToken{})
@@ -266,3 +278,6 @@ type token struct {
 	Priority    bool                   `json:"priority"`
 	Special     map[string]interface{} `json:"special"`
 }
+
+var smallKeyGroup = regexp.MustCompile(`Small Key( Ring)? \((.*)\)`)
+var silverRupeeGroup = regexp.MustCompile(`Silver Rupee( Pouch)? \((.*)\)`)

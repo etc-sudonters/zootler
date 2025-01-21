@@ -28,8 +28,10 @@ func runMain(_ context.Context, opts cliOptions) stageleft.ExitCode {
 	}
 
 	theseSettings := settings.Default()
+	theseSettings.Shuffling.OcarinaNotes = true
+	theseSettings.Spawns.StartingAge = settings.StartAgeChild
 	artifacts := setup(paths, &theseSettings)
-	explore(&artifacts, AgeAdult)
+	explore(&artifacts, AgeAdult, &theseSettings)
 	return stageleft.ExitCode(0)
 }
 
