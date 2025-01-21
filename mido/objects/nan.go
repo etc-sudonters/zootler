@@ -1,6 +1,7 @@
 package objects
 
 import (
+	"fmt"
 	"math"
 )
 
@@ -20,16 +21,19 @@ func IsPtrWithTag(obj Object, tag uint16) bool {
 }
 
 func PackF64(v float64) Object {
+	if math.IsNaN(v) {
+		panic("cannot pack NAN")
+	}
+
 	return Object(math.Float64bits(v))
 }
 
 func UnpackF64(p Object) float64 {
-	bits := bits(p)
-	if container&bits == container {
-		panic("not a float64")
+	f64 := math.Float64frombits(uint64(p))
+	if math.IsNaN(f64) {
+		panic(fmt.Errorf("%x: not a float", p))
 	}
-
-	return math.Float64frombits(uint64(bits))
+	return f64
 }
 
 func PackPtr32(tag uint16, addr uint32) Object {
@@ -200,6 +204,7 @@ const (
 	i32mask  bits = 0<<63 | 1<<49 | 1<<48
 	u32mask  bits = 0<<63 | 1<<49 | 0<<48
 	boolmask bits = 0<<63 | 0<<49 | 1<<48
+	qnan     bits = 0x7FF8000000000001
 
 	Ptr32 bits = container | ptrmask
 	Str32 bits = container | strmask
@@ -207,6 +212,7 @@ const (
 	I32   bits = container | i32mask
 	U32   bits = container | u32mask
 	Bool  bits = container | boolmask
+	F64   bits = ^qnan
 
 	PackedTrue  = Object(container | boolmask | bits(1<<1))
 	PackedFalse = Object(container | boolmask | bits(1<<2))

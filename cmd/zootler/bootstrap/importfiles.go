@@ -6,7 +6,7 @@ import (
 	"sudonters/zootler/cmd/zootler/z16"
 	"sudonters/zootler/internal"
 	"sudonters/zootler/magicbean"
-	"sudonters/zootler/mido/ast"
+	"sudonters/zootler/mido/optimizer"
 	"sudonters/zootler/zecs"
 
 	"github.com/etc-sudonters/substrate/slipup"
@@ -76,7 +76,7 @@ func (this LoadPaths) readrelationsdir(store func(relations) error) error {
 func storeScripts(ocm *zecs.Ocm, paths LoadPaths) error {
 	eng := ocm.Engine()
 	for decl, source := range paths.readscripts() {
-		eng.InsertRow(magicbean.ScriptDecl(decl), magicbean.ScriptSource(source), name(ast.FastScriptNameFromDecl(decl)))
+		eng.InsertRow(magicbean.ScriptDecl(decl), magicbean.ScriptSource(source), name(optimizer.FastScriptNameFromDecl(decl)))
 	}
 	return nil
 }

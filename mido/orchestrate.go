@@ -160,7 +160,7 @@ type Analyzer func(*CompileEnv) ast.Visitor
 type CompileEnv struct {
 	Grammar       peruse.Grammar[ruleparser.Tree]
 	Symbols       *symbols.Table
-	ScriptedFuncs *ast.ScriptedFunctions
+	ScriptedFuncs *optimizer.ScriptedFunctions
 	Objects       *objects.Builder
 
 	Optimize     Optimize
@@ -198,8 +198,8 @@ func (this *Optimize) AddOptimizer(o Optimizer) {
 
 func (this *CompileEnv) BuildScriptedFuncs(declarations map[string]string) error {
 	var err error
-	var funcs ast.ScriptedFunctions
-	funcs, err = ast.BuildScriptedFuncTable(this.Symbols, this.Grammar, declarations)
+	var funcs optimizer.ScriptedFunctions
+	funcs, err = optimizer.BuildScriptedFuncTable(this.Symbols, this.Grammar, declarations)
 	if err != nil {
 		return err
 	}

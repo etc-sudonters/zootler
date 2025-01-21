@@ -10,14 +10,13 @@ import (
 
 	"runtime/pprof"
 	"sudonters/zootler/cmd/zootler/bootstrap"
-	"sudonters/zootler/internal/query"
 	"sudonters/zootler/magicbean"
 	"sudonters/zootler/mido"
 	"sudonters/zootler/mido/objects"
 	"sudonters/zootler/zecs"
 )
 
-func runMain(ctx context.Context, opts cliOptions) stageleft.ExitCode {
+func runMain(_ context.Context, opts cliOptions) stageleft.ExitCode {
 	stopProfiling := profileto(opts.profile)
 	defer stopProfiling()
 
@@ -30,12 +29,7 @@ func runMain(ctx context.Context, opts cliOptions) stageleft.ExitCode {
 
 	theseSettings := settings.Default()
 	artifacts := setup(paths, &theseSettings)
-	eng := artifacts.Ocm.Engine()
-	tbl, err := query.ExtractTable(eng)
-	bootstrap.PanicWhenErr(err)
-
-	explore(&artifacts)
-	displaycolstats(tbl)
+	explore(&artifacts, AgeAdult)
 	return stageleft.ExitCode(0)
 }
 

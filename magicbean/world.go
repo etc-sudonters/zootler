@@ -6,7 +6,9 @@ import (
 	"sudonters/zootler/internal/skelly/bitset32"
 	"sudonters/zootler/internal/skelly/graph32"
 	"sudonters/zootler/mido"
+	"sudonters/zootler/mido/code"
 	"sudonters/zootler/mido/compiler"
+	"sudonters/zootler/mido/objects"
 	"sudonters/zootler/zecs"
 )
 
@@ -29,8 +31,29 @@ func (this ExplorableWorld) Edge(from, to graph32.Node) (ExplorableEdge, bool) {
 
 type Exploration struct {
 	VM      mido.VM
-	Visited bitset32.Bitset
-	Workset bitset32.Bitset
+	Visited *bitset32.Bitset
+	Workset *bitset32.Bitset
+}
+
+func (this *Exploration) evaluateRule(bytecode compiler.Bytecode) bool {
+	if len(bytecode.Tape) == 1 {
+		switch bytecode.Tape[0] {
+		case code.PUSH_T:
+			return true
+		case code.PUSH_F:
+			return false
+		}
+	}
+
+	answer, vmErr := this.VM.Execute(bytecode)
+	if vmErr != nil {
+		fmt.Println(vmErr)
+		answer = objects.PackedFalse
+	}
+
+	_ = answer
+	return false
+
 }
 
 func (this *Exploration) CanTransit(world *ExplorableWorld, from, to graph32.Node) bool {
@@ -39,14 +62,9 @@ func (this *Exploration) CanTransit(world *ExplorableWorld, from, to graph32.Nod
 		panic(fmt.Errorf("no edge registered between %d %d", from, to))
 	}
 	fmt.Printf("exploring %q\n", edge.Name)
-	answer, vmErr := this.VM.Execute(compiler.Bytecode(edge.Rule))
-	if vmErr != nil {
-		fmt.Println(vmErr)
-	}
-
-	_ = answer
-	return true
-
+	result := this.evaluateRule(compiler.Bytecode(edge.Rule))
+	fmt.Printf("\tcrossed? %t\n", result)
+	return result
 }
 
 type Results struct {
@@ -57,16 +75,16 @@ type Results struct {
 func (this *ExplorableWorld) ExploreAvailableEdges(xplr Exploration) Results {
 	var results Results
 
-	for current := range nodeiter(&xplr.Workset).UntilEmpty {
+	for current := range nodeiter(xplr.Workset).UntilEmpty {
 		neighbors, err := this.Graph.Successors(current)
 		internal.PanicOnError(err)
-		neighbors = neighbors.Difference(xplr.Visited)
+		neighbors = neighbors.Difference(*xplr.Visited)
 		for neighbor := range nodeiter(&neighbors).All {
 			if xplr.CanTransit(this, current, neighbor) {
 				bitset32.Unset(&neighbors, neighbor)
-				bitset32.Set(&xplr.Workset, neighbor)
+				bitset32.Set(xplr.Workset, neighbor)
 				bitset32.Set(&results.Reached, neighbor)
-				bitset32.Set(&xplr.Visited, neighbor)
+				bitset32.Set(xplr.Visited, neighbor)
 			}
 		}
 

@@ -1,9 +1,10 @@
-package ast
+package optimizer
 
 import (
 	"fmt"
 	"strings"
 	"sudonters/zootler/internal/ruleparser"
+	"sudonters/zootler/mido/ast"
 	"sudonters/zootler/mido/symbols"
 
 	"github.com/etc-sudonters/substrate/peruse"
@@ -20,28 +21,28 @@ func BuildScriptedFuncTable(symbolTable *symbols.Table, grammar peruse.Grammar[r
 
 	for header, body := range decls {
 		var decl ScriptedFunction
-		head, declErr := Parse(header, symbolTable, grammar)
+		head, declErr := ast.Parse(header, symbolTable, grammar)
 		if declErr != nil {
 			panic(declErr)
 		}
 
 		switch head := head.(type) {
-		case Invoke:
-			decl.Symbol = LookUpNodeInTable(symbolTable, head.Target)
+		case ast.Invoke:
+			decl.Symbol = ast.LookUpNodeInTable(symbolTable, head.Target)
 			if decl.Symbol.Kind == symbols.BUILT_IN_FUNCTION {
 				continue
 			}
 			if decl.Symbol == nil {
 				panic(fmt.Errorf("did not find entry for %#v", head))
 			}
-			decl.Params = make([]Identifier, len(head.Args))
+			decl.Params = make([]ast.Identifier, len(head.Args))
 			for i := range decl.Params {
-				param := head.Args[i].(Identifier)
+				param := head.Args[i].(ast.Identifier)
 				symbol := symbolTable.LookUpByIndex(param.AsIndex())
 				symbol.SetKind(symbols.LOCAL)
 				decl.Params[i] = param
 			}
-		case Identifier:
+		case ast.Identifier:
 			decl.Symbol = symbolTable.LookUpByIndex(head.AsIndex())
 			if decl.Symbol.Kind == symbols.BUILT_IN_FUNCTION {
 				continue
@@ -58,7 +59,7 @@ func BuildScriptedFuncTable(symbolTable *symbols.Table, grammar peruse.Grammar[r
 
 	for name, compiling := range funcTable.tbl {
 		body := bodies[name]
-		nodes, bodyErr := Parse(body, symbolTable, grammar)
+		nodes, bodyErr := ast.Parse(body, symbolTable, grammar)
 		if bodyErr != nil {
 			panic(bodyErr)
 		}
@@ -71,8 +72,8 @@ func BuildScriptedFuncTable(symbolTable *symbols.Table, grammar peruse.Grammar[r
 
 type ScriptedFunction struct {
 	Symbol *symbols.Sym
-	Params []Identifier
-	Body   Node
+	Params []ast.Identifier
+	Body   ast.Node
 }
 
 type ScriptedFunctions struct {
