@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"sudonters/zootler/cmd/zootler/bootstrap"
 	"sudonters/zootler/cmd/zootler/z16"
@@ -10,6 +11,9 @@ import (
 	"sudonters/zootler/mido"
 	"sudonters/zootler/mido/objects"
 	"sudonters/zootler/zecs"
+
+	"github.com/etc-sudonters/substrate/dontio"
+	"golang.org/x/text/collate"
 )
 
 type Age bool
@@ -29,7 +33,7 @@ func fromStartingAge(start settings.StartingAge) Age {
 	}
 }
 
-func explore(artifacts *Artifacts, age Age, these *settings.Zootr) {
+func explore(ctx context.Context, artifacts *Artifacts, age Age, these *settings.Zootr) {
 	q := artifacts.Ocm.Query()
 	q.Build(zecs.With[magicbean.Region], zecs.Load[magicbean.Name])
 	roots := bitset32.Bitset{}
@@ -56,9 +60,15 @@ func explore(artifacts *Artifacts, age Age, these *settings.Zootr) {
 	funcs.IsChild = magicbean.ConstBool(age == AgeChild)
 	funcs.IsStartingAge = magicbean.ConstBool(age == fromStartingAge(these.Spawns.StartingAge))
 
+	std, noStd := dontio.StdFromContext(ctx)
+	if noStd != nil {
+		panic("no std found in context")
+	}
+
 	vm := mido.VM{
 		Objects: &artifacts.Objects,
 		Funcs:   funcs.Table(),
+		Std:     std,
 	}
 
 	workset := bitset32.Copy(roots)
@@ -87,11 +97,39 @@ func PtrsMatching(ocm *zecs.Ocm, query ...zecs.BuildQuery) []objects.Object {
 }
 
 func CollectStartingItems(artifacts *Artifacts, these *settings.Zootr) {
+	type collecting struct {
+		entity zecs.Entity
+		qty    float64
+	}
+	var starting []collecting
+
+	collect := func(token z16.Token, qty float64) {
+		starting = append(starting, collecting{token.Entity(), qty})
+	}
+
+	collectOneEach := func(token ...z16.Token) {
+		new := make([]collecting, len(starting)+len(token))
+		copy(new[len(token):], starting)
+		for i, t := range token {
+			new[i] = collecting{t.Entity(), 1}
+		}
+
+		starting = new
+	}
+
 	tokens := z16.NewTokens(&artifacts.Ocm)
 
 	if these.Locations.OpenDoorOfTime {
-		timeTravel := tokens.MustGet("Time Travel")
-		artifacts.Inventory.CollectOne(timeTravel.Entity())
-		fmt.Printf("Time Travel ID: %x\n", timeTravel.Entity())
+		collect(tokens.MustGet("Time Travel"), 1)
+	}
+
+	collectOneEach(
+		tokens.MustGet("Ocarina"),
+		tokens.MustGet("Deku Stick (1)"),
+		tokens.MustGet("Deku Shield"),
+	)
+
+	for _, collect := range starting {
+		artifacts.Inventory.Collect(collect.entity, collate.qty)
 	}
 }

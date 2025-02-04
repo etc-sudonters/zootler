@@ -15,7 +15,7 @@ import (
 type VM struct {
 	Objects *objects.Table
 	Funcs   objects.BuiltInFunctions
-	Std     dontio.Std
+	Std     *dontio.Std
 }
 
 func (this *VM) Execute(bytecode compiler.Bytecode) (obj objects.Object, err error) {
@@ -114,9 +114,11 @@ loop:
 	return result, err
 }
 
+const warning dontio.ForegroundColor = 9
+
 func (this *VM) Truthy(obj objects.Object) bool {
 	if obj != objects.PackedTrue && obj != objects.PackedFalse {
-		fmt.Fprintf(this.Std.Err, "truthy checked non-boolean %v", obj)
+		fmt.Fprintf(this.Std.Err, warning.Paint("truthy checked non-boolean %q %X\n"), obj.Type(), obj)
 	}
 
 	return obj.Truthy()
@@ -124,37 +126,32 @@ func (this *VM) Truthy(obj objects.Object) bool {
 
 func (this *VM) Dis(w io.Writer, bytecode compiler.Bytecode) {
 	code.DisassembleInto(w, bytecode.Tape)
-	fmt.Fprintln(w)
 	if len(bytecode.Consts) > 0 {
+		fmt.Fprintln(w)
 		fmt.Fprintln(w, "CONSTANTS")
 		for _, constant := range bytecode.Consts {
 			obj := this.Objects.AtIndex(constant)
 			fmt.Fprintf(w, "0x%04X:\t0x%08X\n", constant, obj)
-			fmt.Fprintf(w, "       \t%64b\n", obj)
 			ty := obj.Type()
-			fmt.Fprintf(w, "type: %s\n", ty)
+			fmt.Fprintf(w, "\ttype:\t%s\n", ty)
 			switch ty {
 			case "Ptr32":
-				tag, ptr := objects.UnpackPtr32(obj)
-				fmt.Fprintf(w, "tag:\t%02X\nptr:\t%04X\n", tag, ptr)
+				ptr := objects.UnpackPtr32(obj)
+				name := bytecode.Names[constant]
+				fmt.Fprintf(w, "\tname:\t%q\n", name)
+				fmt.Fprintf(w, "\ttag:\t%s\n\tptr:\t%04X\n", ptr.Tag, ptr.Addr)
 				break
 			case "Str32":
-				fmt.Fprintf(w, "value:	%q\n", this.Objects.DerefString(obj))
+				fmt.Fprintf(w, "\tvalue:	%q\n", this.Objects.DerefString(obj))
 				break
 			case "Array":
-				fmt.Fprintf(w, "value:	%v\n", objects.UnpackArray(obj))
-				break
-			case "I32":
-				fmt.Fprintf(w, "value:	%d\n", objects.UnpackI32(obj))
-				break
-			case "U32":
-				fmt.Fprintf(w, "value:	%d\n", objects.UnpackU32(obj))
+				fmt.Fprintf(w, "\tvalue:	%v\n", objects.UnpackBytes(obj))
 				break
 			case "Bool":
-				fmt.Fprintf(w, "value:	%t\n", objects.UnpackBool(obj))
+				fmt.Fprintf(w, "\tvalue:	%t\n", objects.UnpackBool(obj))
 				break
 			case "F64":
-				fmt.Fprintf(w, "value:	%f\n", objects.UnpackF64(obj))
+				fmt.Fprintf(w, "\tvalue:	%f\n", objects.UnpackF64(obj))
 				break
 			}
 

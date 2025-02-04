@@ -13,6 +13,7 @@ import (
 type Bytecode struct {
 	Tape   code.Instructions
 	Consts []objects.Index
+	Names  map[objects.Index]string
 }
 
 func (this *Bytecode) concat(tape code.Instructions) int {
@@ -28,6 +29,7 @@ func Compile(nodes ast.Node, symbols *symbols.Table, objs *objects.Builder) (Byt
 	compiler.objects = objs
 	compiler.code = &bytecode
 	compiler.consts = map[objects.Index]struct{}{}
+	compiler.names = map[objects.Index]string{}
 
 	visiting := &compiler
 	visitor := ast.Visitor{
@@ -43,6 +45,7 @@ func Compile(nodes ast.Node, symbols *symbols.Table, objs *objects.Builder) (Byt
 	}
 	err := visitor.Visit(nodes)
 	bytecode.Consts = slices.Collect(maps.Keys(compiler.consts))
+	bytecode.Names = compiler.names
 	return bytecode, err
 }
 
@@ -52,6 +55,7 @@ type compiler struct {
 	objects *objects.Builder
 	code    *Bytecode
 	consts  map[objects.Index]struct{}
+	names   map[objects.Index]string
 }
 
 func (this *compiler) emit(op code.Op, operands ...int) int {
@@ -114,7 +118,7 @@ func (this *compiler) Identifier(node ast.Identifier, visit ast.Visiting) error 
 	ptr := this.objects.PtrFor(symbol)
 	switch symbol.Kind {
 	case symbols.BUILT_IN_FUNCTION, symbols.TOKEN, symbols.SETTING:
-		this.pushConst(ptr)
+		this.pushPtr(ptr, symbol.Name)
 	default:
 		return fmt.Errorf("uncompilable identifier: %s", symbol)
 	}
@@ -166,5 +170,11 @@ func (this *compiler) String(node ast.String, visit ast.Visiting) error {
 
 func (this *compiler) pushConst(idx objects.Index) {
 	this.consts[idx] = struct{}{}
+	this.emit(code.PUSH_CONST, int(idx))
+}
+
+func (this *compiler) pushPtr(idx objects.Index, name string) {
+	this.consts[idx] = struct{}{}
+	this.names[idx] = name
 	this.emit(code.PUSH_CONST, int(idx))
 }

@@ -93,7 +93,10 @@ func WithBuiltInFunctionDefs(create func(*CompileEnv) []objects.BuiltInFunctionD
 		builtins := create(env)
 		for i, builtin := range builtins {
 			symbol := env.Symbols.Declare(builtin.Name, symbols.BUILT_IN_FUNCTION)
-			ptr := objects.PackPtr32(objects.PtrFunc, uint32(i))
+			ptr := objects.PackPtr32(objects.Ptr32{
+				Tag:  objects.PtrFunc,
+				Addr: objects.Addr32(i),
+			})
 			env.Objects.DefineFunction(symbol, ptr, builtin)
 		}
 	}

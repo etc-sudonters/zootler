@@ -16,7 +16,7 @@ import (
 	"sudonters/zootler/zecs"
 )
 
-func runMain(_ context.Context, opts cliOptions) stageleft.ExitCode {
+func runMain(ctx context.Context, opts cliOptions) stageleft.ExitCode {
 	stopProfiling := profileto(opts.profile)
 	defer stopProfiling()
 
@@ -33,7 +33,7 @@ func runMain(_ context.Context, opts cliOptions) stageleft.ExitCode {
 	theseSettings.Locations.OpenDoorOfTime = true
 	artifacts := setup(paths, &theseSettings)
 	CollectStartingItems(&artifacts, &theseSettings)
-	explore(&artifacts, AgeAdult, &theseSettings)
+	explore(ctx, &artifacts, AgeAdult, &theseSettings)
 	return stageleft.ExitCode(0)
 }
 

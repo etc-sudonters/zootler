@@ -5,23 +5,23 @@ import (
 )
 
 func NewInventory() Inventory {
-	return Inventory{make(map[zecs.Entity]uint64)}
+	return Inventory{make(map[zecs.Entity]float64)}
 }
 
 type Inventory struct {
-	onhand map[zecs.Entity]uint64
+	onhand map[zecs.Entity]float64
 }
 
 func (this *Inventory) CollectOne(entity zecs.Entity) {
 	this.Collect(entity, 1)
 }
 
-func (this *Inventory) Collect(entity zecs.Entity, n uint64) {
+func (this *Inventory) Collect(entity zecs.Entity, n float64) {
 	has := this.onhand[entity]
 	this.onhand[entity] = has + n
 }
 
-func (this *Inventory) Remove(entity zecs.Entity, n uint64) uint64 {
+func (this *Inventory) Remove(entity zecs.Entity, n float64) float64 {
 	has := this.onhand[entity]
 
 	switch {
@@ -41,12 +41,12 @@ func (this *Inventory) Remove(entity zecs.Entity, n uint64) uint64 {
 	}
 }
 
-func (this *Inventory) Count(entity zecs.Entity) uint64 {
+func (this *Inventory) Count(entity zecs.Entity) float64 {
 	return this.onhand[entity]
 }
 
-func (this *Inventory) Sum(entities []zecs.Entity) uint64 {
-	var total uint64
+func (this *Inventory) Sum(entities []zecs.Entity) float64 {
+	var total float64
 
 	for _, entity := range entities {
 		total += this.onhand[entity]

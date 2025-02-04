@@ -15,7 +15,7 @@ import (
 	"sudonters/zootler/zecs"
 )
 
-var kind2tag = map[symbols.Kind]uint8{
+var kind2tag = map[symbols.Kind]objects.PtrTag{
 	symbols.REGION:  objects.PtrRegion,
 	symbols.TRANSIT: objects.PtrTrans,
 	symbols.TOKEN:   objects.PtrToken,
@@ -39,7 +39,7 @@ func createptrs(ocm *zecs.Ocm, syms *symbols.Table, objs *objects.Builder) {
 		}
 
 		entity := ocm.Proxy(ent)
-		ptr := objects.PackPtr32(tag, uint32(ent))
+		ptr := objects.PackPtr32(objects.Ptr32{Tag: tag, Addr: objects.Addr32(ent)})
 		objs.AssociateSymbol(symbol, ptr)
 		entity.Attach(magicbean.Ptr(ptr))
 	}
@@ -193,7 +193,7 @@ func installCompilerFunctions(these *settings.Zootr) mido.ConfigureCompiler {
 			symbol := env.Symbols.Declare(name, symbols.SETTING)
 			env.Objects.AssociateSymbol(
 				symbol,
-				objects.PackPtr32(objects.PtrSetting, uint32(i)),
+				objects.PackPtr32(objects.Ptr32{Tag: objects.PtrSetting, Addr: objects.Addr32(i)}),
 			)
 		}
 
@@ -256,7 +256,7 @@ func (this ConnectionGenerator) AddConnectionTo(region string, rule ast.Node) (*
 	placement := this.Nodes.Placement(magicbean.NameF("Place%s", suffix))
 
 	placement.Owns(token)
-	ptr := objects.PackPtr32(objects.PtrToken, uint32(token.Entity()))
+	ptr := objects.PackPtr32(objects.Ptr32{Tag: objects.PtrToken, Addr: objects.Addr32(token.Entity())})
 	token.Attach(magicbean.Event{}, ptr)
 
 	node := this.Nodes.Region(magicbean.Name(region))

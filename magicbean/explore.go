@@ -66,7 +66,7 @@ func (this *Exploration) CanTransit(world *ExplorableWorld, from, to graph32.Nod
 	this.VM.Dis(&dis, compiler.Bytecode(edge.Rule))
 	fmt.Println(dis.String())
 	result := this.evaluateRule(compiler.Bytecode(edge.Rule))
-	fmt.Printf("\tcrossed? %t\n", result)
+	fmt.Printf("\tcrossed? %t\n\n", result)
 	return result
 }
 

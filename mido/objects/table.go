@@ -7,7 +7,8 @@ import (
 	"sudonters/zootler/mido/symbols"
 )
 
-var MAX_STR_SIZE = math.MaxUint8
+const MAX_STR_SIZE = math.MaxUint8
+const TOTAL_STR_SIZE = math.MaxUint32
 
 type Index uint16
 
@@ -26,12 +27,12 @@ type Table struct {
 }
 
 func (this Table) DerefString(obj Object) string {
-	if !obj.Is(Str32) {
+	if !obj.Is(MASK_STR32) {
 		panic("non-string dereference")
 	}
 
-	len, offset := UnpackStr32(obj)
-	return string(this.strings[offset : offset+uint32(len)])
+	str32 := UnpackStr32(obj)
+	return string(this.strings[str32.Addr : uint32(str32.Addr)+uint32(str32.Len)])
 }
 
 func (this Table) AtIndex(idx Index) Object {
@@ -111,13 +112,19 @@ func (this *Builder) InternStr(str string) Index {
 		return index
 	}
 
-	offset := len(this.strings)
-	if offset > MAX_STR_SIZE {
-		panic(fmt.Errorf("%d is longest string size, %q is too long"))
-	}
 	bytes := []byte(str)
+	if len(bytes) > MAX_STR_SIZE {
+		panic(fmt.Errorf("%d is longest string size, %q is too long", MAX_STR_SIZE, str))
+	}
+	ptr := len(this.strings)
+	if ptr > TOTAL_STR_SIZE {
+		panic("string heap overflow")
+	}
 	this.strings = slices.Concat(this.strings, bytes)
-	idx := this.insert(PackStr32(uint8(len(bytes)), uint32(offset)))
+	idx := this.insert(PackStr32(Str32{
+		Len:  uint8(len(bytes)),
+		Addr: Addr32(ptr),
+	}))
 	this.strs[str] = idx
 	return idx
 }

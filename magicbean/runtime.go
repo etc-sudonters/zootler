@@ -80,44 +80,17 @@ func CreateBuiltInHasFuncs(builtins *BuiltIns, pocket *Pocket, flags ShuffleFlag
 			return objects.Null, fmt.Errorf("has expects 2 arguments, got %d", len(args))
 		}
 
-		target := args[0]
-		qty := args[1]
-
-		if !target.Is(objects.Ptr32) {
-			return objects.Null, fmt.Errorf("has expects token ptr as first argument, got: %q", target.Type())
-		}
-
-		tag, item := objects.UnpackPtr32(target)
-		if tag != objects.PtrToken {
-			return objects.Null, fmt.Errorf("has expects token ptr (%X) as first argument, tag: %X", objects.PtrToken, tag)
-		}
-
-		var n uint64
-
-		switch {
-		case qty.Is(objects.F64):
-			n = uint64(objects.UnpackF64(qty))
-		case qty.Is(objects.U32):
-			n = uint64(objects.UnpackU32(qty))
-		case qty.Is(objects.I32):
-			n = uint64(int64(objects.UnpackI32(qty)))
-		default:
-			return objects.Null, fmt.Errorf("has expects number as second argument, got %q", qty.Type())
-		}
-
-		result := pocket.Has(zecs.Entity(item), uint64(n))
+		ptr := objects.UnpackPtr32(args[0])
+		qty := objects.UnpackF64(args[1])
+		result := pocket.Has(zecs.Entity(ptr.Addr), qty)
 		return objects.PackBool(result), nil
 	}
 
 	builtins.HasAnyOf = func(_ *objects.Table, args []objects.Object) (objects.Object, error) {
 		items := make([]zecs.Entity, len(args))
 		for i, arg := range args {
-			if !objects.IsPtrWithTag(arg, objects.PtrToken) {
-				return objects.Null, fmt.Errorf("has_anyof expects all args to be ptrs, %d was not", i+1)
-			}
-
-			_, item := objects.UnpackPtr32(arg)
-			items[i] = zecs.Entity(item)
+			ptr := objects.UnpackPtr32(arg)
+			items[i] = zecs.Entity(ptr.Addr)
 		}
 
 		result := pocket.HasAny(items)
@@ -127,12 +100,8 @@ func CreateBuiltInHasFuncs(builtins *BuiltIns, pocket *Pocket, flags ShuffleFlag
 	builtins.HasEvery = func(_ *objects.Table, args []objects.Object) (objects.Object, error) {
 		items := make([]zecs.Entity, len(args))
 		for i, arg := range args {
-			if !objects.IsPtrWithTag(arg, objects.PtrToken) {
-				return objects.Null, fmt.Errorf("has_anyof expects all args to be ptrs, %d was not", i+1)
-			}
-
-			_, item := objects.UnpackPtr32(arg)
-			items[i] = zecs.Entity(item)
+			ptr := objects.UnpackPtr32(arg)
+			items[i] = zecs.Entity(ptr.Addr)
 		}
 
 		result := pocket.HasEvery(items)
@@ -144,81 +113,29 @@ func CreateBuiltInHasFuncs(builtins *BuiltIns, pocket *Pocket, flags ShuffleFlag
 	}
 
 	builtins.HasDungeonRewards = func(_ *objects.Table, args []objects.Object) (objects.Object, error) {
-		qty := args[0]
-		var n uint64
-		switch {
-		case qty.Is(objects.F64):
-			n = uint64(objects.UnpackF64(qty))
-		case qty.Is(objects.U32):
-			n = uint64(objects.UnpackU32(qty))
-		case qty.Is(objects.I32):
-			n = uint64(int64(objects.UnpackI32(qty)))
-		default:
-			return objects.Null, fmt.Errorf("has_dungeon_rewards expects number as first argument")
-		}
-
-		return objects.PackBool(pocket.HasDungeonRewards(n)), nil
+		qty := objects.UnpackF64(args[0])
+		return objects.PackBool(pocket.HasDungeonRewards(qty)), nil
 	}
 
 	builtins.HasHearts = func(_ *objects.Table, args []objects.Object) (objects.Object, error) {
-		qty := args[0]
-		var n uint64
-		switch {
-		case qty.Is(objects.F64):
-			n = uint64(objects.UnpackF64(qty))
-		case qty.Is(objects.U32):
-			n = uint64(objects.UnpackU32(qty))
-		case qty.Is(objects.I32):
-			n = uint64(int64(objects.UnpackI32(qty)))
-		default:
-			return objects.Null, fmt.Errorf("has_hearts expects number as first argument")
-		}
-
-		return objects.PackBool(pocket.HasHearts(n)), nil
+		qty := objects.UnpackF64(args[0])
+		return objects.PackBool(pocket.HasHearts(qty)), nil
 	}
 
 	builtins.HasStones = func(_ *objects.Table, args []objects.Object) (objects.Object, error) {
-		qty := args[0]
-		var n uint64
-		switch {
-		case qty.Is(objects.F64):
-			n = uint64(objects.UnpackF64(qty))
-		case qty.Is(objects.U32):
-			n = uint64(objects.UnpackU32(qty))
-		case qty.Is(objects.I32):
-			n = uint64(int64(objects.UnpackI32(qty)))
-		default:
-			return objects.Null, fmt.Errorf("has_stones expects number as first argument")
-		}
-
-		return objects.PackBool(pocket.HasStones(n)), nil
+		qty := objects.UnpackF64(args[0])
+		return objects.PackBool(pocket.HasStones(qty)), nil
 	}
 
 	builtins.HasMedallions = func(_ *objects.Table, args []objects.Object) (objects.Object, error) {
-		qty := args[0]
-		var n uint64
-		switch {
-		case qty.Is(objects.F64):
-			n = uint64(objects.UnpackF64(qty))
-		case qty.Is(objects.U32):
-			n = uint64(objects.UnpackU32(qty))
-		case qty.Is(objects.I32):
-			n = uint64(int64(objects.UnpackI32(qty)))
-		default:
-			return objects.Null, fmt.Errorf("has_medallions expects number as first argument")
-		}
-
-		return objects.PackBool(pocket.HasMedallions(n)), nil
+		qty := objects.UnpackF64(args[0])
+		return objects.PackBool(pocket.HasMedallions(qty)), nil
 	}
 
 	if flags&SHUFFLE_OCARINA_NOTES == SHUFFLE_OCARINA_NOTES {
 		builtins.HasNotesForSong = func(_ *objects.Table, args []objects.Object) (objects.Object, error) {
-			if !objects.IsPtrWithTag(args[0], objects.PtrToken) {
-				return objects.Null, fmt.Errorf("has_notes_for_song expects song ptr as argument")
-			}
-
-			_, song := objects.UnpackPtr32(args[0])
-			return objects.PackBool(pocket.HasAllNotes(zecs.Entity(song))), nil
+			ptr := objects.UnpackPtr32(args[0])
+			return objects.PackBool(pocket.HasAllNotes(zecs.Entity(ptr.Addr))), nil
 		}
 	} else {
 		builtins.HasNotesForSong = ConstBool(true)

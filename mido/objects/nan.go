@@ -1,14 +1,59 @@
 package objects
 
 import (
-	"fmt"
+	"encoding/binary"
 	"math"
 )
 
 type Object bits
+type PtrTag uint8
+type Addr32 uint32
+
+type Ptr32 struct {
+	Tag  PtrTag
+	Addr Addr32
+}
+
+type Str32 struct {
+	Len  uint8
+	Addr Addr32
+}
 
 func (this Object) Is(mask bits) bool {
+	if mask == MASK_F64 {
+		return !math.IsNaN(math.Float64frombits(uint64(this)))
+	}
+
 	return bits(this)&mask == mask
+}
+
+func (this Object) Type() string {
+	field := bits(this)
+	if field == 0 {
+		return "Null"
+	}
+
+	if field&MASK_PTR32 == MASK_PTR32 {
+		return "Ptr32"
+	}
+
+	if field&MASK_STR32 == MASK_STR32 {
+		return "Str32"
+	}
+
+	if field&MASK_ARRAY == MASK_ARRAY {
+		return "Bytes"
+	}
+
+	if field&MASK_BOOL == MASK_BOOL {
+		return "Bool"
+	}
+
+	if !math.IsNaN(math.Float64frombits(uint64(field))) {
+		return "F64"
+	}
+
+	panic("unrecognized type")
 }
 
 func (this Object) Truthy() bool {
@@ -18,96 +63,68 @@ func (this Object) Truthy() bool {
 	return true
 }
 
-func (this Object) Type() string {
-	field := bits(this)
-	if !math.IsNaN(math.Float64frombits(uint64(field))) {
-		return "F64"
-	}
-	if field&Ptr32 == Ptr32 {
-		return "Ptr32"
-	}
-	if field&Str32 == Str32 {
-		return "Str32"
-	}
-	if field&Array == Array {
-		return "Array"
-	}
-	if field&I32 == I32 {
-		return "I32"
-	}
-	if field&U32 == U32 {
-		return "U32"
-	}
-	if field&Bool == Bool {
-		return "Bool"
-	}
-	if field == bits(Null) {
-		return "<untyped null>"
-	}
-	panic(fmt.Errorf("unknown object pattern 0x%08X", field))
+func PackF64(f64 float64) Object {
+	return Object(math.Float64bits(f64))
 }
 
-func IsPtrWithTag(obj Object, tag uint8) bool {
-	if !obj.Is(Ptr32) {
-		return false
-	}
-
-	bits := bits(obj)
-	return tag == bits.GetU8()
-}
-
-func PackF64(v float64) Object {
-	if math.IsNaN(v) {
-		panic("cannot pack NAN")
-	}
-
-	return Object(math.Float64bits(v))
-}
-
-func UnpackF64(p Object) float64 {
-	f64 := math.Float64frombits(uint64(p))
+func UnpackF64(obj Object) float64 {
+	f64 := math.Float64frombits(uint64(obj))
 	if math.IsNaN(f64) {
-		panic(fmt.Errorf("%x: not a float", p))
+		panic("not a float64")
 	}
+
 	return f64
 }
 
-func PackPtr32(tag uint8, addr uint32) Object {
-	bits := Ptr32
-	bits.PutU8(tag)
-	bits.PutU32(addr)
-	return Object(bits)
+func PackPtr32(ptr Ptr32) Object {
+	var field bits
+	(&field).PutU8(uint8(ptr.Tag))
+	(&field).PutU32(uint32(ptr.Addr))
+	return Object(field | MASK_PTR32)
 }
 
-func UnpackPtr32(p Object) (uint8, uint32) {
-	bits := mustMatch(Ptr32, p)
-	return bits.GetU8(), bits.GetU32()
+func UnpackPtr32(obj Object) Ptr32 {
+	var ptr Ptr32
+	field := bits(obj)
+	if field&MASK_PTR32 != MASK_PTR32 {
+		panic("not a pointer")
+	}
+
+	ptr.Tag = PtrTag(field.GetU8())
+	ptr.Addr = Addr32(field.GetU32())
+	return ptr
 }
 
-func PackStr32(len uint8, offset uint32) Object {
-	bits := Str32
-	bits.PutU8(len)
-	bits.PutU32(offset)
-	return Object(bits)
+func PackStr32(ptr Str32) Object {
+	var field bits
+	(&field).PutU8(ptr.Len)
+	(&field).PutU32(uint32(ptr.Addr))
+	return Object(field | MASK_PTR32)
 }
 
-func UnpackStr32(p Object) (uint8, uint32) {
-	bits := mustMatch(Str32, p)
-	return bits.GetU8(), bits.GetU32()
+func UnpackStr32(obj Object) Str32 {
+	var ptr Str32
+	field := bits(obj)
+	if field&MASK_PTR32 != MASK_PTR32 {
+		panic("not a pointer")
+	}
+
+	ptr.Len = field.GetU8()
+	ptr.Addr = Addr32(field.GetU32())
+	return ptr
 }
 
-func PackArray(array [6]byte) Object {
-	var bytes bytes
-	copy(bytes[0:6], array[:])
-	return Object(Array | bytes.Bits())
+func PackBytes(arr [5]uint8) Object {
+	return Object(bytes(arr).asbits(MASK_ARRAY))
 }
 
-func UnpackArray(p Object) [6]byte {
-	bits := mustMatch(Array, p)
-	bytes := bits.Bytes()
-	array := [6]byte{}
-	copy(array[:], bytes[0:6])
-	return array
+func UnpackBytes(obj Object) bytes {
+	field := bits(obj)
+	if field&MASK_ARRAY != MASK_ARRAY {
+		panic("not an array")
+	}
+
+	return field.asbytes()
 }
 
 func PackBool(b bool) Object {
@@ -117,79 +134,43 @@ func PackBool(b bool) Object {
 	return PackedFalse
 }
 
-func UnpackBool(p Object) bool {
-	mustMatch(Bool, p)
-	return p == PackedTrue
-}
-
-func PackI32(i int32) Object {
-	bits := I32
-	bits.PutU32(uint32(i))
-	return Object(bits)
-}
-
-func UnpackI32(p Object) int32 {
-	bits := mustMatch(I32, p)
-	return int32(bits.GetU32())
-}
-
-func PackU32(u uint32) Object {
-	bits := U32
-	bits.PutU32(u)
-	return Object(bits)
-}
-
-func UnpackU32(p Object) uint32 {
-	bits := mustMatch(U32, p)
-	return bits.GetU32()
-}
-
-func mustMatch(mask bits, p Object) bits {
-	bits := bits(p)
-	if mask&bits != mask {
-		panic("did not match mask")
+func UnpackBool(obj Object) bool {
+	field := bits(obj)
+	if field&MASK_BOOL != MASK_BOOL {
+		panic("not a boolean")
 	}
-	return bits
+	return field.GetU8() == 1
 }
 
-type bits uint64
-type bytes [8]uint8
+const (
+	ptrmask  bits = 1<<63 | 1<<49 | 0<<48
+	strmask  bits = 1<<63 | 1<<49 | 1<<48
+	array    bits = 1<<63 | 1<<49 | 0<<48
+	boolmask bits = 0<<63 | 1<<49 | 1<<48
+
+	QNAN     bits = 0x7FF8000000000001
+	MASKBITS bits = (1 << 63) | (1 << 49) | (1 << 48)
+
+	MASK_PTR32 bits = QNAN | ptrmask
+	MASK_STR32 bits = QNAN | strmask
+	MASK_ARRAY bits = QNAN | array
+	MASK_BOOL  bits = QNAN | boolmask
+	MASK_F64   bits = ^QNAN
+	MASK_NULL  bits = 0
+
+	PackedTrue  = Object(0x7FFB000000000201)
+	PackedFalse = Object(0x7FFB000000000001)
+	Null        = Object(0)
+)
 
 var _ encoder = (*bits)(nil)
-var _ encoder = bytes{}
+var _ encoder = (*bytes)(nil)
 
-type encoder interface {
-	PutU8(uint8)
-	GetU8() uint8
-	PutU32(uint32)
-	GetU32() uint32
-}
-
-func (this bytes) PutU8(u8 uint8) {
-	this[0] = u8
-}
-
-func (this bytes) GetU8() uint8 {
-	return this[0]
-}
-
-func (this bytes) PutU32(u32 uint32) {
-	this[2] = byte(u32)
-	this[3] = byte(u32 >> 8)
-	this[4] = byte(u32 >> 16)
-	this[5] = byte(u32 >> 24)
-}
-
-func (this bytes) GetU32() (u32 uint32) {
-	u32 = uint32(this[2])
-	u32 |= uint32(this[3]) << 8
-	u32 |= uint32(this[4]) << 16
-	u32 |= uint32(this[5]) << 24
-	return
-}
+type bits uint64
+type bytes [5]uint8
 
 func (this *bits) PutU8(u8 uint8) {
-	*this |= bits(u8 << 1)
+	*this = *this | bits(u8)<<1
 }
 
 func (this bits) GetU8() uint8 {
@@ -197,58 +178,45 @@ func (this bits) GetU8() uint8 {
 }
 
 func (this *bits) PutU32(u32 uint32) {
-	*this |= bits(u32) << 9
+	*this = *this | bits(u32)<<9
 }
 
 func (this bits) GetU32() uint32 {
 	return uint32(this >> 9)
 }
 
-func (this bits) Bytes() (bytes bytes) {
-	bytes[0] = uint8(this)
-	bytes[1] = uint8(this >> 8)
-	bytes[2] = uint8(this >> 16)
-	bytes[3] = uint8(this >> 24)
-	bytes[4] = uint8(this >> 32)
-	bytes[5] = uint8(this >> 40)
-	bytes[6] = uint8(this >> 48)
-	bytes[7] = uint8(this >> 56)
-	return
+func (this bits) asbytes() bytes {
+	var bytes bytes
+	bytes.PutU8(this.GetU8())
+	bytes.PutU32(this.GetU32())
+	return bytes
 }
 
-func (this bytes) Bits() (bits_ bits) {
-	bits_ = bits(this[0])
-	bits_ = bits(this[1]) << 8
-	bits_ = bits(this[2]) << 16
-	bits_ = bits(this[3]) << 24
-	bits_ = bits(this[4]) << 32
-	bits_ = bits(this[5]) << 40
-	bits_ = bits(this[6]) << 48
-	bits_ = bits(this[7]) << 56
-	return
+func (this *bytes) PutU8(u8 uint8) {
+	(*this)[0] = u8
 }
 
-const (
-	LOW48    bits = (1 << 48) - 1
-	MASKBITS bits = (1 << 63) | (1 << 49) | (1 << 48)
+func (this bytes) GetU8() uint8 {
+	return this[0]
+}
 
-	ptrmask  bits = 1<<63 | 1<<49 | 0<<48
-	strmask  bits = 1<<63 | 0<<49 | 1<<48
-	array    bits = 1<<63 | 0<<49 | 0<<48
-	i32mask  bits = 0<<63 | 1<<49 | 1<<48
-	u32mask  bits = 0<<63 | 1<<49 | 0<<48
-	boolmask bits = 0<<63 | 0<<49 | 1<<48
-	QNAN     bits = 0x7FF8000000000001
+func (this *bytes) PutU32(u32 uint32) {
+	binary.LittleEndian.PutUint32((*this)[1:], u32)
+}
 
-	Ptr32 bits = QNAN | ptrmask
-	Str32 bits = QNAN | strmask
-	Array bits = QNAN | array
-	I32   bits = QNAN | i32mask
-	U32   bits = QNAN | u32mask
-	Bool  bits = QNAN | boolmask
-	F64   bits = ^QNAN
+func (this bytes) GetU32() uint32 {
+	return binary.LittleEndian.Uint32(this[1:])
+}
 
-	PackedTrue  = Object(QNAN | boolmask | bits(1<<1))
-	PackedFalse = Object(QNAN | boolmask | bits(1<<2))
-	Null        = Object(0)
-)
+func (this bytes) asbits(mask bits) bits {
+	(&mask).PutU8(this.GetU8())
+	(&mask).PutU32(this.GetU32())
+	return mask
+}
+
+type encoder interface {
+	PutU8(uint8)
+	PutU32(uint32)
+	GetU8() uint8
+	GetU32() uint32
+}
