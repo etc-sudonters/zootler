@@ -2,6 +2,7 @@ package compiler
 
 import (
 	"fmt"
+	"maps"
 	"slices"
 	"sudonters/zootler/mido/ast"
 	"sudonters/zootler/mido/code"
@@ -10,7 +11,8 @@ import (
 )
 
 type Bytecode struct {
-	Tape code.Instructions
+	Tape   code.Instructions
+	Consts []objects.Index
 }
 
 func (this *Bytecode) concat(tape code.Instructions) int {
@@ -19,13 +21,13 @@ func (this *Bytecode) concat(tape code.Instructions) int {
 	return written
 }
 
-func Compile(nodes ast.Node, symbols *symbols.Table, objects *objects.Builder, fastops FastOps) (Bytecode, error) {
+func Compile(nodes ast.Node, symbols *symbols.Table, objs *objects.Builder) (Bytecode, error) {
 	var compiler compiler
 	var bytecode Bytecode
 	compiler.symbols = symbols
-	compiler.objects = objects
+	compiler.objects = objs
 	compiler.code = &bytecode
-	compiler.fastops = fastops
+	compiler.consts = map[objects.Index]struct{}{}
 
 	visiting := &compiler
 	visitor := ast.Visitor{
@@ -40,6 +42,7 @@ func Compile(nodes ast.Node, symbols *symbols.Table, objects *objects.Builder, f
 		String:     visiting.String,
 	}
 	err := visitor.Visit(nodes)
+	bytecode.Consts = slices.Collect(maps.Keys(compiler.consts))
 	return bytecode, err
 }
 
@@ -47,8 +50,8 @@ type compiler struct {
 	tapePtr int
 	symbols *symbols.Table
 	objects *objects.Builder
-	fastops FastOps
 	code    *Bytecode
+	consts  map[objects.Index]struct{}
 }
 
 func (this *compiler) emit(op code.Op, operands ...int) int {
@@ -111,7 +114,7 @@ func (this *compiler) Identifier(node ast.Identifier, visit ast.Visiting) error 
 	ptr := this.objects.PtrFor(symbol)
 	switch symbol.Kind {
 	case symbols.BUILT_IN_FUNCTION, symbols.TOKEN, symbols.SETTING:
-		this.emit(code.PUSH_CONST, int(ptr))
+		this.pushConst(ptr)
 	default:
 		return fmt.Errorf("uncompilable identifier: %s", symbol)
 	}
@@ -130,18 +133,6 @@ func (this *compiler) Invoke(node ast.Invoke, visit ast.Visiting) error {
 	callee := ast.LookUpNodeInTable(this.symbols, node.Target)
 	if callee == nil {
 		return fmt.Errorf("can only invoke functions, not %s", node.Target.Kind())
-	}
-
-	if fastOp := this.fastops[callee.Name]; fastOp != nil {
-		code, err := fastOp(node, this.symbols, this.objects, visit)
-		if err != nil {
-			return fmt.Errorf("during fastop generation %q: %w", callee.Name, err)
-		}
-
-		if len(code) != 0 {
-			this.join(code)
-			return nil
-		}
 	}
 
 	def := this.objects.FunctionDefinition(callee)
@@ -163,12 +154,17 @@ func (this *compiler) Invoke(node ast.Invoke, visit ast.Visiting) error {
 
 func (this *compiler) Number(node ast.Number, visit ast.Visiting) error {
 	idx := this.objects.InternNumber(float64(node))
-	this.emit(code.PUSH_CONST, int(idx))
+	this.pushConst(idx)
 	return nil
 }
 
 func (this *compiler) String(node ast.String, visit ast.Visiting) error {
 	idx := this.objects.InternStr(string(node))
-	this.emit(code.PUSH_CONST, int(idx))
+	this.pushConst(idx)
 	return nil
+}
+
+func (this *compiler) pushConst(idx objects.Index) {
+	this.consts[idx] = struct{}{}
+	this.emit(code.PUSH_CONST, int(idx))
 }

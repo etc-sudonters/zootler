@@ -107,3 +107,8 @@ func (this Tokens) Named(name name) Token {
 	token.Attach(magicbean.Token{})
 	return Token{token, name}
 }
+
+func (this Tokens) MustGet(name name) Token {
+	token := this.tokens.MustGet(name)
+	return Token{token, name}
+}

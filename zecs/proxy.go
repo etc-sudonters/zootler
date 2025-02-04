@@ -1,5 +1,10 @@
 package zecs
 
+import (
+	"fmt"
+	"slices"
+)
+
 type Proxy struct {
 	id     Entity
 	parent *Ocm
@@ -25,8 +30,8 @@ type Attaching struct {
 	vs Values
 }
 
-func (this *Attaching) Add(v Value) {
-	this.vs = append(this.vs, v)
+func (this *Attaching) Add(v ...Value) {
+	this.vs = slices.Concat(this.vs, v)
 }
 
 type ComparableValue interface {
@@ -65,5 +70,14 @@ func (this *Tracked[Key]) For(key Key) Proxy {
 	}
 	entity := Entity(row)
 	this.cache[key] = entity
+	return Proxy{entity, this.parent}
+}
+
+func (this *Tracked[Key]) MustGet(key Key) Proxy {
+	entity, exists := this.cache[key]
+	if !exists {
+		panic(fmt.Errorf("no entity registered for key %#v", key))
+	}
+
 	return Proxy{entity, this.parent}
 }

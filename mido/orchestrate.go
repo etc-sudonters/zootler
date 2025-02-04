@@ -73,14 +73,6 @@ type CompilationSource struct {
 
 type ConfigureCompiler func(*CompileEnv)
 
-func CompilerWithFastOps(ops compiler.FastOps) ConfigureCompiler {
-	return func(env *CompileEnv) {
-		for name, fast := range ops {
-			env.Optimize.FastOps[name] = fast
-		}
-	}
-}
-
 func WithCompilerFunctions(create func(*CompileEnv) optimizer.CompilerFunctionTable) ConfigureCompiler {
 	return func(env *CompileEnv) {
 		funcs := create(env)
@@ -144,7 +136,6 @@ func NewCompileEnv(configure ...ConfigureCompiler) CompileEnv {
 	env.Symbols = ptr(symbols.NewTable())
 	env.Objects = ptr(objects.NewTableBuilder())
 	env.Optimize.Context = ptr(optimizer.NewCtx())
-	env.Optimize.FastOps = make(compiler.FastOps)
 
 	for i := range configure {
 		configure[i](&env)
@@ -189,7 +180,6 @@ type Optimize struct {
 	Context     *optimizer.Context
 	Optimiziers []Optimizer
 	Passes      int
-	FastOps     compiler.FastOps
 }
 
 func (this *Optimize) AddOptimizer(o Optimizer) {
@@ -256,7 +246,7 @@ func (this CodeGen) Optimize(node ast.Node) (ast.Node, error) {
 }
 
 func (this CodeGen) Compile(node ast.Node) (compiler.Bytecode, error) {
-	bytecode, compileErr := compiler.Compile(node, this.env.Symbols, this.env.Objects, this.env.Optimize.FastOps)
+	bytecode, compileErr := compiler.Compile(node, this.env.Symbols, this.env.Objects)
 	if compileErr != nil {
 		compileErr = fmt.Errorf("%w: %w", ErrCompile, compileErr)
 	}
@@ -296,7 +286,7 @@ func (this CodeGen) CompileSource(src *CompilationSource) (compiler.Bytecode, er
 	}
 
 	var compileErr error
-	bytecode, compileErr = compiler.Compile(src.Ast, this.env.Symbols, this.env.Objects, this.env.Optimize.FastOps)
+	bytecode, compileErr = compiler.Compile(src.Ast, this.env.Symbols, this.env.Objects)
 	if compileErr != nil {
 		compileErr = fmt.Errorf("%w: %w", ErrCompile, compileErr)
 	}

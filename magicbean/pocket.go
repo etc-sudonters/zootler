@@ -1,127 +1,97 @@
 package magicbean
 
 import (
-	"fmt"
-	"sudonters/zootler/mido/objects"
+	"maps"
+	"slices"
 	"sudonters/zootler/zecs"
 )
 
-func EmptyPockets() Pocket {
-	return Pocket{make(map[zecs.Entity]float64, 32)}
+func NewPockets(inventory *Inventory, ocm *zecs.Ocm) Pocket {
+	var pocket Pocket
+	pocket.inventory = inventory
+	pocket.heartPiece = zecs.FindOne(ocm, Name("Piece of Heart"), zecs.With[Token])
+	pocket.scarecrowSong = zecs.FindOne(ocm, Name("Scarecrow Song"), zecs.With[Token])
+	pocket.transcribe = zecs.IndexEntities[OcarinaNote](ocm)
+	pocket.songs = zecs.IndexValue[SongNotes](ocm)
+	pocket.bottles = zecs.EntitiesMatching(ocm, zecs.With[Bottle])
+	pocket.stones = zecs.EntitiesMatching(ocm, zecs.With[Stone])
+	pocket.meds = zecs.EntitiesMatching(ocm, zecs.With[Medallion])
+	pocket.rewards = zecs.EntitiesMatching(ocm, zecs.With[DungeonReward])
+	pocket.notes = slices.Collect(maps.Values(pocket.transcribe))
+	return pocket
 }
 
 type Pocket struct {
-	tokens map[zecs.Entity]float64
+	inventory  *Inventory
+	transcribe map[OcarinaNote]zecs.Entity
+	songs      map[zecs.Entity]SongNotes
+
+	heartPiece, scarecrowSong             zecs.Entity
+	bottles, stones, meds, rewards, notes []zecs.Entity
 }
 
-func (this Pocket) Quantity(object objects.Object) float64 {
-	if !objects.IsPtrWithTag(object, objects.PtrToken) {
-		panic(fmt.Errorf("%x is not a token pointer", object))
-	}
-
-	_, entity := objects.UnpackPtr32(object)
-	return this.tokens[zecs.Entity(entity)]
+func (this Pocket) Has(entity zecs.Entity, n uint64) bool {
+	return this.inventory.Count(entity) >= n
 }
 
-func (this Pocket) Collect(object objects.Object, qty float64) {
-	if !objects.IsPtrWithTag(object, objects.PtrToken) {
-		panic(fmt.Errorf("%x is not a token pointer", object))
-	}
-
-	_, ent := objects.UnpackPtr32(object)
-	entity := zecs.Entity(ent)
-
-	already := this.tokens[entity]
-	this.tokens[entity] = already + qty
-}
-
-type QtyBuiltInFunctions struct {
-	Pocket      Pocket
-	HeartPieces map[objects.Object]HeartPieceCount
-
-	OcarinaButtons, Bottles, Medallions, DungeonRewards, Stones []objects.Object
-}
-
-func (this QtyBuiltInFunctions) Has(_ *objects.Table, args []objects.Object) (objects.Object, error) {
-	if !args[0].Is(objects.F64) {
-		return objects.PackedFalse, nil
-	}
-
-	f64 := objects.UnpackF64(args[1])
-	enough := this.Pocket.Quantity(args[0]) >= f64
-
-	switch enough {
-	case true:
-		return objects.PackedTrue, nil
-	default:
-		return objects.PackedFalse, nil
-	}
-}
-
-func (this QtyBuiltInFunctions) HasEvery(_ *objects.Table, args []objects.Object) (objects.Object, error) {
-
-	for _, ptr := range args {
-		if this.Pocket.Quantity(ptr) < 1 {
-			return objects.PackedFalse, nil
+func (this Pocket) HasEvery(entities []zecs.Entity) bool {
+	for _, entity := range entities {
+		if !this.Has(entity, 1) {
+			return false
 		}
 	}
-
-	return objects.PackedTrue, nil
+	return true
 }
 
-func (this QtyBuiltInFunctions) HasAnyOf(_ *objects.Table, args []objects.Object) (objects.Object, error) {
-	for _, ptr := range args {
-		if this.Pocket.Quantity(ptr) >= 1 {
-			return objects.PackedTrue, nil
+func (this Pocket) HasAny(entities []zecs.Entity) bool {
+	for _, entity := range entities {
+		if this.Has(entity, 1) {
+			return true
 		}
 	}
-
-	return objects.PackedFalse, nil
+	return false
 }
 
-func (this QtyBuiltInFunctions) HasBottle(tbl *objects.Table, _ []objects.Object) (objects.Object, error) {
-	return this.HasAnyOf(tbl, this.Bottles)
+func (this Pocket) HasBottle() bool {
+	return this.HasAny(this.bottles)
 }
 
-func (this QtyBuiltInFunctions) HasHearts(tbl *objects.Table, args []objects.Object) (objects.Object, error) {
-	var total float64
-	needed := objects.UnpackF64(args[0])
-	for ptr, mul := range this.HeartPieces {
-		total += this.Pocket.Quantity(ptr) * float64(mul)
+func (this Pocket) HasStones(n uint64) bool {
+	return this.inventory.Sum(this.stones) >= n
+}
+
+func (this Pocket) HasMedallions(n uint64) bool {
+	return this.inventory.Sum(this.meds) >= n
+}
+
+func (this Pocket) HasDungeonRewards(n uint64) bool {
+	return this.inventory.Sum(this.rewards) >= n
+}
+
+func (this Pocket) HasHearts(n uint64) bool {
+	pieces := this.inventory.Count(this.heartPiece)
+	hearts := pieces / 4
+	return hearts >= n
+}
+
+func (this Pocket) HasAllNotes(entity zecs.Entity) bool {
+	if entity == this.scarecrowSong {
+		return this.inventory.Sum(this.notes) >= 2
 	}
 
-	return objects.PackBool(total >= needed), nil
-}
-
-func (this QtyBuiltInFunctions) HasMedallions(_ *objects.Table, args []objects.Object) (objects.Object, error) {
-	var total float64
-	needed := objects.UnpackF64(args[0])
-
-	for _, ptr := range this.Medallions {
-		total += this.Pocket.Quantity(ptr)
+	song, exists := this.songs[entity]
+	if !exists {
+		panic("not a song!")
+	}
+	notes := []OcarinaNote(song)
+	transcript := make([]zecs.Entity, len(notes))
+	for i, note := range notes {
+		entity, exists := this.transcribe[note]
+		if !exists {
+			panic("unknown note")
+		}
+		transcript[i] = entity
 	}
 
-	return objects.PackBool(total >= needed), nil
-}
-
-func (this QtyBuiltInFunctions) HasStones(_ *objects.Table, args []objects.Object) (objects.Object, error) {
-	var total float64
-	needed := objects.UnpackF64(args[0])
-
-	for _, ptr := range this.Stones {
-		total += this.Pocket.Quantity(ptr)
-	}
-
-	return objects.PackBool(total >= needed), nil
-}
-
-func (this QtyBuiltInFunctions) HasDungeonRewards(_ *objects.Table, args []objects.Object) (objects.Object, error) {
-	var total float64
-	needed := objects.UnpackF64(args[0])
-
-	for _, ptr := range this.DungeonRewards {
-		total += this.Pocket.Quantity(ptr)
-	}
-
-	return objects.PackBool(total >= needed), nil
+	return this.HasEvery(transcript)
 }

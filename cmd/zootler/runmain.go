@@ -29,16 +29,19 @@ func runMain(_ context.Context, opts cliOptions) stageleft.ExitCode {
 
 	theseSettings := settings.Default()
 	theseSettings.Shuffling.OcarinaNotes = true
-	theseSettings.Spawns.StartingAge = settings.StartAgeChild
+	theseSettings.Spawns.StartingAge = settings.StartAgeAdult
+	theseSettings.Locations.OpenDoorOfTime = true
 	artifacts := setup(paths, &theseSettings)
+	CollectStartingItems(&artifacts, &theseSettings)
 	explore(&artifacts, AgeAdult, &theseSettings)
 	return stageleft.ExitCode(0)
 }
 
 type Artifacts struct {
-	Ocm     zecs.Ocm
-	World   magicbean.ExplorableWorld
-	Objects objects.Table
+	Ocm       zecs.Ocm
+	World     magicbean.ExplorableWorld
+	Objects   objects.Table
+	Inventory magicbean.Inventory
 }
 
 func setup(paths bootstrap.LoadPaths, settings *settings.Zootr) (artifacts Artifacts) {
@@ -58,6 +61,7 @@ func setup(paths bootstrap.LoadPaths, settings *settings.Zootr) (artifacts Artif
 	artifacts.Ocm = ocm
 	artifacts.World = world
 	artifacts.Objects = objects.TableFrom(compileEnv.Objects)
+	artifacts.Inventory = magicbean.NewInventory()
 
 	return artifacts
 }

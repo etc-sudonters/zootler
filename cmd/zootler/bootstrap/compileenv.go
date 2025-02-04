@@ -15,7 +15,7 @@ import (
 	"sudonters/zootler/zecs"
 )
 
-var kind2tag = map[symbols.Kind]uint16{
+var kind2tag = map[symbols.Kind]uint8{
 	symbols.REGION:  objects.PtrRegion,
 	symbols.TRANSIT: objects.PtrTrans,
 	symbols.TOKEN:   objects.PtrToken,

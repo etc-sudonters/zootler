@@ -2,9 +2,12 @@ package objects
 
 import (
 	"fmt"
+	"math"
 	"slices"
 	"sudonters/zootler/mido/symbols"
 )
+
+var MAX_STR_SIZE = math.MaxUint8
 
 type Index uint16
 
@@ -22,7 +25,7 @@ type Table struct {
 	values  []Object
 }
 
-func (this Table) DecodeString(obj Object) string {
+func (this Table) DerefString(obj Object) string {
 	if !obj.Is(Str32) {
 		panic("non-string dereference")
 	}
@@ -109,9 +112,12 @@ func (this *Builder) InternStr(str string) Index {
 	}
 
 	offset := len(this.strings)
+	if offset > MAX_STR_SIZE {
+		panic(fmt.Errorf("%d is longest string size, %q is too long"))
+	}
 	bytes := []byte(str)
 	this.strings = slices.Concat(this.strings, bytes)
-	idx := this.insert(PackStr32(uint16(len(bytes)), uint32(offset)))
+	idx := this.insert(PackStr32(uint8(len(bytes)), uint32(offset)))
 	this.strs[str] = idx
 	return idx
 }

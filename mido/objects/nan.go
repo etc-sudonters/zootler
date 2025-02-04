@@ -11,13 +11,49 @@ func (this Object) Is(mask bits) bool {
 	return bits(this)&mask == mask
 }
 
-func IsPtrWithTag(obj Object, tag uint16) bool {
+func (this Object) Truthy() bool {
+	if this == PackedFalse || this == Null {
+		return false
+	}
+	return true
+}
+
+func (this Object) Type() string {
+	field := bits(this)
+	if !math.IsNaN(math.Float64frombits(uint64(field))) {
+		return "F64"
+	}
+	if field&Ptr32 == Ptr32 {
+		return "Ptr32"
+	}
+	if field&Str32 == Str32 {
+		return "Str32"
+	}
+	if field&Array == Array {
+		return "Array"
+	}
+	if field&I32 == I32 {
+		return "I32"
+	}
+	if field&U32 == U32 {
+		return "U32"
+	}
+	if field&Bool == Bool {
+		return "Bool"
+	}
+	if field == bits(Null) {
+		return "<untyped null>"
+	}
+	panic(fmt.Errorf("unknown object pattern 0x%08X", field))
+}
+
+func IsPtrWithTag(obj Object, tag uint8) bool {
 	if !obj.Is(Ptr32) {
 		return false
 	}
 
 	bits := bits(obj)
-	return tag == bits.GetU16()
+	return tag == bits.GetU8()
 }
 
 func PackF64(v float64) Object {
@@ -36,28 +72,28 @@ func UnpackF64(p Object) float64 {
 	return f64
 }
 
-func PackPtr32(tag uint16, addr uint32) Object {
+func PackPtr32(tag uint8, addr uint32) Object {
 	bits := Ptr32
-	bits.PutU16(tag)
+	bits.PutU8(tag)
 	bits.PutU32(addr)
 	return Object(bits)
 }
 
-func UnpackPtr32(p Object) (uint16, uint32) {
+func UnpackPtr32(p Object) (uint8, uint32) {
 	bits := mustMatch(Ptr32, p)
-	return bits.GetU16(), bits.GetU32()
+	return bits.GetU8(), bits.GetU32()
 }
 
-func PackStr32(len uint16, offset uint32) Object {
+func PackStr32(len uint8, offset uint32) Object {
 	bits := Str32
-	bits.PutU16(len)
+	bits.PutU8(len)
 	bits.PutU32(offset)
 	return Object(bits)
 }
 
-func UnpackStr32(p Object) (uint16, uint32) {
+func UnpackStr32(p Object) (uint8, uint32) {
 	bits := mustMatch(Str32, p)
-	return bits.GetU16(), bits.GetU32()
+	return bits.GetU8(), bits.GetU32()
 }
 
 func PackArray(array [6]byte) Object {
@@ -123,19 +159,18 @@ var _ encoder = (*bits)(nil)
 var _ encoder = bytes{}
 
 type encoder interface {
-	PutU16(uint16)
-	GetU16() uint16
+	PutU8(uint8)
+	GetU8() uint8
 	PutU32(uint32)
 	GetU32() uint32
 }
 
-func (this bytes) PutU16(u16 uint16) {
-	this[0] = byte(u16)
-	this[1] = byte(u16 >> 8)
+func (this bytes) PutU8(u8 uint8) {
+	this[0] = u8
 }
 
-func (this bytes) GetU16() uint16 {
-	return uint16(this[0]) | uint16(this[1])<<8
+func (this bytes) GetU8() uint8 {
+	return this[0]
 }
 
 func (this bytes) PutU32(u32 uint32) {
@@ -153,20 +188,20 @@ func (this bytes) GetU32() (u32 uint32) {
 	return
 }
 
-func (this *bits) PutU16(u16 uint16) {
-	*this |= bits(u16)
+func (this *bits) PutU8(u8 uint8) {
+	*this |= bits(u8 << 1)
 }
 
-func (this bits) GetU16() uint16 {
-	return uint16(this)
+func (this bits) GetU8() uint8 {
+	return uint8(this >> 1)
 }
 
 func (this *bits) PutU32(u32 uint32) {
-	*this |= bits(u32) << 16
+	*this |= bits(u32) << 9
 }
 
 func (this bits) GetU32() uint32 {
-	return uint32(this >> 16)
+	return uint32(this >> 9)
 }
 
 func (this bits) Bytes() (bytes bytes) {
@@ -194,9 +229,8 @@ func (this bytes) Bits() (bits_ bits) {
 }
 
 const (
-	low48     bits = (1 << 48) - 1
-	maskbits  bits = (1 << 63) | (1 << 49) | (1 << 48)
-	container bits = (^low48) & (^maskbits)
+	LOW48    bits = (1 << 48) - 1
+	MASKBITS bits = (1 << 63) | (1 << 49) | (1 << 48)
 
 	ptrmask  bits = 1<<63 | 1<<49 | 0<<48
 	strmask  bits = 1<<63 | 0<<49 | 1<<48
@@ -204,17 +238,17 @@ const (
 	i32mask  bits = 0<<63 | 1<<49 | 1<<48
 	u32mask  bits = 0<<63 | 1<<49 | 0<<48
 	boolmask bits = 0<<63 | 0<<49 | 1<<48
-	qnan     bits = 0x7FF8000000000001
+	QNAN     bits = 0x7FF8000000000001
 
-	Ptr32 bits = container | ptrmask
-	Str32 bits = container | strmask
-	Array bits = container | array
-	I32   bits = container | i32mask
-	U32   bits = container | u32mask
-	Bool  bits = container | boolmask
-	F64   bits = ^qnan
+	Ptr32 bits = QNAN | ptrmask
+	Str32 bits = QNAN | strmask
+	Array bits = QNAN | array
+	I32   bits = QNAN | i32mask
+	U32   bits = QNAN | u32mask
+	Bool  bits = QNAN | boolmask
+	F64   bits = ^QNAN
 
-	PackedTrue  = Object(container | boolmask | bits(1<<1))
-	PackedFalse = Object(container | boolmask | bits(1<<2))
+	PackedTrue  = Object(QNAN | boolmask | bits(1<<1))
+	PackedFalse = Object(QNAN | boolmask | bits(1<<2))
 	Null        = Object(0)
 )

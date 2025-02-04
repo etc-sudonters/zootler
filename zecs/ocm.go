@@ -1,6 +1,8 @@
 package zecs
 
 import (
+	"errors"
+	"fmt"
 	"sudonters/zootler/internal/bundle"
 	"sudonters/zootler/internal/query"
 	"sudonters/zootler/internal/table"
@@ -80,4 +82,70 @@ func (this *Q) Rows(yield bundle.RowIter) {
 		panic(err)
 	}
 	rows.All(yield)
+}
+
+func EntitiesMatching(ocm *Ocm, query ...BuildQuery) []Entity {
+	if len(query) == 0 {
+		panic(errors.New("no entities specified"))
+	}
+
+	q := ocm.Query()
+	q.Build(query[0], query[1:]...)
+	rows, err := q.Execute()
+	if err != nil {
+		panic(err)
+	}
+	ptrs := make([]Entity, 0, rows.Len())
+
+	for row, _ := range rows.All {
+		ptrs = append(ptrs, row)
+	}
+
+	return ptrs
+}
+
+func IndexEntities[Key ComparableValue](ocm *Ocm, query ...BuildQuery) map[Key]Entity {
+	q := ocm.Query()
+	q.Build(Load[Key], query...)
+	rows, err := q.Execute()
+	if err != nil {
+		panic(err)
+	}
+	entities := make(map[Key]Entity, rows.Len())
+
+	for row, tup := range rows.All {
+		key := tup.Values[0].(Key)
+		entities[key] = row
+	}
+
+	return entities
+}
+
+func FindOne[T ComparableValue](ocm *Ocm, key T, query ...BuildQuery) Entity {
+	q := ocm.Query()
+	q.Build(Load[T], query...)
+	for row, tup := range q.Rows {
+		k := tup.Values[0].(T)
+		if k == key {
+			return row
+		}
+	}
+
+	panic(fmt.Errorf("did not find matching entity for key %#v", key))
+}
+
+func IndexValue[V Value](ocm *Ocm, query ...BuildQuery) map[Entity]V {
+	q := ocm.Query()
+	q.Build(Load[V], query...)
+	rows, err := q.Execute()
+	if err != nil {
+		panic(err)
+	}
+	lookup := make(map[Entity]V, rows.Len())
+
+	for row, tup := range rows.All {
+		lookup[row] = tup.Values[0].(V)
+	}
+
+	return lookup
 }

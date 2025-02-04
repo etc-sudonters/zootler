@@ -1,6 +1,7 @@
 package bootstrap
 
 import (
+	"fmt"
 	"io/fs"
 	"path/filepath"
 	"regexp"
@@ -100,10 +101,10 @@ func storeTokens(tokens z16.Tokens, paths LoadPaths) error {
 
 		switch raw.Type {
 		case "BossKey", "bosskey":
-			attachments.Add(magicbean.BossKey{})
+			attachments.Add(magicbean.BossKey{}, magicbean.ParseDungeonGroup(raw.Name))
 			break
 		case "Compass", "compass":
-			attachments.Add(magicbean.Compass{})
+			attachments.Add(magicbean.Compass{}, magicbean.ParseDungeonGroup(raw.Name))
 			break
 		case "Drop", "drop":
 			attachments.Add(magicbean.Drop{})
@@ -115,13 +116,13 @@ func storeTokens(tokens z16.Tokens, paths LoadPaths) error {
 			attachments.Add(magicbean.Event{})
 			break
 		case "GanonBossKey", "ganonbosskey":
-			attachments.Add(magicbean.GanonBossKey{})
+			attachments.Add(magicbean.BossKey{}, magicbean.DUNGEON_GANON_CASTLE)
 			break
 		case "Item", "item":
 			attachments.Add(magicbean.Item{})
 			break
 		case "Map", "map":
-			attachments.Add(magicbean.Map{})
+			attachments.Add(magicbean.Map{}, magicbean.ParseDungeonGroup(raw.Name))
 			break
 		case "Refill", "refill":
 			attachments.Add(magicbean.Refill{})
@@ -130,38 +131,53 @@ func storeTokens(tokens z16.Tokens, paths LoadPaths) error {
 			attachments.Add(magicbean.Shop{})
 			break
 		case "SilverRupee", "silverrupee":
-			matches := silverRupeeGroup.FindStringSubmatch(raw.Name)
-			if len(matches) >= 3 {
-				attachments.Add(magicbean.SilverRupeeGroup(matches[2]))
-			}
-			if strings.Contains(raw.Name, "Pouch") {
-				attachments.Add(magicbean.SilverRupeeCount(0xFF))
-			} else {
-				attachments.Add(magicbean.SilverRupeeCount(1))
-			}
+			attachments.Add(magicbean.ParseSilverRupeePuzzle(raw.Name))
 
+			if strings.Contains(raw.Name, "Pouch") {
+				attachments.Add(magicbean.SilverRupeePouch{})
+			} else {
+				attachments.Add(magicbean.SilverRupee{})
+			}
 			break
 		case "SmallKey", "smallkey",
 			"HideoutSmallKey", "hideoutsmallkey",
 			"TCGSmallKey", "tcgsmallkey":
-			matches := smallKeyGroup.FindStringSubmatch(raw.Name)
-			if len(matches) >= 3 {
-				attachments.Add(magicbean.SmallKeyGroup(matches[2]))
-			}
-
-			attachments.Add(magicbean.SmallKeyCount(1))
+			attachments.Add(magicbean.SmallKey{}, magicbean.ParseDungeonGroup(raw.Name))
 			break
 		case "SmallKeyRing", "smallkeyring",
 			"HideoutSmallKeyRing", "hideoutsmallkeyring",
 			"TCGSmallKeyRing", "tcgsmallkeyring":
-			matches := smallKeyGroup.FindStringSubmatch(raw.Name)
-			if len(matches) >= 3 {
-				attachments.Add(magicbean.SmallKeyGroup(matches[2]))
-			}
-			attachments.Add(magicbean.SmallKeyCount(0xFF))
+			attachments.Add(magicbean.DungeonKeyRing{}, magicbean.ParseDungeonGroup(raw.Name))
 			break
 		case "Song", "song":
-			attachments.Add(magicbean.Song(""))
+			switch raw.Name {
+			case "Prelude of Light":
+				attachments.Add(magicbean.SONG_PRELUDE, magicbean.SongNotes("^>^><^"))
+			case "Bolero of Fire":
+				attachments.Add(magicbean.SONG_BOLERO, magicbean.SongNotes("vAvA>v>v"))
+			case "Minuet of Forest":
+				attachments.Add(magicbean.SONG_MINUET, magicbean.SongNotes("A^<><>"))
+			case "Serenade of Water":
+				attachments.Add(magicbean.SONG_SERENADE, magicbean.SongNotes("Av>><"))
+			case "Requiem of Spirit":
+				attachments.Add(magicbean.SONG_REQUIEM, magicbean.SongNotes("AvA>vA"))
+			case "Nocturne of Shadow":
+				attachments.Add(magicbean.SONG_NOCTURNE, magicbean.SongNotes("<>>A<>v"))
+			case "Sarias Song":
+				attachments.Add(magicbean.SONG_SARIA, magicbean.SongNotes("v><v><"))
+			case "Eponas Song":
+				attachments.Add(magicbean.SONG_EPONA, magicbean.SongNotes("^<>^<>"))
+			case "Zeldas Lullaby":
+				attachments.Add(magicbean.SONG_LULLABY, magicbean.SongNotes("<^><^>"))
+			case "Suns Song":
+				attachments.Add(magicbean.SONG_SUN, magicbean.SongNotes(">v^>v^"))
+			case "Song of Time":
+				attachments.Add(magicbean.SONG_TIME, magicbean.SongNotes(">Av>Av"))
+			case "Song of Storms":
+				attachments.Add(magicbean.SONG_STORMS, magicbean.SongNotes("Av^Av^"))
+			default:
+				panic(fmt.Errorf("unknown song %q", raw.Name))
+			}
 			break
 		case "GoldSkulltulaToken", "goldskulltulatoken":
 			attachments.Add(magicbean.GoldSkulltulaToken{})

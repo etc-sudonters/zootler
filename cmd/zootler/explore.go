@@ -1,7 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"sudonters/zootler/cmd/zootler/bootstrap"
+	"sudonters/zootler/cmd/zootler/z16"
 	"sudonters/zootler/internal/settings"
 	"sudonters/zootler/internal/skelly/bitset32"
 	"sudonters/zootler/magicbean"
@@ -40,33 +42,19 @@ func explore(artifacts *Artifacts, age Age, these *settings.Zootr) {
 		}
 	}
 
-	qty := magicbean.QtyBuiltInFunctions{
-		Pocket:         magicbean.EmptyPockets(),
-		OcarinaButtons: PtrsMatching(&artifacts.Ocm, zecs.With[magicbean.OcarinaButton]),
-		HeartPieces:    HeartPieces(&artifacts.Ocm),
-		Bottles:        PtrsMatching(&artifacts.Ocm, zecs.With[magicbean.Bottle]),
-		Medallions:     PtrsMatching(&artifacts.Ocm, zecs.With[magicbean.Medallion]),
-		DungeonRewards: PtrsMatching(&artifacts.Ocm, zecs.With[magicbean.DungeonReward]),
-		Stones:         PtrsMatching(&artifacts.Ocm, zecs.With[magicbean.Stone]),
+	pockets := magicbean.NewPockets(&artifacts.Inventory, &artifacts.Ocm)
+
+	var shuffleFlags magicbean.ShuffleFlags
+	if these.Shuffling.OcarinaNotes {
+		shuffleFlags = shuffleFlags | magicbean.SHUFFLE_OCARINA_NOTES
 	}
 
-	hasNotesForSong := magicbean.ConstBool(true)
-
-	funcs := magicbean.BuiltIns{
-		CheckTodAccess:    magicbean.ConstBool(true),
-		Has:               qty.Has,
-		HasAnyOf:          qty.HasAnyOf,
-		HasBottle:         qty.HasBottle,
-		HasDungeonRewards: qty.HasDungeonRewards,
-		HasEvery:          qty.HasEvery,
-		HasHearts:         qty.HasHearts,
-		HasMedallions:     qty.HasMedallions,
-		HasNotesForSong:   hasNotesForSong,
-		HasStones:         qty.HasStones,
-		IsAdult:           magicbean.ConstBool(age == AgeAdult),
-		IsChild:           magicbean.ConstBool(age == AgeChild),
-		IsStartingAge:     magicbean.ConstBool(age == fromStartingAge(these.Spawns.StartingAge)),
-	}
+	funcs := magicbean.BuiltIns{}
+	magicbean.CreateBuiltInHasFuncs(&funcs, &pockets, shuffleFlags)
+	funcs.CheckTodAccess = magicbean.ConstBool(true)
+	funcs.IsAdult = magicbean.ConstBool(age == AgeAdult)
+	funcs.IsChild = magicbean.ConstBool(age == AgeChild)
+	funcs.IsStartingAge = magicbean.ConstBool(age == fromStartingAge(these.Spawns.StartingAge))
 
 	vm := mido.VM{
 		Objects: &artifacts.Objects,
@@ -79,12 +67,13 @@ func explore(artifacts *Artifacts, age Age, these *settings.Zootr) {
 		Workset: &workset,
 		Visited: &bitset32.Bitset{},
 		VM:      vm,
+		Objects: &artifacts.Objects,
 	})
 }
 
 func PtrsMatching(ocm *zecs.Ocm, query ...zecs.BuildQuery) []objects.Object {
 	q := ocm.Query()
-	q.Build(zecs.Load[magicbean.Ptr], zecs.With[magicbean.Bottle], zecs.With[magicbean.Token])
+	q.Build(zecs.Load[magicbean.Ptr], zecs.With[magicbean.Token])
 	rows, err := q.Execute()
 	bootstrap.PanicWhenErr(err)
 	ptrs := make([]objects.Object, 0, rows.Len())
@@ -97,18 +86,12 @@ func PtrsMatching(ocm *zecs.Ocm, query ...zecs.BuildQuery) []objects.Object {
 	return ptrs
 }
 
-func HeartPieces(ocm *zecs.Ocm) map[objects.Object]magicbean.HeartPieceCount {
-	q := ocm.Query()
-	q.Build(zecs.Load[magicbean.Ptr], zecs.Load[magicbean.HeartPieceCount], zecs.With[magicbean.Token])
-	rows, err := q.Execute()
-	bootstrap.PanicWhenErr(err)
-	ptrs := make(map[objects.Object]magicbean.HeartPieceCount, rows.Len())
+func CollectStartingItems(artifacts *Artifacts, these *settings.Zootr) {
+	tokens := z16.NewTokens(&artifacts.Ocm)
 
-	for _, tup := range rows.All {
-		ptr := tup.Values[0].(magicbean.Ptr)
-		hp := tup.Values[1].(magicbean.HeartPieceCount)
-		ptrs[objects.Object(ptr)] = hp
+	if these.Locations.OpenDoorOfTime {
+		timeTravel := tokens.MustGet("Time Travel")
+		artifacts.Inventory.CollectOne(timeTravel.Entity())
+		fmt.Printf("Time Travel ID: %x\n", timeTravel.Entity())
 	}
-
-	return ptrs
 }

@@ -3,15 +3,19 @@ package vm
 import (
 	"errors"
 	"fmt"
+	"io"
 	"runtime/debug"
 	"sudonters/zootler/mido/code"
 	"sudonters/zootler/mido/compiler"
 	"sudonters/zootler/mido/objects"
+
+	"github.com/etc-sudonters/substrate/dontio"
 )
 
 type VM struct {
 	Objects *objects.Table
 	Funcs   objects.BuiltInFunctions
+	Std     dontio.Std
 }
 
 func (this *VM) Execute(bytecode compiler.Bytecode) (obj objects.Object, err error) {
@@ -49,13 +53,13 @@ loop:
 			unit.stack.push(this.Objects.AtIndex(index))
 		case code.INVERT:
 			obj := unit.stack.pop()
-			unit.stack.push(objects.PackBool((!this.truthy(obj))))
+			unit.stack.push(objects.PackBool((!this.Truthy(obj))))
 		case code.NEED_ALL:
 			count := int(unit.readu16())
 			reduction := true
 			stackargs := unit.stackargs(count)
 			for _, obj := range stackargs {
-				if !this.truthy(obj) {
+				if !this.Truthy(obj) {
 					reduction = false
 					break
 				}
@@ -67,7 +71,7 @@ loop:
 			reduction := false
 			stackargs := unit.stackargs(count)
 			for _, obj := range stackargs {
-				if this.truthy(obj) {
+				if this.Truthy(obj) {
 					reduction = true
 					break
 				}
@@ -110,6 +114,51 @@ loop:
 	return result, err
 }
 
-func (this *VM) truthy(_ objects.Object) bool {
-	return true
+func (this *VM) Truthy(obj objects.Object) bool {
+	if obj != objects.PackedTrue && obj != objects.PackedFalse {
+		fmt.Fprintf(this.Std.Err, "truthy checked non-boolean %v", obj)
+	}
+
+	return obj.Truthy()
+}
+
+func (this *VM) Dis(w io.Writer, bytecode compiler.Bytecode) {
+	code.DisassembleInto(w, bytecode.Tape)
+	fmt.Fprintln(w)
+	if len(bytecode.Consts) > 0 {
+		fmt.Fprintln(w, "CONSTANTS")
+		for _, constant := range bytecode.Consts {
+			obj := this.Objects.AtIndex(constant)
+			fmt.Fprintf(w, "0x%04X:\t0x%08X\n", constant, obj)
+			fmt.Fprintf(w, "       \t%64b\n", obj)
+			ty := obj.Type()
+			fmt.Fprintf(w, "type: %s\n", ty)
+			switch ty {
+			case "Ptr32":
+				tag, ptr := objects.UnpackPtr32(obj)
+				fmt.Fprintf(w, "tag:\t%02X\nptr:\t%04X\n", tag, ptr)
+				break
+			case "Str32":
+				fmt.Fprintf(w, "value:	%q\n", this.Objects.DerefString(obj))
+				break
+			case "Array":
+				fmt.Fprintf(w, "value:	%v\n", objects.UnpackArray(obj))
+				break
+			case "I32":
+				fmt.Fprintf(w, "value:	%d\n", objects.UnpackI32(obj))
+				break
+			case "U32":
+				fmt.Fprintf(w, "value:	%d\n", objects.UnpackU32(obj))
+				break
+			case "Bool":
+				fmt.Fprintf(w, "value:	%t\n", objects.UnpackBool(obj))
+				break
+			case "F64":
+				fmt.Fprintf(w, "value:	%f\n", objects.UnpackF64(obj))
+				break
+			}
+
+			fmt.Fprintln(w)
+		}
+	}
 }
