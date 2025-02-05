@@ -64,7 +64,7 @@ func explore(ctx context.Context, xplr *magicbean.Exploration, generation *Gener
 	xplr.VM = vm
 	xplr.Objects = &generation.Objects
 
-	return generation.World.ExploreAvailableEdges(xplr)
+	return generation.World.ExploreAvailableEdges(ctx, xplr)
 }
 
 func PtrsMatching(ocm *zecs.Ocm, query ...zecs.BuildQuery) []objects.Object {

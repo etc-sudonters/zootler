@@ -1,6 +1,7 @@
 package magicbean
 
 import (
+	"context"
 	"fmt"
 	"sudonters/zootler/internal"
 	"sudonters/zootler/internal/skelly/bitset32"
@@ -10,6 +11,8 @@ import (
 	"sudonters/zootler/mido/compiler"
 	"sudonters/zootler/mido/objects"
 	"sudonters/zootler/zecs"
+
+	"github.com/etc-sudonters/substrate/dontio"
 )
 
 type ExplorableEdge struct {
@@ -56,17 +59,22 @@ func (this *Exploration) evaluateRule(bytecode compiler.Bytecode) bool {
 	return this.VM.Truthy(answer)
 }
 
-func (this *Exploration) CanTransit(world *ExplorableWorld, from, to graph32.Node) bool {
+func (this *Exploration) CanTransit(ctx context.Context, world *ExplorableWorld, from, to graph32.Node) bool {
+	std, nostd := dontio.StdFromContext(ctx)
+	internal.PanicOnError(nostd)
+
 	edge, exists := world.Edge(from, to)
 	if !exists {
 		panic(fmt.Errorf("no edge registered between %d %d", from, to))
 	}
 	fmt.Printf("exploring %q\n", edge.Name)
 	if edge.Src != "" {
-		fmt.Println(edge.Src)
+		std.WriteLineOut(string(edge.Src))
 	}
-	result := this.evaluateRule(compiler.Bytecode(edge.Rule))
-	fmt.Printf("\tcrossed? %t\n\n", result)
+	bytecode := compiler.Bytecode(edge.Rule)
+	this.VM.Dis(std.Out, bytecode)
+	result := this.evaluateRule(bytecode)
+	std.WriteLineOut("\tcrossed? %t\n\n", result)
 	return result
 }
 
@@ -75,7 +83,7 @@ type ExplorationResults struct {
 	Reached bitset32.Bitset
 }
 
-func (this *ExplorableWorld) ExploreAvailableEdges(xplr *Exploration) ExplorationResults {
+func (this *ExplorableWorld) ExploreAvailableEdges(ctx context.Context, xplr *Exploration) ExplorationResults {
 	var results ExplorationResults
 	for current := range nodeiter(xplr.Workset).UntilEmpty {
 		neighbors, err := this.Graph.Successors(current)
@@ -83,7 +91,7 @@ func (this *ExplorableWorld) ExploreAvailableEdges(xplr *Exploration) Exploratio
 		neighbors = neighbors.Difference(*xplr.Visited)
 
 		for neighbor := range nodeiter(&neighbors).All {
-			if xplr.CanTransit(this, current, neighbor) {
+			if xplr.CanTransit(ctx, this, current, neighbor) {
 				bitset32.Unset(&neighbors, neighbor)
 				bitset32.Set(xplr.Workset, neighbor)
 				bitset32.Set(&results.Reached, neighbor)

@@ -17,20 +17,20 @@ func InlineCalls(ctx *Context, syms *symbols.Table, funcs *ScriptedFunctions) as
 		scopes: make([]map[ast.Identifier]ast.Node, 16),
 		sp:     -1,
 	}
-	inliner := &inliner{ctx, syms, funcs, &replacer}
+	inliner := &funcinline{ctx, syms, funcs, &replacer}
 	return ast.Rewriter{
 		Invoke: inliner.Invoke,
 	}
 }
 
-type inliner struct {
+type funcinline struct {
 	ctx      *Context
 	symbols  *symbols.Table
 	funcs    *ScriptedFunctions
 	replacer *replacer
 }
 
-func (this *inliner) Invoke(node ast.Invoke, rewrite ast.Rewriting) (ast.Node, error) {
+func (this *funcinline) Invoke(node ast.Invoke, rewrite ast.Rewriting) (ast.Node, error) {
 	symbol := ast.LookUpNodeInTable(this.symbols, node.Target)
 	if symbol == nil {
 		return node, nil
