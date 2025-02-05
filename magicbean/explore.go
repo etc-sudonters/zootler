@@ -2,7 +2,6 @@ package magicbean
 
 import (
 	"fmt"
-	"strings"
 	"sudonters/zootler/internal"
 	"sudonters/zootler/internal/skelly/bitset32"
 	"sudonters/zootler/internal/skelly/graph32"
@@ -17,6 +16,7 @@ type ExplorableEdge struct {
 	Kind   EdgeKind
 	Entity zecs.Entity
 	Rule   RuleCompiled
+	Src    RuleSource
 	Name   Name
 }
 
@@ -62,26 +62,26 @@ func (this *Exploration) CanTransit(world *ExplorableWorld, from, to graph32.Nod
 		panic(fmt.Errorf("no edge registered between %d %d", from, to))
 	}
 	fmt.Printf("exploring %q\n", edge.Name)
-	var dis strings.Builder
-	this.VM.Dis(&dis, compiler.Bytecode(edge.Rule))
-	fmt.Println(dis.String())
+	if edge.Src != "" {
+		fmt.Println(edge.Src)
+	}
 	result := this.evaluateRule(compiler.Bytecode(edge.Rule))
 	fmt.Printf("\tcrossed? %t\n\n", result)
 	return result
 }
 
-type Results struct {
-	Workset bitset32.Bitset
+type ExplorationResults struct {
+	Pending bitset32.Bitset
 	Reached bitset32.Bitset
 }
 
-func (this *ExplorableWorld) ExploreAvailableEdges(xplr Exploration) Results {
-	var results Results
-
+func (this *ExplorableWorld) ExploreAvailableEdges(xplr *Exploration) ExplorationResults {
+	var results ExplorationResults
 	for current := range nodeiter(xplr.Workset).UntilEmpty {
 		neighbors, err := this.Graph.Successors(current)
 		internal.PanicOnError(err)
 		neighbors = neighbors.Difference(*xplr.Visited)
+
 		for neighbor := range nodeiter(&neighbors).All {
 			if xplr.CanTransit(this, current, neighbor) {
 				bitset32.Unset(&neighbors, neighbor)
@@ -92,7 +92,7 @@ func (this *ExplorableWorld) ExploreAvailableEdges(xplr Exploration) Results {
 		}
 
 		if !neighbors.IsEmpty() {
-			bitset32.Set(&results.Workset, current)
+			bitset32.Set(&results.Pending, current)
 		}
 	}
 

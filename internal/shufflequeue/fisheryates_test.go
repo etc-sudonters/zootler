@@ -1,4 +1,4 @@
-package placementpool
+package shufflequeue
 
 import (
 	"math/rand/v2"
@@ -10,7 +10,7 @@ import (
 func TestDequeueAllItems(t *testing.T) {
 	enqueued := []int{1, 2, 3, 4}
 	rng := rng.NewXoshiro256PPFromU64(0xbf58476d1ce4e5b9)
-	q := NewRandomQueue[int](rand.New(rng))
+	q := Empty[int](rand.New(rng))
 	q.EnqueueSlice(enqueued)
 	result := map[int]int{}
 

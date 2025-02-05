@@ -1,4 +1,4 @@
-package placementpool
+package shufflequeue
 
 import (
 	"errors"
@@ -13,14 +13,14 @@ var ErrEmptyQueue = errors.New("empty queue")
 // is "sorted" in place. Unlike most in place FY implementations, this
 // structure moves swapped elements to the front of the slice rather than the
 // end. this allows new items to be added after dequeues have happened
-func NewRandomQueue[T any](rng *rand.Rand) *FisherYatesQueue[T] {
+func Empty[T any](rng *rand.Rand) *FisherYatesQueue[T] {
 	r := new(FisherYatesQueue[T])
 	r.rng = rng
 	return r
 }
 
 // the passed slice is immediately shuffled
-func RandomQueueFrom[T any](rng *rand.Rand, ts []T) *FisherYatesQueue[T] {
+func From[T any](rng *rand.Rand, ts []T) *FisherYatesQueue[T] {
 	r := new(FisherYatesQueue[T])
 	r.rng = rng
 	r.members = ts

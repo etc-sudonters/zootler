@@ -84,5 +84,6 @@ func staticddl() []zecs.DDL {
 		columns.BitColumnOf[magicbean.Medallion],
 		columns.BitColumnOf[magicbean.Stone],
 		columns.BitColumnOf[magicbean.Bottle],
+		columns.BitColumnOf[magicbean.WorldGraphRoot],
 	}
 }

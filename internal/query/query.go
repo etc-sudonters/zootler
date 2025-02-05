@@ -36,6 +36,7 @@ type columnIndex map[reflect.Type]table.ColumnId
 type Entry struct{}
 
 type Query interface {
+	Optional(table.ColumnId)
 	Load(table.ColumnId)
 	Exists(table.ColumnId)
 	NotExists(table.ColumnId)
@@ -46,6 +47,7 @@ type query struct {
 	cols      table.ColumnIds
 	exists    *bitset32.Bitset
 	notExists *bitset32.Bitset
+	optional  *bitset32.Bitset
 }
 
 func (b *query) Load(typ table.ColumnId) {
@@ -60,6 +62,13 @@ func (b *query) Exists(typ table.ColumnId) {
 
 func (b *query) NotExists(typ table.ColumnId) {
 	b.notExists.Set(uint32(typ))
+}
+
+func (b *query) Optional(typ table.ColumnId) {
+	i := uint32(typ)
+	if b.optional.Set(i) && !b.load.IsSet(i) {
+		b.cols = append(b.cols, typ)
+	}
 }
 
 func makePredicate(b *query) predicate {
@@ -147,6 +156,7 @@ func (e engine) CreateQuery() Query {
 		load:      &bitset32.Bitset{},
 		exists:    &bitset32.Bitset{},
 		notExists: &bitset32.Bitset{},
+		optional:  &bitset32.Bitset{},
 	}
 }
 

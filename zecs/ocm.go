@@ -60,6 +60,10 @@ func (this *Q) Build(build BuildQuery, builds ...BuildQuery) *Q {
 
 type BuildQuery func(*Q)
 
+func Optional[T Value](this *Q) {
+	this.q.Optional(query.MustAsColumnId[T](this.set.eng))
+}
+
 func Load[T Value](this *Q) {
 	this.q.Load(query.MustAsColumnId[T](this.set.eng))
 }

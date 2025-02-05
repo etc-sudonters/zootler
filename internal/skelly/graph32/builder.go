@@ -5,25 +5,29 @@ import (
 )
 
 type Builder struct {
-	Directed
+	Graph *Directed
 }
 
-func (b *Builder) AddNode(n Node) {
-	if _, exists := b.origins[n]; !exists {
-		b.origins[n] = bitset32.Bitset{}
+func (this *Builder) AddNode(n Node) {
+	if _, exists := this.Graph.origins[n]; !exists {
+		this.Graph.origins[n] = bitset32.Bitset{}
 	}
 }
 
-func (b *Builder) AddNodes(ns []Node) {
+func (this *Builder) AddNodes(ns []Node) {
 	for _, n := range ns {
-		b.AddNode(n)
+		this.AddNode(n)
 	}
 }
 
-func (b *Builder) AddEdge(origin, dest Node) {
-	b.AddNode(origin)
-	b.AddNode(dest)
-	origins := b.origins[origin]
+func (this *Builder) AddEdge(origin, dest Node) {
+	this.AddNode(origin)
+	this.AddNode(dest)
+	origins := this.Graph.origins[origin]
 	bitset32.Set(&origins, dest)
-	b.origins[origin] = origins
+	this.Graph.origins[origin] = origins
+}
+
+func (this *Builder) AddRoot(root Node) {
+	bitset32.Set(&this.Graph.roots, root)
 }

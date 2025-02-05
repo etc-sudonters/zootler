@@ -2,10 +2,15 @@ package main
 
 import (
 	"context"
+	"math/rand/v2"
 	"os"
 	"path/filepath"
+	"sudonters/zootler/internal"
 	"sudonters/zootler/internal/settings"
+	"sudonters/zootler/internal/skelly/bitset32"
 
+	"github.com/etc-sudonters/substrate/dontio"
+	"github.com/etc-sudonters/substrate/rng"
 	"github.com/etc-sudonters/substrate/stageleft"
 
 	"runtime/pprof"
@@ -28,23 +33,38 @@ func runMain(ctx context.Context, opts cliOptions) stageleft.ExitCode {
 	}
 
 	theseSettings := settings.Default()
+	theseSettings.Seed = 0x76E76E14E9691280
 	theseSettings.Shuffling.OcarinaNotes = true
 	theseSettings.Spawns.StartingAge = settings.StartAgeAdult
 	theseSettings.Locations.OpenDoorOfTime = true
-	artifacts := setup(paths, &theseSettings)
-	CollectStartingItems(&artifacts, &theseSettings)
-	explore(ctx, &artifacts, AgeAdult, &theseSettings)
+	generation := setup(paths, &theseSettings)
+	generation.Settings = theseSettings
+	CollectStartingItems(&generation)
+	visited := bitset32.Bitset{}
+	workset := generation.World.Graph.Roots()
+	xplr := magicbean.Exploration{
+		Visited: &visited,
+		Workset: &workset,
+	}
+	results := explore(ctx, &xplr, &generation, AgeAdult)
+	std, err := dontio.StdFromContext(ctx)
+	internal.PanicOnError(err)
+	std.WriteLineOut("Visited %d", visited.Len())
+	std.WriteLineOut("Reached %d", results.Reached.Len())
+	std.WriteLineOut("Pending %d", results.Pending.Len())
 	return stageleft.ExitCode(0)
 }
 
-type Artifacts struct {
+type Generation struct {
 	Ocm       zecs.Ocm
 	World     magicbean.ExplorableWorld
 	Objects   objects.Table
 	Inventory magicbean.Inventory
+	Rng       rand.Rand
+	Settings  settings.Zootr
 }
 
-func setup(paths bootstrap.LoadPaths, settings *settings.Zootr) (artifacts Artifacts) {
+func setup(paths bootstrap.LoadPaths, settings *settings.Zootr) (generation Generation) {
 	ocm := bootstrap.Phase1_InitializeStorage(nil)
 	bootstrap.PanicWhenErr(bootstrap.Phase2_ImportFromFiles(&ocm, paths))
 
@@ -58,12 +78,13 @@ func setup(paths bootstrap.LoadPaths, settings *settings.Zootr) (artifacts Artif
 
 	world := bootstrap.Phase5_CreateWorld(&ocm, settings, objects.TableFrom(compileEnv.Objects))
 
-	artifacts.Ocm = ocm
-	artifacts.World = world
-	artifacts.Objects = objects.TableFrom(compileEnv.Objects)
-	artifacts.Inventory = magicbean.NewInventory()
+	generation.Ocm = ocm
+	generation.World = world
+	generation.Objects = objects.TableFrom(compileEnv.Objects)
+	generation.Inventory = magicbean.NewInventory()
+	generation.Rng = *rand.New(rng.NewXoshiro256PPFromU64(settings.Seed))
 
-	return artifacts
+	return generation
 }
 
 func noop() {}

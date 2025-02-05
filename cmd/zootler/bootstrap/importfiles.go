@@ -234,6 +234,10 @@ func storeRelations(nodes z16.Nodes, tokens z16.Tokens, paths LoadPaths) error {
 
 		var attachments zecs.Attaching
 
+		if raw.RegionName == "Root" {
+			attachments.Add(magicbean.WorldGraphRoot{})
+		}
+
 		if raw.Hint != "" {
 			attachments.Add(magicbean.HintRegion(raw.Hint))
 		}
@@ -262,7 +266,7 @@ func storeRelations(nodes z16.Nodes, tokens z16.Tokens, paths LoadPaths) error {
 			attachments.Add(magicbean.TimePassess{})
 		}
 
-		return nil
+		return region.AttachFrom(attachments)
 	})
 }
 

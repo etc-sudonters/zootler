@@ -46,9 +46,6 @@ func Phase3_ConfigureCompiler(ocm *zecs.Ocm, theseSettings *settings.Zootr, opti
 		mido.WithBuiltInFunctionDefs(func(*mido.CompileEnv) []objects.BuiltInFunctionDef {
 			return magicbean.CreateBuiltInDefs()
 		}),
-		//		mido.CompilerWithFastOps(compiler.FastOps{
-		//			"has": compiler.FastHasOp,
-		//		}),
 		func(env *mido.CompileEnv) {
 			createptrs(ocm, env.Symbols, env.Objects)
 		},

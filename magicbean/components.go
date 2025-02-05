@@ -49,6 +49,7 @@ type Savewarp string
 type Scene string
 type TimePassess struct{}
 type CollectablePriority uint8
+type WorldGraphRoot struct{}
 
 const (
 	_             EdgeKind = 0

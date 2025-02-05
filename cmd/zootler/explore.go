@@ -3,17 +3,19 @@ package main
 import (
 	"context"
 	"fmt"
+	"math/rand/v2"
 	"sudonters/zootler/cmd/zootler/bootstrap"
 	"sudonters/zootler/cmd/zootler/z16"
+	"sudonters/zootler/internal/query"
 	"sudonters/zootler/internal/settings"
-	"sudonters/zootler/internal/skelly/bitset32"
+	"sudonters/zootler/internal/shufflequeue"
+	"sudonters/zootler/internal/table"
 	"sudonters/zootler/magicbean"
 	"sudonters/zootler/mido"
 	"sudonters/zootler/mido/objects"
 	"sudonters/zootler/zecs"
 
 	"github.com/etc-sudonters/substrate/dontio"
-	"golang.org/x/text/collate"
 )
 
 type Age bool
@@ -33,23 +35,11 @@ func fromStartingAge(start settings.StartingAge) Age {
 	}
 }
 
-func explore(ctx context.Context, artifacts *Artifacts, age Age, these *settings.Zootr) {
-	q := artifacts.Ocm.Query()
-	q.Build(zecs.With[magicbean.Region], zecs.Load[magicbean.Name])
-	roots := bitset32.Bitset{}
-
-	for ent, tup := range q.Rows {
-		name := tup.Values[0].(magicbean.Name)
-		if name == "Root" {
-			bitset32.Set(&roots, ent)
-			break
-		}
-	}
-
-	pockets := magicbean.NewPockets(&artifacts.Inventory, &artifacts.Ocm)
+func explore(ctx context.Context, xplr *magicbean.Exploration, generation *Generation, age Age) magicbean.ExplorationResults {
+	pockets := magicbean.NewPockets(&generation.Inventory, &generation.Ocm)
 
 	var shuffleFlags magicbean.ShuffleFlags
-	if these.Shuffling.OcarinaNotes {
+	if generation.Settings.Shuffling.OcarinaNotes {
 		shuffleFlags = shuffleFlags | magicbean.SHUFFLE_OCARINA_NOTES
 	}
 
@@ -58,7 +48,7 @@ func explore(ctx context.Context, artifacts *Artifacts, age Age, these *settings
 	funcs.CheckTodAccess = magicbean.ConstBool(true)
 	funcs.IsAdult = magicbean.ConstBool(age == AgeAdult)
 	funcs.IsChild = magicbean.ConstBool(age == AgeChild)
-	funcs.IsStartingAge = magicbean.ConstBool(age == fromStartingAge(these.Spawns.StartingAge))
+	funcs.IsStartingAge = magicbean.ConstBool(age == fromStartingAge(generation.Settings.Spawns.StartingAge))
 
 	std, noStd := dontio.StdFromContext(ctx)
 	if noStd != nil {
@@ -66,19 +56,15 @@ func explore(ctx context.Context, artifacts *Artifacts, age Age, these *settings
 	}
 
 	vm := mido.VM{
-		Objects: &artifacts.Objects,
+		Objects: &generation.Objects,
 		Funcs:   funcs.Table(),
 		Std:     std,
 	}
 
-	workset := bitset32.Copy(roots)
+	xplr.VM = vm
+	xplr.Objects = &generation.Objects
 
-	artifacts.World.ExploreAvailableEdges(magicbean.Exploration{
-		Workset: &workset,
-		Visited: &bitset32.Bitset{},
-		VM:      vm,
-		Objects: &artifacts.Objects,
-	})
+	return generation.World.ExploreAvailableEdges(xplr)
 }
 
 func PtrsMatching(ocm *zecs.Ocm, query ...zecs.BuildQuery) []objects.Object {
@@ -96,7 +82,12 @@ func PtrsMatching(ocm *zecs.Ocm, query ...zecs.BuildQuery) []objects.Object {
 	return ptrs
 }
 
-func CollectStartingItems(artifacts *Artifacts, these *settings.Zootr) {
+func CollectStartingItems(generation *Generation) {
+	ocm := &generation.Ocm
+	rng := &generation.Rng
+	these := &generation.Settings
+	eng := ocm.Engine()
+
 	type collecting struct {
 		entity zecs.Entity
 		qty    float64
@@ -117,7 +108,7 @@ func CollectStartingItems(artifacts *Artifacts, these *settings.Zootr) {
 		starting = new
 	}
 
-	tokens := z16.NewTokens(&artifacts.Ocm)
+	tokens := z16.NewTokens(ocm)
 
 	if these.Locations.OpenDoorOfTime {
 		collect(tokens.MustGet("Time Travel"), 1)
@@ -125,11 +116,25 @@ func CollectStartingItems(artifacts *Artifacts, these *settings.Zootr) {
 
 	collectOneEach(
 		tokens.MustGet("Ocarina"),
-		tokens.MustGet("Deku Stick (1)"),
 		tokens.MustGet("Deku Shield"),
 	)
 
+	collect(tokens.MustGet("Deku Stick (1)"), 10)
+
+	starting = append(starting, collecting{OneOfRandomly(ocm, rng, zecs.With[magicbean.Song]), 1})
+	starting = append(starting, collecting{OneOfRandomly(ocm, rng, zecs.With[magicbean.DungeonReward]), 1})
+
 	for _, collect := range starting {
-		artifacts.Inventory.Collect(collect.entity, collate.qty)
+		selected, err := eng.GetValues(collect.entity, table.ColumnIds{query.MustAsColumnId[magicbean.Name](eng)})
+		bootstrap.PanicWhenErr(err)
+		fmt.Printf("starting with %f %s\n", collect.qty, selected.Values[0].(magicbean.Name))
+		generation.Inventory.Collect(collect.entity, collect.qty)
 	}
+}
+
+func OneOfRandomly(ocm *zecs.Ocm, rng *rand.Rand, query ...zecs.BuildQuery) zecs.Entity {
+	matching := shufflequeue.From(rng, zecs.EntitiesMatching(ocm, query...))
+	randomly, err := matching.Dequeue()
+	bootstrap.PanicWhenErr(err)
+	return *randomly
 }

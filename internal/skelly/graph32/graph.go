@@ -36,6 +36,7 @@ func (o Origination) String() string {
 func WithCapacity(c int) Directed {
 	return Directed{
 		origins: make(map[Node]bitset32.Bitset, c),
+		roots:   bitset32.Bitset{},
 	}
 }
 
@@ -45,6 +46,11 @@ func New() Directed {
 
 type Directed struct {
 	origins map[Node]bitset32.Bitset
+	roots   bitset32.Bitset
+}
+
+func (g Directed) Roots() bitset32.Bitset {
+	return bitset32.Copy(g.roots)
 }
 
 func (g Directed) NodeCount() int {
