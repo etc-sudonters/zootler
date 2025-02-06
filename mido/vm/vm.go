@@ -102,9 +102,6 @@ loop:
 			if answer != objects.Null {
 				unit.stack.push(answer)
 			}
-		case code.CMP_EQ, code.CMP_NQ, code.CMP_LT:
-			err = fmt.Errorf("runtime comparison not implemented")
-			break loop
 		case code.CHK_QTY:
 			if this.ChkQty == nil {
 				err = fmt.Errorf("fastop 0x%02X not found in table", thisOp)
@@ -121,9 +118,8 @@ loop:
 				break loop
 			}
 			unit.stack.push(answer)
-
-		case code.CHK_ALL, code.CHK_ANY, code.IS_CHILD, code.IS_ADULT:
-			err = fmt.Errorf("fastop 0x%02x not implemented", thisOp)
+		case code.CMP_EQ, code.CMP_NQ, code.CMP_LT:
+			err = fmt.Errorf("runtime comparison not implemented")
 			break loop
 		default:
 			err = fmt.Errorf("unrecognized op: 0x%02x", thisOp)
@@ -165,19 +161,18 @@ func (this *VM) Dis(w io.Writer, bytecode compiler.Bytecode) {
 				fmt.Fprintf(w, "\ttag:\t%s\n\tptr:\t%04X\n", ptr.Tag, ptr.Addr)
 				break
 			case objects.STR_STR32:
-				fmt.Fprintf(w, "\tvalue:	%q\n", this.Objects.DerefString(obj))
+				fmt.Fprintf(w, "\tvalue:\t%q\n", this.Objects.DerefString(obj))
 				break
 			case objects.STR_BYTES:
-				fmt.Fprintf(w, "\tvalue:	%v\n", objects.UnpackBytes(obj))
+				fmt.Fprintf(w, "\tvalue:\t%v\n", objects.UnpackBytes(obj))
 				break
 			case objects.STR_BOOL:
-				fmt.Fprintf(w, "\tvalue:	%t\n", objects.UnpackBool(obj))
+				fmt.Fprintf(w, "\tvalue:\t%t\n", objects.UnpackBool(obj))
 				break
 			case objects.STR_F64:
-				fmt.Fprintf(w, "\tvalue:	%f\n", objects.UnpackF64(obj))
+				fmt.Fprintf(w, "\tvalue:\t%f\n", objects.UnpackF64(obj))
 				break
 			}
-
 			fmt.Fprintln(w)
 		}
 	}

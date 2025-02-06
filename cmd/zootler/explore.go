@@ -59,6 +59,7 @@ func explore(ctx context.Context, xplr *magicbean.Exploration, generation *Gener
 		Objects: &generation.Objects,
 		Funcs:   funcs.Table(),
 		Std:     std,
+		ChkQty:  funcs.Has,
 	}
 
 	xplr.VM = vm

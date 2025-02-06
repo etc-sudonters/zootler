@@ -146,11 +146,7 @@ func (this *compiler) Invoke(node ast.Invoke, visit ast.Visiting) error {
 		return fmt.Errorf("%q expects %d arguments but received %d", def.Name, def.Params, argCount)
 	}
 
-	if def.Params == 0 {
-		ptr := this.objects.PtrFor(callee)
-		this.consts[ptr] = struct{}{}
-		this.names[ptr] = callee.Name
-		this.emit(code.INVOKE_0, int(ptr))
+	if this.trySpecializeInvoke(node, callee, def) {
 		return nil
 	}
 
@@ -184,4 +180,29 @@ func (this *compiler) pushPtr(op code.Op, idx objects.Index, name string) {
 	this.consts[idx] = struct{}{}
 	this.names[idx] = name
 	this.emit(op, int(idx))
+}
+
+func (this *compiler) trySpecializeInvoke(node ast.Invoke, callee *symbols.Sym, def objects.BuiltInFunctionDef) bool {
+	switch callee.Name {
+	case "has":
+		what := ast.LookUpNodeInTable(this.symbols, node.Args[0])
+		qty := node.Args[1]
+		if what != nil && qty.Kind() == ast.KindNumber {
+			ptr := this.objects.PtrFor(what)
+			this.consts[ptr] = struct{}{}
+			this.names[ptr] = what.Name
+			this.emit(code.CHK_QTY, int(ptr), int(uint8(qty.(ast.Number))))
+			return true
+		}
+	}
+
+	if def.Params == 0 {
+		ptr := this.objects.PtrFor(callee)
+		this.consts[ptr] = struct{}{}
+		this.names[ptr] = callee.Name
+		this.emit(code.INVOKE_0, int(ptr))
+		return true
+	}
+
+	return false
 }
