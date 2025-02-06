@@ -25,8 +25,6 @@ func (this promotetokens) Identifier(node ast.Identifier, _ ast.Rewriting) (ast.
 	switch symbol.Kind {
 	case symbols.TOKEN:
 		return this.has(node), nil
-	case symbols.SETTING:
-		return this.loadSetting(symbol.Name), nil
 	default:
 		if strings.Contains(symbol.Name, "_") {
 			rawSymbol := this.LookUpByName(strings.ReplaceAll(symbol.Name, "_", " "))
@@ -46,8 +44,6 @@ func (this promotetokens) String(node ast.String, _ ast.Rewriting) (ast.Node, er
 		return node, nil
 	case symbol.Kind == symbols.TOKEN:
 		return this.has(ast.IdentifierFrom(symbol)), nil
-	case symbol.Kind == symbols.SETTING:
-		return this.loadSetting(symbol.Name), nil
 	default:
 		if strings.Contains(symbol.Name, "_") {
 			rawSymbol := this.LookUpByName(strings.ReplaceAll(symbol.Name, "_", " "))
@@ -63,12 +59,5 @@ func (this promotetokens) has(what ast.Node) ast.Invoke {
 	return ast.Invoke{
 		Target: ast.IdentifierFrom(this.Declare("has", symbols.FUNCTION)),
 		Args:   []ast.Node{what, ast.Number(1)},
-	}
-}
-
-func (this promotetokens) loadSetting(which string) ast.Invoke {
-	return ast.Invoke{
-		Target: ast.IdentifierFrom(this.Declare("load_setting", symbols.FUNCTION)),
-		Args:   []ast.Node{ast.String(which)},
 	}
 }

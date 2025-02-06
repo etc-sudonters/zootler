@@ -27,30 +27,39 @@ func (this Object) Is(mask bits) bool {
 	return bits(this)&mask == mask
 }
 
+const (
+	STR_NULL  = "null"
+	STR_STR32 = "Str32"
+	STR_PTR32 = "Ptr32"
+	STR_BYTES = "Bytes"
+	STR_BOOL  = "Bool"
+	STR_F64   = "F64"
+)
+
 func (this Object) Type() string {
 	field := bits(this)
 	if field == 0 {
-		return "Null"
+		return STR_NULL
 	}
 
 	if field&MASK_PTR32 == MASK_PTR32 {
-		return "Ptr32"
+		return STR_PTR32
 	}
 
 	if field&MASK_STR32 == MASK_STR32 {
-		return "Str32"
+		return STR_STR32
 	}
 
-	if field&MASK_ARRAY == MASK_ARRAY {
-		return "Bytes"
+	if field&MASK_BYTES == MASK_BYTES {
+		return STR_BYTES
 	}
 
 	if field&MASK_BOOL == MASK_BOOL {
-		return "Bool"
+		return STR_BOOL
 	}
 
 	if !math.IsNaN(math.Float64frombits(uint64(field))) {
-		return "F64"
+		return STR_F64
 	}
 
 	panic("unrecognized type")
@@ -99,14 +108,14 @@ func PackStr32(ptr Str32) Object {
 	var field bits
 	(&field).PutU8(ptr.Len)
 	(&field).PutU32(uint32(ptr.Addr))
-	return Object(field | MASK_PTR32)
+	return Object(field | MASK_STR32)
 }
 
 func UnpackStr32(obj Object) Str32 {
 	var ptr Str32
 	field := bits(obj)
-	if field&MASK_PTR32 != MASK_PTR32 {
-		panic("not a pointer")
+	if field&MASK_STR32 != MASK_STR32 {
+		panic("not a string")
 	}
 
 	ptr.Len = field.GetU8()
@@ -115,12 +124,12 @@ func UnpackStr32(obj Object) Str32 {
 }
 
 func PackBytes(arr [5]uint8) Object {
-	return Object(bytes(arr).asbits(MASK_ARRAY))
+	return Object(bytes(arr).asbits(MASK_BYTES))
 }
 
 func UnpackBytes(obj Object) bytes {
 	field := bits(obj)
-	if field&MASK_ARRAY != MASK_ARRAY {
+	if field&MASK_BYTES != MASK_BYTES {
 		panic("not an array")
 	}
 
@@ -143,8 +152,8 @@ func UnpackBool(obj Object) bool {
 }
 
 const (
-	ptrmask  bits = 1<<63 | 1<<49 | 0<<48
-	strmask  bits = 1<<63 | 1<<49 | 1<<48
+	ptrmask  bits = 1<<63 | 1<<49 | 1<<48
+	strmask  bits = 1<<63 | 1<<49 | 0<<48
 	array    bits = 1<<63 | 1<<49 | 0<<48
 	boolmask bits = 0<<63 | 1<<49 | 1<<48
 
@@ -153,7 +162,7 @@ const (
 
 	MASK_PTR32 bits = QNAN | ptrmask
 	MASK_STR32 bits = QNAN | strmask
-	MASK_ARRAY bits = QNAN | array
+	MASK_BYTES bits = QNAN | array
 	MASK_BOOL  bits = QNAN | boolmask
 	MASK_F64   bits = ^QNAN
 	MASK_NULL  bits = 0

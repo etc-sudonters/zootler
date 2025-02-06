@@ -43,16 +43,36 @@ func RewriteWithEvery(original Node, rw []Rewriter) (Node, error) {
 type Rewriting func(Node) (Node, error)
 type RewriteFunc[T Node] func(T, Rewriting) (Node, error)
 
-func (r Rewriting) All(ast []Node) ([]Node, error) {
+func (this Rewriting) All(ast []Node) ([]Node, error) {
 	var err error
 	rewritten := make([]Node, len(ast))
 	for i := range ast {
-		rewritten[i], err = r(ast[i])
+		rewritten[i], err = this(ast[i])
 		if err != nil {
 			err = errors.Join(err)
 		}
 	}
 	return rewritten, err
+}
+
+func (this Rewriting) AnyOf(node AnyOf) (Node, error) {
+	return RewriteAnyOf(node, this)
+}
+
+func (this Rewriting) Compare(node Compare) (Node, error) {
+	return RewriteCompare(node, this)
+}
+
+func (this Rewriting) Every(node Every) (Node, error) {
+	return RewriteEvery(node, this)
+}
+
+func (this Rewriting) Invert(node Invert) (Node, error) {
+	return RewriteInvert(node, this)
+}
+
+func (this Rewriting) Invoke(node Invoke) (Node, error) {
+	return RewriteInvoke(node, this)
 }
 
 type Rewriter struct {
@@ -133,7 +153,7 @@ func (this *Rewriter) Rewrite(ast Node) (Node, error) {
 
 func RewriteAnyOf(anyof AnyOf, rewrite Rewriting) (Node, error) {
 	items, err := rewrite.All(anyof)
-	return AnyOf(items), err
+	return AnyOf(items).Flatten().Reduce(), err
 }
 
 func RewriteBoolean(b Boolean, _ Rewriting) (Node, error) {
@@ -151,7 +171,7 @@ func RewriteCompare(compare Compare, rewrite Rewriting) (Node, error) {
 
 func RewriteEvery(every Every, rewrite Rewriting) (Node, error) {
 	items, err := rewrite.All(every)
-	return Every(items), err
+	return Every(items).Flatten().Reduce(), err
 }
 
 func RewriteIdentifier(i Identifier, _ Rewriting) (Node, error) {

@@ -6,7 +6,9 @@ import (
 	"sudonters/zootler/internal/settings"
 	"sudonters/zootler/magicbean"
 	"sudonters/zootler/mido"
+	"sudonters/zootler/mido/ast"
 	"sudonters/zootler/mido/objects"
+	"sudonters/zootler/mido/optimizer"
 	"sudonters/zootler/zecs"
 )
 
@@ -37,6 +39,9 @@ func Phase3_ConfigureCompiler(ocm *zecs.Ocm, theseSettings *settings.Zootr, opti
 	defaults := []mido.ConfigureCompiler{
 		mido.CompilerDefaults(),
 		func(env *mido.CompileEnv) {
+			env.Optimize.AddOptimizer(func(env *mido.CompileEnv) ast.Rewriter {
+				return optimizer.InlineSettings(theseSettings, env.Symbols)
+			})
 			PanicWhenErr(loadsymbols(ocm, env.Symbols))
 			PanicWhenErr(loadscripts(ocm, env))
 			PanicWhenErr(aliassymbols(ocm, env.Symbols))

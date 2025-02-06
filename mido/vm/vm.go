@@ -48,7 +48,7 @@ loop:
 			unit.stack.push(objects.PackedTrue)
 		case code.PUSH_F:
 			unit.stack.push(objects.PackedFalse)
-		case code.PUSH_CONST:
+		case code.PUSH_CONST, code.PUSH_FUNC, code.PUSH_PTR, code.PUSH_STR:
 			index := unit.readIndex()
 			unit.stack.push(this.Objects.AtIndex(index))
 		case code.INVERT:
@@ -135,22 +135,22 @@ func (this *VM) Dis(w io.Writer, bytecode compiler.Bytecode) {
 			ty := obj.Type()
 			fmt.Fprintf(w, "\ttype:\t%s\n", ty)
 			switch ty {
-			case "Ptr32":
+			case objects.STR_PTR32:
 				ptr := objects.UnpackPtr32(obj)
 				name := bytecode.Names[constant]
 				fmt.Fprintf(w, "\tname:\t%q\n", name)
 				fmt.Fprintf(w, "\ttag:\t%s\n\tptr:\t%04X\n", ptr.Tag, ptr.Addr)
 				break
-			case "Str32":
+			case objects.STR_STR32:
 				fmt.Fprintf(w, "\tvalue:	%q\n", this.Objects.DerefString(obj))
 				break
-			case "Array":
+			case objects.STR_BYTES:
 				fmt.Fprintf(w, "\tvalue:	%v\n", objects.UnpackBytes(obj))
 				break
-			case "Bool":
+			case objects.STR_BOOL:
 				fmt.Fprintf(w, "\tvalue:	%t\n", objects.UnpackBool(obj))
 				break
-			case "F64":
+			case objects.STR_F64:
 				fmt.Fprintf(w, "\tvalue:	%f\n", objects.UnpackF64(obj))
 				break
 			}

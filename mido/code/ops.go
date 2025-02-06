@@ -6,27 +6,26 @@ import (
 )
 
 var definitions = map[Op]Defintion{
-	NOP:          {"NOP", NOP, nil},
-	ERR:          {"ERR", ERR, nil},
-	PUSH_T:       {"PUSH_T", PUSH_T, nil},
-	PUSH_F:       {"PUSH_F", PUSH_F, nil},
-	PUSH_CONST:   {"PUSH_CONST", PUSH_CONST, []int{2}},
-	PUSH_TOKEN:   {"PUSH_TOKEN", PUSH_TOKEN, []int{2}},
-	PUSH_BUILTIN: {"PUSH_BUILTIN", PUSH_BUILTIN, []int{2}},
-	PUSH_SETTING: {"PUSH_SETTING", PUSH_SETTING, []int{2}},
-	PUSH_PTR:     {"PUSH_PTR", PUSH_PTR, []int{2}},
-	INVERT:       {"INVERT", INVERT, nil},
-	NEED_ALL:     {"NEED_ALL", NEED_ALL, []int{2}},
-	NEED_ANY:     {"NEED_ANY", NEED_ANY, []int{2}},
-	CHK_QTY:      {"CHK_QTY", CHK_QTY, []int{2, 1}},
-	CHK_ALL:      {"CHK_ALL", CHK_ALL, []int{2}},
-	CHK_ANY:      {"CHK_ANY", CHK_ANY, []int{2}},
-	IS_CHILD:     {"IS_CHILD", IS_CHILD, nil},
-	IS_ADULT:     {"IS_ADULT", IS_ADULT, nil},
-	INVOKE:       {"INVOKE", INVOKE, []int{2}},
-	CMP_EQ:       {"CMP_EQ", CMP_EQ, nil},
-	CMP_NQ:       {"CMP_NQ", CMP_NQ, nil},
-	CMP_LT:       {"CMP_LT", CMP_LT, nil},
+	NOP:        {"NOP", NOP, nil},
+	ERR:        {"ERR", ERR, nil},
+	PUSH_T:     {"PUSH_T", PUSH_T, nil},
+	PUSH_F:     {"PUSH_F", PUSH_F, nil},
+	PUSH_CONST: {"PUSH_CONST", PUSH_CONST, []int{2}},
+	PUSH_PTR:   {"PUSH_PTR", PUSH_PTR, []int{2}},
+	PUSH_STR:   {"PUSH_STR", PUSH_STR, []int{2}},
+	PUSH_FUNC:  {"PUSH_FUNC", PUSH_FUNC, []int{2}},
+	INVERT:     {"INVERT", INVERT, nil},
+	NEED_ALL:   {"NEED_ALL", NEED_ALL, []int{2}},
+	NEED_ANY:   {"NEED_ANY", NEED_ANY, []int{2}},
+	CHK_QTY:    {"CHK_QTY", CHK_QTY, []int{2, 1}},
+	CHK_ALL:    {"CHK_ALL", CHK_ALL, []int{2}},
+	CHK_ANY:    {"CHK_ANY", CHK_ANY, []int{2}},
+	IS_CHILD:   {"IS_CHILD", IS_CHILD, nil},
+	IS_ADULT:   {"IS_ADULT", IS_ADULT, nil},
+	INVOKE:     {"INVOKE", INVOKE, []int{2}},
+	CMP_EQ:     {"CMP_EQ", CMP_EQ, nil},
+	CMP_NQ:     {"CMP_NQ", CMP_NQ, nil},
+	CMP_LT:     {"CMP_LT", CMP_LT, nil},
 }
 
 func Make(op Op, operands ...int) Instructions {
@@ -67,27 +66,26 @@ func Make(op Op, operands ...int) Instructions {
 }
 
 const (
-	NOP          Op = 0x00
-	ERR             = 0xFF
-	PUSH_T          = 0x21
-	PUSH_F          = 0x22
-	PUSH_CONST      = 0x23
-	PUSH_TOKEN      = 0x25
-	PUSH_BUILTIN    = 0x26
-	PUSH_SETTING    = 0x27
-	PUSH_PTR        = 0x28
-	INVERT          = 0x31
-	NEED_ALL        = 0x32
-	NEED_ANY        = 0x33
-	CHK_QTY         = 0x41
-	CHK_ALL         = 0x42
-	CHK_ANY         = 0x43
-	IS_CHILD        = 0x44
-	IS_ADULT        = 0x45
-	INVOKE          = 0x51
-	CMP_EQ          = 0x61
-	CMP_NQ          = 0x62
-	CMP_LT          = 0x63
+	NOP        Op = 0x00
+	ERR           = 0xFF
+	PUSH_T        = 0x21
+	PUSH_F        = 0x22
+	PUSH_CONST    = 0x23
+	PUSH_PTR      = 0x24
+	PUSH_STR      = 0x25
+	PUSH_FUNC     = 0x26
+	INVERT        = 0x31
+	NEED_ALL      = 0x32
+	NEED_ANY      = 0x33
+	CHK_QTY       = 0x41
+	CHK_ALL       = 0x42
+	CHK_ANY       = 0x43
+	IS_CHILD      = 0x44
+	IS_ADULT      = 0x45
+	INVOKE        = 0x51
+	CMP_EQ        = 0x61
+	CMP_NQ        = 0x62
+	CMP_LT        = 0x63
 )
 
 type Instructions []byte

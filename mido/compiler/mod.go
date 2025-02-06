@@ -117,8 +117,10 @@ func (this *compiler) Identifier(node ast.Identifier, visit ast.Visiting) error 
 	symbol := this.symbols.LookUpByIndex(node.AsIndex())
 	ptr := this.objects.PtrFor(symbol)
 	switch symbol.Kind {
-	case symbols.BUILT_IN_FUNCTION, symbols.TOKEN, symbols.SETTING:
-		this.pushPtr(ptr, symbol.Name)
+	case symbols.BUILT_IN_FUNCTION:
+		this.pushPtr(code.PUSH_FUNC, ptr, symbol.Name)
+	case symbols.TOKEN, symbols.SETTING:
+		this.pushPtr(code.PUSH_PTR, ptr, symbol.Name)
 	default:
 		return fmt.Errorf("uncompilable identifier: %s", symbol)
 	}
@@ -158,23 +160,20 @@ func (this *compiler) Invoke(node ast.Invoke, visit ast.Visiting) error {
 
 func (this *compiler) Number(node ast.Number, visit ast.Visiting) error {
 	idx := this.objects.InternNumber(float64(node))
-	this.pushConst(idx)
+	this.consts[idx] = struct{}{}
+	this.emit(code.PUSH_CONST, int(idx))
 	return nil
 }
 
 func (this *compiler) String(node ast.String, visit ast.Visiting) error {
 	idx := this.objects.InternStr(string(node))
-	this.pushConst(idx)
+	this.consts[idx] = struct{}{}
+	this.emit(code.PUSH_STR, int(idx))
 	return nil
 }
 
-func (this *compiler) pushConst(idx objects.Index) {
-	this.consts[idx] = struct{}{}
-	this.emit(code.PUSH_CONST, int(idx))
-}
-
-func (this *compiler) pushPtr(idx objects.Index, name string) {
+func (this *compiler) pushPtr(op code.Op, idx objects.Index, name string) {
 	this.consts[idx] = struct{}{}
 	this.names[idx] = name
-	this.emit(code.PUSH_CONST, int(idx))
+	this.emit(op, int(idx))
 }

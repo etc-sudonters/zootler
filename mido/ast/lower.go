@@ -53,13 +53,6 @@ func Lower(tbl *symbols.Table, node ruleparser.Tree) (Node, error) {
 			}
 			op := compareOps[node.Op]
 
-			if isSetting(tbl, lhs) || isSetting(tbl, rhs) {
-				return Invoke{
-					Target: IdentifierFrom(tbl.Declare("compare_setting", symbols.FUNCTION)),
-					Args:   []Node{Number(op), lhs, rhs},
-				}, nil
-			}
-
 			return Compare{
 				LHS: lhs,
 				RHS: rhs,

@@ -186,9 +186,6 @@ func installCompilerFunctions(these *settings.Zootr) mido.ConfigureCompiler {
 		}
 
 		hadNightStart := ConstCompileFunc(these.Starting.TimeOfDay.IsNight())
-
-		trueFunc := ConstCompileFunc(true)
-
 		for i, name := range settings.Names() {
 			symbol := env.Symbols.Declare(name, symbols.SETTING)
 			env.Objects.AssociateSymbol(
@@ -199,8 +196,6 @@ func installCompilerFunctions(these *settings.Zootr) mido.ConfigureCompiler {
 
 		mido.WithCompilerFunctions(func(*mido.CompileEnv) optimizer.CompilerFunctionTable {
 			return optimizer.CompilerFunctionTable{
-				"load_setting":           trueFunc,
-				"compare_setting":        trueFunc,
 				"region_has_shortcuts":   regionHasShortcuts,
 				"is_trick_enabled":       isTrickEnabled,
 				"had_night_start":        hadNightStart,

@@ -1,5 +1,7 @@
 package settings
 
+import "fmt"
+
 // this is actually two uint8
 // the upper bits describe what the condition is
 // the lower bits describe how much of that condition
@@ -21,8 +23,17 @@ func encodeqty(which Condition, qty uint8) quantitycondition {
 	return quantitycondition{(uint16(which) << 8) | uint16(qty)}
 }
 
-func Decode[C qc](c C) (which Condition, qty uint8) {
+func DecodeCondition[C qc](c C) (which Condition, qty uint8) {
 	return quantitycondition(c).Decode()
+}
+
+func ExpectedCondition[C qc](c C, which Condition) (uint8, bool) {
+	cond, qty := DecodeCondition(c)
+	if cond != which {
+		return 0, false
+	}
+
+	return qty, true
 }
 
 type LacsCondition quantitycondition
@@ -44,11 +55,33 @@ func CreateGanonBK(cond Condition, qty uint8) GanonBKCondition {
 type Condition uint8
 
 const (
-	CondMedallions Condition = iota + 1
+	CondDefault Condition = iota
+	CondMedallions
 	CondStones
 	CondRewards
 	CondTokens
 	CondHearts
-	CondDefault
 	CondOpen
 )
+
+func (this Condition) String() string {
+	switch this {
+
+	case CondMedallions:
+		return "medallions"
+	case CondStones:
+		return "stones"
+	case CondRewards:
+		return "rewards"
+	case CondTokens:
+		return "tokens"
+	case CondHearts:
+		return "hearts"
+	case CondDefault:
+		return "default"
+	case CondOpen:
+		return "open"
+	default:
+		panic(fmt.Errorf("unknown condition flag %x", uint8(this)))
+	}
+}

@@ -3,7 +3,7 @@ package settings
 func Default() Zootr {
 	var s Zootr
 	s.LogicRules = LogicGlitchess
-	s.TriforceHunt = nil
+	s.TriforceHunt = TriforceHunt{}
 	s.LacsCondition = CreateLacs(CondDefault, 0)
 	s.BridgeCondition = CreateBridge(CondMedallions, 6)
 	s.BlueFireArrows = false
@@ -104,6 +104,7 @@ func Default() Zootr {
 
 	s.Skips.EponaRace = true
 	s.Skips.TowerEscape = true
+	s.Skips.ChildZelda = true
 
 	s.Minigames.BigPoeCount = 1
 	s.Minigames.CollapsePhases = true

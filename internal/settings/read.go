@@ -2,204 +2,175 @@ package settings
 
 import (
 	"fmt"
-	"sudonters/zootler/internal/skelly/bitset32"
+	"math"
 )
-
-func (this *Zootr) Bitfield(name string) (bitset32.Bitset, error) {
-	var val bitset32.Bitset
-	switch name {
-	case "dungeon_shortcuts":
-		panic("not implemented for dungeon_shortcuts")
-	case "mq_dungeons_specific":
-		panic("not implemented for mq_dungeons_specific")
-	case "empty_dungeons_specific":
-		panic("not implemented for empty_dungeons_specific")
-	case "empty_dungeons_rewards":
-		panic("not implemented for empty_dungeons_rewards")
-	case "spawn_positions":
-		panic("not implemented for spawn_positions")
-	case "shuffle_child_trade":
-		panic("not implemented for shuffle_child_trade")
-	case "adult_trade_start":
-		panic("not implemented for adult_trade_start")
-	case "key_rings":
-		panic("not implemented for key_rings")
-	case "silver_rupee_pouches":
-		panic("not implemented for silver_rupee_pouches")
-	case "disabled_locations":
-		panic("not implemented for disabled_locations")
-	case "allowed_tricks":
-		panic("not implemented for allowed_tricks")
-	case "starting_items":
-		panic("not implemented for starting_items")
-	case "starting_equipment":
-		panic("not implemented for starting_equipment")
-	case "starting_inventory":
-		panic("not implemented for starting_inventory")
-	case "misc_hints":
-		panic("not implemented for misc_hints")
-	case "starting_songs":
-		panic("not implemented for starting_songs")
-	case "chest_textures_specific":
-		panic("not implemented for chest_textures_specific")
-	default:
-		return val, unknown(name)
-
-	}
-	return val, nil
-}
 
 func (this *Zootr) String(name string) (string, error) {
 	var val string
 	switch name {
 	case "logic_rules":
-		panic("not implemented for logic_rules")
+		val = this.LogicRules.String()
 	case "reachable_locations":
-		panic("not implemented for reachable_locations")
+		val = this.Locations.ReachableLocations.String()
 	case "lacs_condition":
-		panic("not implemented for lacs_condition")
+		cond, _ := DecodeCondition(this.LacsCondition)
+		val = cond.String()
 	case "bridge":
-		panic("not implemented for bridge")
+		cond, _ := DecodeCondition(this.BridgeCondition)
+		val = cond.String()
 	case "shuffle_ganon_bosskey":
-		panic("not implemented for shuffle_ganon_bosskey")
+		cond, _ := DecodeCondition(this.KeyShuffle.GanonBKCondition)
+		val = cond.String()
 	case "open_forest":
-		panic("not implemented for open_forest")
+		val = this.Locations.KokriForest.String()
 	case "open_kakariko":
-		panic("not implemented for open_kakariko")
+		val = this.Locations.Kakariko.String()
 	case "zora_fountain":
-		panic("not implemented for zora_fountain")
+		val = this.Locations.ZoraFountain.String()
 	case "gerudo_fortress":
-		panic("not implemented for gerudo_fortress")
-	case "dungeon_shortcuts_choice":
-		panic("not implemented for dungeon_shortcuts_choice")
-	case "starting_age":
-		panic("not implemented for starting_age")
-	case "mq_dungeons_mode":
-		panic("not implemented for mq_dungeons_mode")
-	case "empty_dungeons_mode":
-		panic("not implemented for empty_dungeons_mode")
-	case "shuffle_dungeon_entrances":
-		panic("not implemented for shuffle_dungeon_entrances")
-	case "shuffle_bosses":
-		panic("not implemented for shuffle_bosses")
-	case "shuffle_song_items":
-		panic("not implemented for shuffle_song_items")
-	case "shopsanity_prices":
-		panic("not implemented for shopsanity_prices")
-	case "shopsanity":
-		panic("not implemented for shopsanity")
-	case "tokensanity":
-		panic("not implemented for tokensanity")
+		val = this.Locations.GerudoFortress.String()
 	case "shuffle_scrubs":
-		panic("not implemented for shuffle_scrubs")
-	case "shuffle_freestanding_items":
-		panic("not implemented for shuffle_freestanding_items")
+		val = this.Shuffling.Scrubs.String()
 	case "shuffle_pots":
-		panic("not implemented for shuffle_pots")
+		val = this.Shuffling.Pots.String()
 	case "shuffle_crates":
-		panic("not implemented for shuffle_crates")
+		val = this.Shuffling.Crates.String()
 	case "shuffle_dungeon_rewards":
-		panic("not implemented for shuffle_dungeon_rewards")
-	case "shuffle_mapcompass":
-		panic("not implemented for shuffle_mapcompass")
-	case "shuffle_smallkeys":
-		panic("not implemented for shuffle_smallkeys")
-	case "shuffle_hideoutkeys":
-		panic("not implemented for shuffle_hideoutkeys")
-	case "shuffle_interior_entrances":
-		panic("not implemented for shuffle_interior_entrances")
-	case "shuffle_gerudo_fortress_heart_piece":
-		panic("not implemented for shuffle_gerudo_fortress_heart_piece")
+		val = this.Dungeons.Rewards.String()
 	case "shuffle_tcgkeys":
-		panic("not implemented for shuffle_tcgkeys")
-	case "key_rings_choice":
-		panic("not implemented for key_rings_choice")
-	case "shuffle_bosskeys":
-		panic("not implemented for shuffle_bosskeys")
-	case "shuffle_silver_rupees":
-		panic("not implemented for shuffle_silver_rupees")
-	case "silver_rupee_pouches_choice":
-		panic("not implemented for silver_rupee_pouches_choice")
+		val = this.KeyShuffle.TreasureChestGame.String()
 	case "hints":
-		panic("not implemented for hints")
-	case "hint_dist":
-		panic("not implemented for hint_dist")
-	case "correct_chest_appearances":
-		panic("not implemented for correct_chest_appearances")
-	case "ocarina_songs":
-		panic("not implemented for ocarina_songs")
+		val = this.HintsRevealed.String()
 	case "damage_multiplier":
-		panic("not implemented for damage_multiplier")
+		val = this.Damage.Multiplier.String()
 	case "deadly_bonks":
-		panic("not implemented for deadly_bonks")
-	case "starting_tod":
-		panic("not implemented for starting_tod")
-	case "item_pool_value":
-		panic("not implemented for item_pool_value")
-	case "junk_ice_traps":
-		panic("not implemented for junk_ice_traps")
-	case "ice_trap_appearance":
-		panic("not implemented for ice_trap_appearance")
-
+		val = this.Damage.Bonk.String()
+	case "shuffle_gerudo_fortress_heart_piece":
+		val = "remove"
 	default:
 		return val, unknown(name)
 	}
+	return val, nil
 }
 
 func (this *Zootr) Float64(name string) (float64, error) {
 	var val float64
 	switch name {
 	case "triforce_count_per_world":
-		panic("not implemented for triforce_count_per_world")
+		val = float64(this.TriforceHunt.CountPerWorld)
 	case "triforce_goal_per_world":
-		panic("not implemented for triforce_goal_per_world")
+		val = float64(this.TriforceHunt.GoalPerWorld)
 	case "lacs_medallions":
-		panic("not implemented for lacs_medallions")
+		qty, isCond := ExpectedCondition(this.LacsCondition, CondMedallions)
+		if isCond {
+			val = float64(qty)
+		} else {
+			val = math.MaxFloat64
+		}
 	case "lacs_stones":
-		panic("not implemented for lacs_stones")
+		qty, isCond := ExpectedCondition(this.LacsCondition, CondStones)
+		if isCond {
+			val = float64(qty)
+		} else {
+			val = math.MaxFloat64
+		}
 	case "lacs_rewards":
-		panic("not implemented for lacs_rewards")
+		qty, isCond := ExpectedCondition(this.LacsCondition, CondRewards)
+		if isCond {
+			val = float64(qty)
+		} else {
+			val = math.MaxFloat64
+		}
 	case "lacs_tokens":
-		panic("not implemented for lacs_tokens")
+		qty, isCond := ExpectedCondition(this.LacsCondition, CondTokens)
+		if isCond {
+			val = float64(qty)
+		} else {
+			val = math.MaxFloat64
+		}
 	case "lacs_hearts":
-		panic("not implemented for lacs_hearts")
+		qty, isCond := ExpectedCondition(this.LacsCondition, CondHearts)
+		if isCond {
+			val = float64(qty)
+		} else {
+			val = math.MaxFloat64
+		}
 	case "bridge_medallions":
-		panic("not implemented for bridge_medallions")
+		qty, isCond := ExpectedCondition(this.BridgeCondition, CondMedallions)
+		if isCond {
+			val = float64(qty)
+		} else {
+			val = math.MaxFloat64
+		}
 	case "bridge_stones":
-		panic("not implemented for bridge_stones")
+		qty, isCond := ExpectedCondition(this.BridgeCondition, CondStones)
+		if isCond {
+			val = float64(qty)
+		} else {
+			val = math.MaxFloat64
+		}
 	case "bridge_rewards":
-		panic("not implemented for bridge_rewards")
+		qty, isCond := ExpectedCondition(this.BridgeCondition, CondRewards)
+		if isCond {
+			val = float64(qty)
+		} else {
+			val = math.MaxFloat64
+		}
 	case "bridge_tokens":
-		panic("not implemented for bridge_tokens")
+		qty, isCond := ExpectedCondition(this.BridgeCondition, CondTokens)
+		if isCond {
+			val = float64(qty)
+		} else {
+			val = math.MaxFloat64
+		}
 	case "bridge_hearts":
-		panic("not implemented for bridge_hearts")
+		qty, isCond := ExpectedCondition(this.BridgeCondition, CondHearts)
+		if isCond {
+			val = float64(qty)
+		} else {
+			val = math.MaxFloat64
+		}
 	case "trials":
-		panic("not implemented for trials")
+		val = float64(this.Dungeons.Trials.Count())
+	case "ganon_bosskey_medallions":
+		qty, isCond := ExpectedCondition(this.KeyShuffle.GanonBKCondition, CondMedallions)
+		if isCond {
+			val = float64(qty)
+		} else {
+			val = math.MaxFloat64
+		}
 	case "ganon_bosskey_stones":
-		panic("not implemented for ganon_bosskey_stones")
+		qty, isCond := ExpectedCondition(this.KeyShuffle.GanonBKCondition, CondStones)
+		if isCond {
+			val = float64(qty)
+		} else {
+			val = math.MaxFloat64
+		}
 	case "ganon_bosskey_rewards":
-		panic("not implemented for ganon_bosskey_rewards")
+		qty, isCond := ExpectedCondition(this.KeyShuffle.GanonBKCondition, CondRewards)
+		if isCond {
+			val = float64(qty)
+		} else {
+			val = math.MaxFloat64
+		}
 	case "ganon_bosskey_tokens":
-		panic("not implemented for ganon_bosskey_tokens")
+		qty, isCond := ExpectedCondition(this.KeyShuffle.GanonBKCondition, CondTokens)
+		if isCond {
+			val = float64(qty)
+		} else {
+			val = math.MaxFloat64
+		}
 	case "ganon_bosskey_hearts":
-		panic("not implemented for ganon_bosskey_hearts")
-	case "mq_dungeons_count":
-		panic("not implemented for mq_dungeons_count")
-	case "empty_dungeons_count":
-		panic("not implemented for empty_dungeons_count")
-	case "starting_hearts":
-		panic("not implemented for starting_hearts")
-	case "fae_torch_count":
-		panic("not implemented for fae_torch_count")
+		qty, isCond := ExpectedCondition(this.KeyShuffle.GanonBKCondition, CondHearts)
+		if isCond {
+			val = float64(qty)
+		} else {
+			val = math.MaxFloat64
+		}
 	case "chicken_count":
-		panic("not implemented for chicken_count")
+		val = float64(this.Minigames.KakChickens)
 	case "big_poe_count":
-		panic("not implemented for big_poe_count")
-	case "custom_ice_trap_percent":
-		panic("not implemented for custom_ice_trap_percent")
-	case "custom_ice_trap_count":
-		panic("not implemented for custom_ice_trap_count")
-
+		val = float64(this.Minigames.BigPoeCount)
 	default:
 		return val, unknown(name)
 	}
@@ -211,110 +182,110 @@ func (this *Zootr) Bool(name string) (bool, error) {
 	var val bool
 	switch name {
 	case "trials_random":
-		panic("not implemented for trials_random")
+		val = this.Dungeons.RandomTrials
 	case "triforce_hunt":
-		panic("not implemented for triforce_hunt")
+		val = this.TriforceHunt.CountPerWorld != 0 && this.TriforceHunt.GoalPerWorld != 0
 	case "open_door_of_time":
-		panic("not implemented for open_door_of_time")
+		val = this.Locations.OpenDoorOfTime
 	case "shuffle_hideout_entrances":
-		panic("not implemented for shuffle_hideout_entrances")
+		val = this.Entrances.HideoutEntrances
 	case "shuffle_grotto_entrances":
-		panic("not implemented for shuffle_grotto_entrances")
+		val = this.Entrances.Grottos
 	case "shuffle_ganon_tower":
-		panic("not implemented for shuffle_ganon_tower")
+		val = this.Entrances.Tower
 	case "shuffle_overworld_entrances":
-		panic("not implemented for shuffle_overworld_entrances")
+		val = this.Entrances.Overworld
 	case "shuffle_gerudo_valley_river_exit":
-		panic("not implemented for shuffle_gerudo_valley_river_exit")
+		val = this.Entrances.ValleyExit
 	case "owl_drops":
-		panic("not implemented for owl_drops")
+		val = this.Entrances.OwlDrops
 	case "free_bombchu_drops":
-		panic("not implemented for free_bombchu_drops")
+		val = this.FreeBombchuDrops
 	case "warp_songs":
-		panic("not implemented for warp_songs")
+		val = this.Entrances.WarpSongs
 	case "adult_trade_shuffle":
-		panic("not implemented for adult_trade_shuffle")
+		val = Has(this.Trades.Adult, AdultTradeShuffle)
 	case "shuffle_empty_pots":
-		panic("not implemented for shuffle_empty_pots")
+		val = this.Shuffling.IncludeEmptyPots
 	case "shuffle_empty_crates":
-		panic("not implemented for shuffle_empty_crates")
+		val = this.Shuffling.IncludeEmptyCrates
 	case "shuffle_cows":
-		panic("not implemented for shuffle_cows")
+		val = this.Shuffling.Cows
 	case "shuffle_beehives":
-		panic("not implemented for shuffle_beehives")
+		val = this.Shuffling.Beehives
 	case "shuffle_wonderitems":
-		panic("not implemented for shuffle_wonderitems")
+		val = this.Shuffling.WonderItems
 	case "shuffle_kokiri_sword":
-		panic("not implemented for shuffle_kokiri_sword")
+		val = this.Shuffling.KokriSword
 	case "shuffle_ocarinas":
-		panic("not implemented for shuffle_ocarinas")
+		val = this.Shuffling.Ocarinas
 	case "shuffle_gerudo_card":
-		panic("not implemented for shuffle_gerudo_card")
+		val = this.Shuffling.GerudoCard
 	case "shuffle_beans":
-		panic("not implemented for shuffle_beans")
+		val = this.Shuffling.Beans
 	case "shuffle_expensive_merchants":
-		panic("not implemented for shuffle_expensive_merchants")
+		val = this.Shuffling.ExpensiveMerchants
 	case "shuffle_frog_song_rupees":
-		panic("not implemented for shuffle_frog_song_rupees")
-	case "shuffle_loach_reward":
-		panic("not implemented for shuffle_loach_reward")
+		val = this.Shuffling.FrogRupeeRewards
 	case "shuffle_individual_ocarina_notes":
-		panic("not implemented for shuffle_individual_ocarina_notes")
+		val = this.Shuffling.OcarinaNotes
 	case "keyring_give_bk":
-		panic("not implemented for keyring_give_bk")
+		val = Has(this.KeyShuffle.Keyrings, KeyRingsGiveBossKey)
 	case "enhance_map_compass":
-		panic("not implemented for enhance_map_compass")
+		val = this.EnhanceMapAndCompass
 	case "start_with_consumables":
-		panic("not implemented for start_with_consumables")
+		val = this.Starting.WithConsumables
 	case "start_with_rupees":
-		panic("not implemented for start_with_rupees")
+		val = this.Starting.Rupees != 0
 	case "skip_reward_from_rauru":
-		panic("not implemented for skip_reward_from_rauru")
+		val = this.Starting.RauruReward
 	case "no_escape_sequence":
-		panic("not implemented for no_escape_sequence")
+		val = this.Skips.TowerEscape
 	case "no_guard_stealth":
-		panic("not implemented for no_guard_stealth")
+		val = this.Skips.HyruleCastleStealth
 	case "no_epona_race":
-		panic("not implemented for no_epona_race")
+		val = this.Skips.EponaRace
 	case "skip_some_minigame_phases":
-		panic("not implemented for skip_some_minigame_phases")
+		val = this.Minigames.CollapsePhases
+	case "skip_child_zelda":
+		val = this.Skips.ChildZelda
 	case "complete_mask_quest":
-		panic("not implemented for complete_mask_quest")
+		val = this.Starting.CompleteMaskQuest
 	case "useful_cutscenes":
-		panic("not implemented for useful_cutscenes")
+		val = this.UsefulCutscenes
 	case "fast_chests":
-		panic("not implemented for fast_chests")
+		val = this.FastChests
 	case "free_scarecrow":
-		panic("not implemented for free_scarecrow")
-	case "fast_bunny_hood":
-		panic("not implemented for fast_bunny_hood")
-	case "auto_equip_masks":
-		panic("not implemented for auto_equip_masks")
+		val = this.Starting.Scarecrow
 	case "plant_beans":
-		panic("not implemented for plant_beans")
+		val = this.Starting.PlantBeans
 	case "easier_fire_arrow_entry":
-		panic("not implemented for easier_fire_arrow_entry")
+		val = this.Tricks.ShadowFireArrowEntry != 0
 	case "ruto_already_f1_jabu":
-		panic("not implemented for ruto_already_f1_jabu")
-	case "fast_shadow_boat":
-		panic("not implemented for fast_shadow_boat")
+		val = this.Skips.RutoAlreadyOnFloor1
 	case "chicken_count_random":
-		panic("not implemented for chicken_count_random")
+		val = this.Minigames.KakChickens != 0xFF
 	case "clearer_hints":
-		panic("not implemented for clearer_hints")
+		val = this.ClearerHints
 	case "blue_fire_arrows":
-		panic("not implemented for blue_fire_arrows")
+		val = this.BlueFireArrows
 	case "fix_broken_drops":
-		panic("not implemented for fix_broken_drops")
+		val = this.FixBrokenDrops
 	case "tcg_requires_lens":
-		panic("not implemented for tcg_requires_lens")
+		val = this.Minigames.TreasureChestGameRequiresLens
 	case "no_collectible_hearts":
-		panic("not implemented for no_collectible_hearts")
+		val = this.NoCollectibleHearts
 	case "one_item_per_dungeon":
-		panic("not implemented for one_item_per_dungeon")
+		val = this.Dungeons.OneItemPer
+	case "shuffle_interior_entrances":
+		val = this.Entrances.Interior != InteriorShuffleOff
+	case "shuffle_silver_rupees":
+		val = this.KeyShuffle.SilverRupees != KeysVanilla
 	default:
 		return val, unknown(name)
 	}
+
+	return val, nil
 }
 
 func unknown(name string) error {
