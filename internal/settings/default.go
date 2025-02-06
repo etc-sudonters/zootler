@@ -4,7 +4,7 @@ func Default() Zootr {
 	var s Zootr
 	s.LogicRules = LogicGlitchess
 	s.TriforceHunt = TriforceHunt{}
-	s.LacsCondition = CreateLacs(CondDefault, 0)
+	s.LacsCondition = CreateLacs(CondVanilla, 0)
 	s.BridgeCondition = CreateBridge(CondMedallions, 6)
 	s.BlueFireArrows = false
 	s.DisabledLocations = nil
@@ -14,6 +14,7 @@ func Default() Zootr {
 
 	s.KeyShuffle.BossKeys = KeysDungeon
 	s.KeyShuffle.GanonBKShuffle = GanonBKRemove
+	s.KeyShuffle.GanonBKCondition = CreateGanonBK(CondMedallions, 6)
 	s.KeyShuffle.HideoutKeys = KeysRemove
 	s.KeyShuffle.Keyrings = KeyRingsOff
 	s.KeyShuffle.SilverRupeePouches = SilverRupeesOff

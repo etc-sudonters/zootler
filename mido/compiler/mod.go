@@ -146,6 +146,14 @@ func (this *compiler) Invoke(node ast.Invoke, visit ast.Visiting) error {
 		return fmt.Errorf("%q expects %d arguments but received %d", def.Name, def.Params, argCount)
 	}
 
+	if def.Params == 0 {
+		ptr := this.objects.PtrFor(callee)
+		this.consts[ptr] = struct{}{}
+		this.names[ptr] = callee.Name
+		this.emit(code.INVOKE_0, int(ptr))
+		return nil
+	}
+
 	if argsErr := visit.All(node.Args); argsErr != nil {
 		return argsErr
 	}

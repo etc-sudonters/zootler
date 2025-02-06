@@ -16,6 +16,7 @@ type VM struct {
 	Objects *objects.Table
 	Funcs   objects.BuiltInFunctions
 	Std     *dontio.Std
+	ChkQty  objects.BuiltInFunction
 }
 
 func (this *VM) Execute(bytecode compiler.Bytecode) (obj objects.Object, err error) {
@@ -78,11 +79,6 @@ loop:
 			}
 			unit.stack.popN(count)
 			unit.stack.push(objects.PackBool(reduction))
-		case code.CHK_QTY:
-			ptr := unit.readIndex()
-			qty := unit.readu8()
-			_, _ = ptr, qty
-			unit.stack.push(objects.PackedTrue)
 		case code.INVOKE:
 			answer := objects.Null
 			obj := unit.stack.pop()
@@ -96,9 +92,36 @@ loop:
 			if answer != objects.Null {
 				unit.stack.push(answer)
 			}
+		case code.INVOKE_0:
+			index := unit.readIndex()
+			obj := this.Objects.AtIndex(index)
+			answer, err := this.Funcs.Call(this.Objects, obj, nil)
+			if err != nil {
+				break loop
+			}
+			if answer != objects.Null {
+				unit.stack.push(answer)
+			}
 		case code.CMP_EQ, code.CMP_NQ, code.CMP_LT:
 			err = fmt.Errorf("runtime comparison not implemented")
 			break loop
+		case code.CHK_QTY:
+			if this.ChkQty == nil {
+				err = fmt.Errorf("fastop 0x%02X not found in table", thisOp)
+				break loop
+			}
+
+			index := unit.readIndex()
+			qty := unit.readu8()
+			obj := this.Objects.AtIndex(index)
+			answer, err := this.ChkQty(this.Objects, []objects.Object{
+				obj, objects.PackF64(float64(qty)),
+			})
+			if err != nil {
+				break loop
+			}
+			unit.stack.push(answer)
+
 		case code.CHK_ALL, code.CHK_ANY, code.IS_CHILD, code.IS_ADULT:
 			err = fmt.Errorf("fastop 0x%02x not implemented", thisOp)
 			break loop

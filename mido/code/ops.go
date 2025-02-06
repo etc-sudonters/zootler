@@ -23,6 +23,7 @@ var definitions = map[Op]Defintion{
 	IS_CHILD:   {"IS_CHILD", IS_CHILD, nil},
 	IS_ADULT:   {"IS_ADULT", IS_ADULT, nil},
 	INVOKE:     {"INVOKE", INVOKE, []int{2}},
+	INVOKE_0:   {"INVOKE_0", INVOKE_0, []int{2}},
 	CMP_EQ:     {"CMP_EQ", CMP_EQ, nil},
 	CMP_NQ:     {"CMP_NQ", CMP_NQ, nil},
 	CMP_LT:     {"CMP_LT", CMP_LT, nil},
@@ -83,6 +84,7 @@ const (
 	IS_CHILD      = 0x44
 	IS_ADULT      = 0x45
 	INVOKE        = 0x51
+	INVOKE_0      = 0x52
 	CMP_EQ        = 0x61
 	CMP_NQ        = 0x62
 	CMP_LT        = 0x63

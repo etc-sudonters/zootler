@@ -1,6 +1,9 @@
 package settings
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
 // this is actually two uint8
 // the upper bits describe what the condition is
@@ -55,18 +58,22 @@ func CreateGanonBK(cond Condition, qty uint8) GanonBKCondition {
 type Condition uint8
 
 const (
-	CondDefault Condition = iota
+	CondUnitialized Condition = iota
+	CondDefault
 	CondMedallions
 	CondStones
 	CondRewards
 	CondTokens
 	CondHearts
 	CondOpen
+	CondVanilla
+	CondTriforce
 )
 
 func (this Condition) String() string {
 	switch this {
-
+	case CondUnitialized:
+		panic(errors.New("uninitialized condition"))
 	case CondMedallions:
 		return "medallions"
 	case CondStones:
@@ -81,6 +88,10 @@ func (this Condition) String() string {
 		return "default"
 	case CondOpen:
 		return "open"
+	case CondVanilla:
+		return "vanilla"
+	case CondTriforce:
+		return "triforce"
 	default:
 		panic(fmt.Errorf("unknown condition flag %x", uint8(this)))
 	}
