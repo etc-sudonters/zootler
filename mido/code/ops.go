@@ -18,10 +18,6 @@ var definitions = map[Op]Defintion{
 	NEED_ALL:   {"NEED_ALL", NEED_ALL, []int{2}},
 	NEED_ANY:   {"NEED_ANY", NEED_ANY, []int{2}},
 	CHK_QTY:    {"CHK_QTY", CHK_QTY, []int{2, 1}},
-	CHK_ALL:    {"CHK_ALL", CHK_ALL, []int{2}},
-	CHK_ANY:    {"CHK_ANY", CHK_ANY, []int{2}},
-	IS_CHILD:   {"IS_CHILD", IS_CHILD, nil},
-	IS_ADULT:   {"IS_ADULT", IS_ADULT, nil},
 	INVOKE:     {"INVOKE", INVOKE, []int{2}},
 	INVOKE_0:   {"INVOKE_0", INVOKE_0, []int{2}},
 	CMP_EQ:     {"CMP_EQ", CMP_EQ, nil},
@@ -79,10 +75,6 @@ const (
 	NEED_ALL      = 0x32
 	NEED_ANY      = 0x33
 	CHK_QTY       = 0x41
-	CHK_ALL       = 0x42
-	CHK_ANY       = 0x43
-	IS_CHILD      = 0x44
-	IS_ADULT      = 0x45
 	INVOKE        = 0x51
 	INVOKE_0      = 0x52
 	CMP_EQ        = 0x61
