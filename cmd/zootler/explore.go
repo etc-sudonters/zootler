@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"math/rand/v2"
 	"sudonters/zootler/cmd/zootler/bootstrap"
-	"sudonters/zootler/cmd/zootler/z16"
 	"sudonters/zootler/internal/query"
 	"sudonters/zootler/internal/settings"
 	"sudonters/zootler/internal/shufflequeue"
 	"sudonters/zootler/internal/table"
 	"sudonters/zootler/magicbean"
+	"sudonters/zootler/magicbean/tracking"
 	"sudonters/zootler/mido"
 	"sudonters/zootler/mido/objects"
 	"sudonters/zootler/zecs"
@@ -35,7 +35,7 @@ func fromStartingAge(start settings.StartingAge) Age {
 	}
 }
 
-func explore(ctx context.Context, xplr *magicbean.Exploration, generation *Generation, age Age) magicbean.ExplorationResults {
+func explore(ctx context.Context, xplr *magicbean.Exploration, generation *magicbean.Generation, age Age) magicbean.ExplorationResults {
 	pockets := magicbean.NewPockets(&generation.Inventory, &generation.Ocm)
 
 	var shuffleFlags magicbean.ShuffleFlags
@@ -83,7 +83,7 @@ func PtrsMatching(ocm *zecs.Ocm, query ...zecs.BuildQuery) []objects.Object {
 	return ptrs
 }
 
-func CollectStartingItems(generation *Generation) {
+func CollectStartingItems(generation *magicbean.Generation) {
 	ocm := &generation.Ocm
 	rng := &generation.Rng
 	these := &generation.Settings
@@ -95,11 +95,11 @@ func CollectStartingItems(generation *Generation) {
 	}
 	var starting []collecting
 
-	collect := func(token z16.Token, qty float64) {
+	collect := func(token tracking.Token, qty float64) {
 		starting = append(starting, collecting{token.Entity(), qty})
 	}
 
-	collectOneEach := func(token ...z16.Token) {
+	collectOneEach := func(token ...tracking.Token) {
 		new := make([]collecting, len(starting)+len(token))
 		copy(new[len(token):], starting)
 		for i, t := range token {
@@ -109,7 +109,7 @@ func CollectStartingItems(generation *Generation) {
 		starting = new
 	}
 
-	tokens := z16.NewTokens(ocm)
+	tokens := tracking.NewTokens(ocm)
 
 	if these.Locations.OpenDoorOfTime {
 		collect(tokens.MustGet("Time Travel"), 1)

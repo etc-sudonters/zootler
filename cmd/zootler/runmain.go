@@ -8,6 +8,7 @@ import (
 	"sudonters/zootler/internal"
 	"sudonters/zootler/internal/settings"
 	"sudonters/zootler/internal/skelly/bitset32"
+	"sudonters/zootler/magicbean/tracking"
 
 	"github.com/etc-sudonters/substrate/dontio"
 	"github.com/etc-sudonters/substrate/rng"
@@ -18,7 +19,6 @@ import (
 	"sudonters/zootler/magicbean"
 	"sudonters/zootler/mido"
 	"sudonters/zootler/mido/objects"
-	"sudonters/zootler/zecs"
 )
 
 func runMain(ctx context.Context, opts cliOptions) stageleft.ExitCode {
@@ -55,18 +55,10 @@ func runMain(ctx context.Context, opts cliOptions) stageleft.ExitCode {
 	return stageleft.ExitCode(0)
 }
 
-type Generation struct {
-	Ocm       zecs.Ocm
-	World     magicbean.ExplorableWorld
-	Objects   objects.Table
-	Inventory magicbean.Inventory
-	Rng       rand.Rand
-	Settings  settings.Zootr
-}
-
-func setup(paths bootstrap.LoadPaths, settings *settings.Zootr) (generation Generation) {
+func setup(paths bootstrap.LoadPaths, settings *settings.Zootr) (generation magicbean.Generation) {
 	ocm := bootstrap.Phase1_InitializeStorage(nil)
-	bootstrap.PanicWhenErr(bootstrap.Phase2_ImportFromFiles(&ocm, paths))
+	trackSet := tracking.NewTrackingSet(&ocm)
+	bootstrap.PanicWhenErr(bootstrap.Phase2_ImportFromFiles(&ocm, &trackSet, paths))
 
 	compileEnv := bootstrap.Phase3_ConfigureCompiler(&ocm, settings)
 

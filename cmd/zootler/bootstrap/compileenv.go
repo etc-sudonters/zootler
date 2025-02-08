@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-	"sudonters/zootler/cmd/zootler/z16"
 	"sudonters/zootler/internal/settings"
 	"sudonters/zootler/magicbean"
+	"sudonters/zootler/magicbean/tracking"
 	"sudonters/zootler/mido"
 	"sudonters/zootler/mido/ast"
 	"sudonters/zootler/mido/objects"
@@ -213,8 +213,8 @@ func installConnectionGenerator(ocm *zecs.Ocm) mido.ConfigureCompiler {
 	return func(env *mido.CompileEnv) {
 		env.Optimize.AddOptimizer(func(ce *mido.CompileEnv) ast.Rewriter {
 			var conngen ConnectionGenerator
-			conngen.Nodes = z16.NewNodes(ocm)
-			conngen.Tokens = z16.NewTokens(ocm)
+			conngen.Nodes = tracking.NewNodes(ocm)
+			conngen.Tokens = tracking.NewTokens(ocm)
 			conngen.Symbols = ce.Symbols
 			conngen.Objects = ce.Objects
 
@@ -232,8 +232,8 @@ func escape(name string) string {
 }
 
 type ConnectionGenerator struct {
-	Nodes   z16.Nodes
-	Tokens  z16.Tokens
+	Nodes   tracking.Nodes
+	Tokens  tracking.Tokens
 	Symbols *symbols.Table
 	Objects *objects.Builder
 }
@@ -250,13 +250,13 @@ func (this ConnectionGenerator) AddConnectionTo(region string, rule ast.Node) (*
 	token := this.Tokens.Named(tokenName)
 	placement := this.Nodes.Placement(magicbean.NameF("Place%s", suffix))
 
-	placement.Owns(token)
+	placement.Fixed(token)
 	ptr := objects.PackPtr32(objects.Ptr32{Tag: objects.PtrToken, Addr: objects.Addr32(token.Entity())})
 	token.Attach(magicbean.Event{}, ptr)
 
 	node := this.Nodes.Region(magicbean.Name(region))
 	edge := node.Has(placement)
-	edge.Attach(magicbean.RuleParsed{rule})
+	edge.Proxy.Attach(magicbean.RuleParsed{rule})
 
 	symbol := this.Symbols.Declare(string(tokenName), symbols.TOKEN)
 	this.Objects.AssociateSymbol(symbol, ptr)

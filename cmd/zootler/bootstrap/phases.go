@@ -2,9 +2,9 @@ package bootstrap
 
 import (
 	"slices"
-	"sudonters/zootler/cmd/zootler/z16"
 	"sudonters/zootler/internal/settings"
 	"sudonters/zootler/magicbean"
+	"sudonters/zootler/magicbean/tracking"
 	"sudonters/zootler/mido"
 	"sudonters/zootler/mido/ast"
 	"sudonters/zootler/mido/objects"
@@ -25,13 +25,11 @@ func Phase1_InitializeStorage(ddl []zecs.DDL) zecs.Ocm {
 	return ocm
 }
 
-func Phase2_ImportFromFiles(ocm *zecs.Ocm, paths LoadPaths) error {
-	tokens := z16.NewTokens(ocm)
-	nodes := z16.NewNodes(ocm)
+func Phase2_ImportFromFiles(ocm *zecs.Ocm, set *tracking.Set, paths LoadPaths) error {
 	PanicWhenErr(storeScripts(ocm, paths))
-	PanicWhenErr(storeTokens(tokens, paths))
-	PanicWhenErr(storePlacements(nodes, tokens, paths))
-	PanicWhenErr(storeRelations(nodes, tokens, paths))
+	PanicWhenErr(storeTokens(set.Tokens, paths))
+	PanicWhenErr(storePlacements(set.Nodes, set.Tokens, paths))
+	PanicWhenErr(storeRelations(set.Nodes, set.Tokens, paths))
 	return nil
 }
 

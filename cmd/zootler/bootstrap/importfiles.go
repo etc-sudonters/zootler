@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-	"sudonters/zootler/cmd/zootler/z16"
 	"sudonters/zootler/internal"
 	"sudonters/zootler/magicbean"
+	"sudonters/zootler/magicbean/tracking"
 	"sudonters/zootler/mido/optimizer"
 	"sudonters/zootler/zecs"
 
@@ -84,7 +84,7 @@ func storeScripts(ocm *zecs.Ocm, paths LoadPaths) error {
 	return nil
 }
 
-func storeTokens(tokens z16.Tokens, paths LoadPaths) error {
+func storeTokens(tokens tracking.Tokens, paths LoadPaths) error {
 	for _, raw := range paths.readtokens() {
 		var attachments zecs.Attaching
 		token := tokens.Named(name(raw.Name))
@@ -196,7 +196,7 @@ func storeTokens(tokens z16.Tokens, paths LoadPaths) error {
 	return nil
 }
 
-func storePlacements(nodes z16.Nodes, tokens z16.Tokens, paths LoadPaths) error {
+func storePlacements(nodes tracking.Nodes, tokens tracking.Tokens, paths LoadPaths) error {
 	for _, raw := range paths.readplacements() {
 		place := nodes.Placement(name(raw.Name))
 		if raw.Default != "" {
@@ -207,13 +207,13 @@ func storePlacements(nodes z16.Nodes, tokens z16.Tokens, paths LoadPaths) error 
 	return nil
 }
 
-func storeRelations(nodes z16.Nodes, tokens z16.Tokens, paths LoadPaths) error {
+func storeRelations(nodes tracking.Nodes, tokens tracking.Tokens, paths LoadPaths) error {
 	return paths.readrelationsdir(func(raw relations) error {
 		region := nodes.Region(name(raw.RegionName))
 
 		for exit, rule := range raw.Exits {
-			transit := region.Connects(nodes.Region(name(exit)))
-			transit.Edge.Attach(magicbean.RuleSource(rule), magicbean.EdgeTransit)
+			transit := region.ConnectsTo(nodes.Region(name(exit)))
+			transit.Proxy.Attach(magicbean.RuleSource(rule), magicbean.EdgeTransit)
 		}
 
 		for location, rule := range raw.Locations {
@@ -227,7 +227,7 @@ func storeRelations(nodes z16.Nodes, tokens z16.Tokens, paths LoadPaths) error {
 			token := tokens.Named(name(event))
 			token.Attach(magicbean.Event{})
 			placement := nodes.Placement(namef("%s %s", raw.RegionName, event))
-			placement.Owns(token)
+			placement.Fixed(token)
 			edge := region.Has(placement)
 			edge.Attach(magicbean.RuleSource(rule))
 		}
