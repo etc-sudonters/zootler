@@ -3,6 +3,7 @@ package magicbean
 import (
 	"fmt"
 	"regexp"
+	"sudonters/libzootr/internal/skelly/bitset32"
 	"sudonters/libzootr/mido/ast"
 	"sudonters/libzootr/mido/compiler"
 	"sudonters/libzootr/mido/objects"
@@ -32,7 +33,7 @@ type RuleParsed struct{ ast.Node }
 type RuleOptimized struct{ ast.Node }
 type RuleCompiled compiler.Bytecode
 
-type HeldAt zecs.Entity
+type Eligibility bitset32.Bitset
 type HoldsToken zecs.Entity
 type Empty struct{}
 type Generated struct{}

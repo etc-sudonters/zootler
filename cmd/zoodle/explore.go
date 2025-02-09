@@ -137,5 +137,5 @@ func OneOfRandomly(ocm *zecs.Ocm, rng *rand.Rand, query ...zecs.BuildQuery) zecs
 	matching := shufflequeue.From(rng, zecs.EntitiesMatching(ocm, query...))
 	randomly, err := matching.Dequeue()
 	bootstrap.PanicWhenErr(err)
-	return *randomly
+	return randomly
 }

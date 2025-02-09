@@ -42,7 +42,6 @@ func staticddl() []zecs.DDL {
 		sizedhash[magicbean.DefaultPlacement](2200),
 
 		columns.HashMapColumn[magicbean.CollectablePriority],
-		columns.HashMapColumn[magicbean.HeldAt],
 		columns.HashMapColumn[magicbean.HoldsToken],
 		columns.HashMapColumn[magicbean.HintRegion],
 		columns.HashMapColumn[magicbean.AltHintRegion],

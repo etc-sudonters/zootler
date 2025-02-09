@@ -3,6 +3,7 @@ package zecs
 import (
 	"fmt"
 	"slices"
+	"sudonters/libzootr/internal/skelly/bitset32"
 )
 
 type Proxy struct {
@@ -24,6 +25,10 @@ func (this *Proxy) AttachAll(values Values) error {
 
 func (this *Proxy) AttachFrom(from Attaching) error {
 	return this.AttachAll(from.vs)
+}
+
+func (this *Proxy) Membership() (bitset32.Bitset, error) {
+	return this.parent.eng.Membership(this.id)
 }
 
 type Attaching struct {

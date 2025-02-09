@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"reflect"
+	"sudonters/libzootr/internal"
 	"sudonters/libzootr/internal/bundle"
 	"sudonters/libzootr/internal/skelly/bitset32"
 	"sudonters/libzootr/internal/table"
@@ -101,6 +102,7 @@ type Engine interface {
 	SetValues(r table.RowId, vs table.Values) error
 	UnsetValues(r table.RowId, cs table.ColumnIds) error
 	ColumnIdFor(reflect.Type) (table.ColumnId, bool)
+	Membership(table.RowId) (bitset32.Bitset, error)
 }
 
 func MustColumnIdFor(typ reflect.Type, e Engine) table.ColumnId {
@@ -202,15 +204,19 @@ func (e engine) Retrieve(b Query) (bundle.Interface, error) {
 	predicate := makePredicate(q)
 	fill := bitset32.Bitset{}
 
-	for row, possessed := range e.tbl.Rows {
+	iter := table.Iterate(e.tbl)
+
+	for row, possessed := range iter.UnsafeRows {
 		if predicate.admit(possessed) {
-			fill.Set(uint32(row))
+			bitset32.Set(&fill, row)
 		}
 	}
 
 	var columns table.Columns
 	for _, col := range q.cols {
-		columns = append(columns, e.tbl.Cols[col])
+		column, err := e.tbl.Column(col)
+		internal.PanicOnError(err)
+		columns = append(columns, column)
 	}
 
 	return bundle.Bundle(fill, columns)
@@ -262,7 +268,8 @@ func (e *engine) GetValues(r table.RowId, cs table.ColumnIds) (table.ValueTuple,
 	vt.Cols = make(table.ColumnMetas, len(cs))
 	vt.Values = make(table.Values, len(cs))
 	for i, cid := range cs {
-		c := e.tbl.Cols[cid]
+		c, err := e.tbl.Column(cid)
+		internal.PanicOnError(err)
 		vt.Cols[i].Id = c.Id()
 		vt.Cols[i].T = c.Type()
 		vt.Values[i] = c.Column().Get(r)
@@ -281,6 +288,10 @@ func (e *engine) UnsetValues(r table.RowId, cs table.ColumnIds) error {
 	}
 
 	return nil
+}
+
+func (e *engine) Membership(r table.RowId) (bitset32.Bitset, error) {
+	return e.tbl.Membership(r)
 }
 
 func (e *engine) intoColId(v table.Value) (table.ColumnId, error) {
