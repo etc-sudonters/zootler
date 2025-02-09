@@ -2,8 +2,8 @@ package optimizer
 
 import (
 	"strings"
-	"sudonters/zootler/mido/ast"
-	"sudonters/zootler/mido/symbols"
+	"sudonters/libzootr/mido/ast"
+	"sudonters/libzootr/mido/symbols"
 )
 
 func PromoteTokens(tbl *symbols.Table) ast.Rewriter {

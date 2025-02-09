@@ -1,9 +1,9 @@
 package vm
 
 import (
-	"sudonters/zootler/mido/code"
-	"sudonters/zootler/mido/compiler"
-	"sudonters/zootler/mido/objects"
+	"sudonters/libzootr/mido/code"
+	"sudonters/libzootr/mido/compiler"
+	"sudonters/libzootr/mido/objects"
 )
 
 type execution struct {

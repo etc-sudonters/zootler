@@ -1,12 +1,12 @@
 package bootstrap
 
 import (
-	"sudonters/zootler/internal/query"
-	"sudonters/zootler/internal/table"
-	"sudonters/zootler/magicbean"
-	"sudonters/zootler/mido"
-	"sudonters/zootler/mido/optimizer"
-	"sudonters/zootler/zecs"
+	"sudonters/libzootr/internal/query"
+	"sudonters/libzootr/internal/table"
+	"sudonters/libzootr/magicbean"
+	"sudonters/libzootr/mido"
+	"sudonters/libzootr/mido/optimizer"
+	"sudonters/libzootr/zecs"
 )
 
 func parseall(ocm *zecs.Ocm, codegen *mido.CodeGen) error {

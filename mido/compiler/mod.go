@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"maps"
 	"slices"
-	"sudonters/zootler/mido/ast"
-	"sudonters/zootler/mido/code"
-	"sudonters/zootler/mido/objects"
-	"sudonters/zootler/mido/symbols"
+	"sudonters/libzootr/mido/ast"
+	"sudonters/libzootr/mido/code"
+	"sudonters/libzootr/mido/objects"
+	"sudonters/libzootr/mido/symbols"
 )
 
 type Bytecode struct {

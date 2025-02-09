@@ -1,8 +1,8 @@
 package indexes
 
 import (
-	"sudonters/zootler/internal/skelly/bitset32"
-	"sudonters/zootler/internal/table"
+	"sudonters/libzootr/internal/skelly/bitset32"
+	"sudonters/libzootr/internal/table"
 
 	"github.com/etc-sudonters/substrate/mirrors"
 )

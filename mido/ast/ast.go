@@ -2,8 +2,8 @@ package ast
 
 import (
 	"slices"
-	"sudonters/zootler/internal/ruleparser"
-	"sudonters/zootler/mido/symbols"
+	"sudonters/libzootr/internal/ruleparser"
+	"sudonters/libzootr/mido/symbols"
 
 	"github.com/etc-sudonters/substrate/peruse"
 )

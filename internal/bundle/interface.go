@@ -2,8 +2,8 @@ package bundle
 
 import (
 	"fmt"
-	"sudonters/zootler/internal/skelly/bitset32"
-	"sudonters/zootler/internal/table"
+	"sudonters/libzootr/internal/skelly/bitset32"
+	"sudonters/libzootr/internal/table"
 )
 
 type RowIter = func(table.RowId, table.ValueTuple) bool

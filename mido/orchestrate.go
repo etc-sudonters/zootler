@@ -3,13 +3,13 @@ package mido
 import (
 	"errors"
 	"fmt"
-	"sudonters/zootler/internal/ruleparser"
-	"sudonters/zootler/internal/settings"
-	"sudonters/zootler/mido/ast"
-	"sudonters/zootler/mido/compiler"
-	"sudonters/zootler/mido/objects"
-	"sudonters/zootler/mido/optimizer"
-	"sudonters/zootler/mido/symbols"
+	"sudonters/libzootr/internal/ruleparser"
+	"sudonters/libzootr/internal/settings"
+	"sudonters/libzootr/mido/ast"
+	"sudonters/libzootr/mido/compiler"
+	"sudonters/libzootr/mido/objects"
+	"sudonters/libzootr/mido/optimizer"
+	"sudonters/libzootr/mido/symbols"
 
 	"github.com/etc-sudonters/substrate/peruse"
 )

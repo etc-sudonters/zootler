@@ -1,6 +1,6 @@
 package tracking
 
-import "sudonters/zootler/zecs"
+import "sudonters/libzootr/zecs"
 
 type Set struct {
 	Nodes  Nodes

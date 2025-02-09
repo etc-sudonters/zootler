@@ -1,9 +1,9 @@
 package bootstrap
 
 import (
-	"sudonters/zootler/internal/skelly/graph32"
-	"sudonters/zootler/magicbean"
-	"sudonters/zootler/zecs"
+	"sudonters/libzootr/internal/skelly/graph32"
+	"sudonters/libzootr/magicbean"
+	"sudonters/libzootr/zecs"
 )
 
 func explorableworldfrom(ocm *zecs.Ocm) magicbean.ExplorableWorld {

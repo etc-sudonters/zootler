@@ -3,8 +3,8 @@ package columns
 import (
 	"fmt"
 	"reflect"
-	"sudonters/zootler/internal/skelly/bitset32"
-	"sudonters/zootler/internal/table"
+	"sudonters/libzootr/internal/skelly/bitset32"
+	"sudonters/libzootr/internal/table"
 )
 
 func SliceColumn[T any]() *table.ColumnBuilder {

@@ -5,20 +5,20 @@ import (
 	"math/rand/v2"
 	"os"
 	"path/filepath"
-	"sudonters/zootler/internal"
-	"sudonters/zootler/internal/settings"
-	"sudonters/zootler/internal/skelly/bitset32"
-	"sudonters/zootler/magicbean/tracking"
+	"sudonters/libzootr/internal"
+	"sudonters/libzootr/internal/settings"
+	"sudonters/libzootr/internal/skelly/bitset32"
+	"sudonters/libzootr/magicbean/tracking"
 
 	"github.com/etc-sudonters/substrate/dontio"
 	"github.com/etc-sudonters/substrate/rng"
 	"github.com/etc-sudonters/substrate/stageleft"
 
 	"runtime/pprof"
-	"sudonters/zootler/cmd/zootler/bootstrap"
-	"sudonters/zootler/magicbean"
-	"sudonters/zootler/mido"
-	"sudonters/zootler/mido/objects"
+	"sudonters/libzootr/cmd/zoodle/bootstrap"
+	"sudonters/libzootr/magicbean"
+	"sudonters/libzootr/mido"
+	"sudonters/libzootr/mido/objects"
 )
 
 func runMain(ctx context.Context, opts cliOptions) stageleft.ExitCode {

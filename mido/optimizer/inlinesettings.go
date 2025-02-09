@@ -2,10 +2,10 @@ package optimizer
 
 import (
 	"fmt"
-	"sudonters/zootler/internal"
-	"sudonters/zootler/internal/settings"
-	"sudonters/zootler/mido/ast"
-	"sudonters/zootler/mido/symbols"
+	"sudonters/libzootr/internal"
+	"sudonters/libzootr/internal/settings"
+	"sudonters/libzootr/mido/ast"
+	"sudonters/libzootr/mido/symbols"
 )
 
 type reader func(*settings.Zootr, string) ast.Node

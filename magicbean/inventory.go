@@ -1,7 +1,7 @@
 package magicbean
 
 import (
-	"sudonters/zootler/zecs"
+	"sudonters/libzootr/zecs"
 )
 
 func NewInventory() Inventory {

@@ -1,6 +1,6 @@
 package table
 
-import "sudonters/zootler/internal/skelly/bitset32"
+import "sudonters/libzootr/internal/skelly/bitset32"
 
 type Index interface {
 	Set(r RowId, v Value)

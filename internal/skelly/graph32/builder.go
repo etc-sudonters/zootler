@@ -1,7 +1,7 @@
 package graph32
 
 import (
-	"sudonters/zootler/internal/skelly/bitset32"
+	"sudonters/libzootr/internal/skelly/bitset32"
 )
 
 type Builder struct {

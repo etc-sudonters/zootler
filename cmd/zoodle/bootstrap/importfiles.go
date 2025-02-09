@@ -6,11 +6,11 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-	"sudonters/zootler/internal"
-	"sudonters/zootler/magicbean"
-	"sudonters/zootler/magicbean/tracking"
-	"sudonters/zootler/mido/optimizer"
-	"sudonters/zootler/zecs"
+	"sudonters/libzootr/internal"
+	"sudonters/libzootr/magicbean"
+	"sudonters/libzootr/magicbean/tracking"
+	"sudonters/libzootr/mido/optimizer"
+	"sudonters/libzootr/zecs"
 
 	"github.com/etc-sudonters/substrate/slipup"
 )

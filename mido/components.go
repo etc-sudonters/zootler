@@ -1,8 +1,8 @@
 package mido
 
 import (
-	"sudonters/zootler/mido/ast"
-	"sudonters/zootler/mido/compiler"
+	"sudonters/libzootr/mido/ast"
+	"sudonters/libzootr/mido/compiler"
 )
 
 type RawSource string

@@ -1,11 +1,11 @@
 package bootstrap
 
 import (
-	"sudonters/zootler/internal/table"
-	"sudonters/zootler/internal/table/columns"
-	"sudonters/zootler/magicbean"
-	"sudonters/zootler/mido/symbols"
-	"sudonters/zootler/zecs"
+	"sudonters/libzootr/internal/table"
+	"sudonters/libzootr/internal/table/columns"
+	"sudonters/libzootr/magicbean"
+	"sudonters/libzootr/mido/symbols"
+	"sudonters/libzootr/zecs"
 )
 
 func sizedslice[T zecs.Value](size uint32) zecs.DDL {

@@ -3,9 +3,9 @@ package zecs
 import (
 	"errors"
 	"fmt"
-	"sudonters/zootler/internal/bundle"
-	"sudonters/zootler/internal/query"
-	"sudonters/zootler/internal/table"
+	"sudonters/libzootr/internal/bundle"
+	"sudonters/libzootr/internal/query"
+	"sudonters/libzootr/internal/table"
 )
 
 type Entity = table.RowId

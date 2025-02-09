@@ -3,8 +3,8 @@ package optimizer
 import (
 	"errors"
 	"fmt"
-	"sudonters/zootler/mido/ast"
-	"sudonters/zootler/mido/symbols"
+	"sudonters/libzootr/mido/ast"
+	"sudonters/libzootr/mido/symbols"
 )
 
 type currentKey string

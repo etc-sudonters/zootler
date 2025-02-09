@@ -3,7 +3,7 @@ package magicbean
 import (
 	"maps"
 	"slices"
-	"sudonters/zootler/zecs"
+	"sudonters/libzootr/zecs"
 )
 
 func NewPockets(inventory *Inventory, ocm *zecs.Ocm) Pocket {

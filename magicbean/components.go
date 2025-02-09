@@ -3,10 +3,10 @@ package magicbean
 import (
 	"fmt"
 	"regexp"
-	"sudonters/zootler/mido/ast"
-	"sudonters/zootler/mido/compiler"
-	"sudonters/zootler/mido/objects"
-	"sudonters/zootler/zecs"
+	"sudonters/libzootr/mido/ast"
+	"sudonters/libzootr/mido/compiler"
+	"sudonters/libzootr/mido/objects"
+	"sudonters/libzootr/zecs"
 )
 
 type Name string

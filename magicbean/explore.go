@@ -3,14 +3,14 @@ package magicbean
 import (
 	"context"
 	"fmt"
-	"sudonters/zootler/internal"
-	"sudonters/zootler/internal/skelly/bitset32"
-	"sudonters/zootler/internal/skelly/graph32"
-	"sudonters/zootler/mido"
-	"sudonters/zootler/mido/code"
-	"sudonters/zootler/mido/compiler"
-	"sudonters/zootler/mido/objects"
-	"sudonters/zootler/zecs"
+	"sudonters/libzootr/internal"
+	"sudonters/libzootr/internal/skelly/bitset32"
+	"sudonters/libzootr/internal/skelly/graph32"
+	"sudonters/libzootr/mido"
+	"sudonters/libzootr/mido/code"
+	"sudonters/libzootr/mido/compiler"
+	"sudonters/libzootr/mido/objects"
+	"sudonters/libzootr/zecs"
 
 	"github.com/etc-sudonters/substrate/dontio"
 )

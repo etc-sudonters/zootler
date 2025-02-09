@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"sudonters/zootler/internal/ruleparser"
-	"sudonters/zootler/mido/symbols"
+	"sudonters/libzootr/internal/ruleparser"
+	"sudonters/libzootr/mido/symbols"
 )
 
 var (

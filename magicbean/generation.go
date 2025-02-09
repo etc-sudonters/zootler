@@ -2,10 +2,10 @@ package magicbean
 
 import (
 	"math/rand/v2"
-	"sudonters/zootler/internal/settings"
+	"sudonters/libzootr/internal/settings"
 
-	"sudonters/zootler/mido/objects"
-	"sudonters/zootler/zecs"
+	"sudonters/libzootr/mido/objects"
+	"sudonters/libzootr/zecs"
 )
 
 type Generation struct {

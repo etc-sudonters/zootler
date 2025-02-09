@@ -2,14 +2,14 @@ package bootstrap
 
 import (
 	"slices"
-	"sudonters/zootler/internal/settings"
-	"sudonters/zootler/magicbean"
-	"sudonters/zootler/magicbean/tracking"
-	"sudonters/zootler/mido"
-	"sudonters/zootler/mido/ast"
-	"sudonters/zootler/mido/objects"
-	"sudonters/zootler/mido/optimizer"
-	"sudonters/zootler/zecs"
+	"sudonters/libzootr/internal/settings"
+	"sudonters/libzootr/magicbean"
+	"sudonters/libzootr/magicbean/tracking"
+	"sudonters/libzootr/mido"
+	"sudonters/libzootr/mido/ast"
+	"sudonters/libzootr/mido/objects"
+	"sudonters/libzootr/mido/optimizer"
+	"sudonters/libzootr/zecs"
 )
 
 func PanicWhenErr(err error) {

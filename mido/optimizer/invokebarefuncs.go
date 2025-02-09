@@ -2,8 +2,8 @@ package optimizer
 
 import (
 	"fmt"
-	"sudonters/zootler/mido/ast"
-	"sudonters/zootler/mido/symbols"
+	"sudonters/libzootr/mido/ast"
+	"sudonters/libzootr/mido/symbols"
 )
 
 func InvokeBareFuncs(symbols *symbols.Table, funcs *ScriptedFunctions) ast.Rewriter {

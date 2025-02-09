@@ -1,8 +1,8 @@
 package tracking
 
 import (
-	"sudonters/zootler/magicbean"
-	"sudonters/zootler/zecs"
+	"sudonters/libzootr/magicbean"
+	"sudonters/libzootr/zecs"
 )
 
 type namedents = zecs.Tracked[magicbean.Name]

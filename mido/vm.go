@@ -1,5 +1,5 @@
 package mido
 
-import "sudonters/zootler/mido/vm"
+import "sudonters/libzootr/mido/vm"
 
 type VM = vm.VM

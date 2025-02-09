@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"io"
 	"runtime/debug"
-	"sudonters/zootler/mido/code"
-	"sudonters/zootler/mido/compiler"
-	"sudonters/zootler/mido/objects"
+	"sudonters/libzootr/mido/code"
+	"sudonters/libzootr/mido/compiler"
+	"sudonters/libzootr/mido/objects"
 
 	"github.com/etc-sudonters/substrate/dontio"
 )

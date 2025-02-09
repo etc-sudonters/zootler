@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
-	"sudonters/zootler/internal/skelly/bitset32"
+	"sudonters/libzootr/internal/skelly/bitset32"
 
 	"github.com/etc-sudonters/substrate/mirrors"
 )

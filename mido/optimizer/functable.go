@@ -3,9 +3,9 @@ package optimizer
 import (
 	"fmt"
 	"strings"
-	"sudonters/zootler/internal/ruleparser"
-	"sudonters/zootler/mido/ast"
-	"sudonters/zootler/mido/symbols"
+	"sudonters/libzootr/internal/ruleparser"
+	"sudonters/libzootr/mido/ast"
+	"sudonters/libzootr/mido/symbols"
 
 	"github.com/etc-sudonters/substrate/peruse"
 )

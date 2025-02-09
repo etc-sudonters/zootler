@@ -1,4 +1,4 @@
-module sudonters/zootler
+module sudonters/libzootr
 
 go 1.23.0
 

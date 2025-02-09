@@ -2,8 +2,8 @@ package magicbean
 
 import (
 	"fmt"
-	"sudonters/zootler/mido/objects"
-	"sudonters/zootler/zecs"
+	"sudonters/libzootr/mido/objects"
+	"sudonters/libzootr/zecs"
 )
 
 func ConstBool(b bool) objects.BuiltInFunction {
@@ -17,19 +17,19 @@ func ConstBool(b bool) objects.BuiltInFunction {
 }
 
 type BuiltIns struct {
-	CheckTodAccess    objects.BuiltInFunction `zootler:"check_tod_access,params=1"`
-	Has               objects.BuiltInFunction `zootler:"has,params=2"`
-	HasAnyOf          objects.BuiltInFunction `zootler:"has_anyof,params=-1"`
-	HasBottle         objects.BuiltInFunction `zootler:"has_bottle,params=0"`
-	HasDungeonRewards objects.BuiltInFunction `zootler:"has_dungeon_rewards,params=1"`
-	HasEvery          objects.BuiltInFunction `zootler:"has_every,params=-1"`
-	HasHearts         objects.BuiltInFunction `zootler:"has_hearts,params=1"`
-	HasMedallions     objects.BuiltInFunction `zootler:"has_medallions,params=1"`
-	HasNotesForSong   objects.BuiltInFunction `zootler:"has_notes_for_song,params=1"`
-	HasStones         objects.BuiltInFunction `zootler:"has_stones,params=1"`
-	IsAdult           objects.BuiltInFunction `zootler:"is_adult,params=0"`
-	IsChild           objects.BuiltInFunction `zootler:"is_child,params=0"`
-	IsStartingAge     objects.BuiltInFunction `zootler:"is_starting_age,params=0"`
+	CheckTodAccess    objects.BuiltInFunction `libzootr:"check_tod_access,params=1"`
+	Has               objects.BuiltInFunction `libzootr:"has,params=2"`
+	HasAnyOf          objects.BuiltInFunction `libzootr:"has_anyof,params=-1"`
+	HasBottle         objects.BuiltInFunction `libzootr:"has_bottle,params=0"`
+	HasDungeonRewards objects.BuiltInFunction `libzootr:"has_dungeon_rewards,params=1"`
+	HasEvery          objects.BuiltInFunction `libzootr:"has_every,params=-1"`
+	HasHearts         objects.BuiltInFunction `libzootr:"has_hearts,params=1"`
+	HasMedallions     objects.BuiltInFunction `libzootr:"has_medallions,params=1"`
+	HasNotesForSong   objects.BuiltInFunction `libzootr:"has_notes_for_song,params=1"`
+	HasStones         objects.BuiltInFunction `libzootr:"has_stones,params=1"`
+	IsAdult           objects.BuiltInFunction `libzootr:"is_adult,params=0"`
+	IsChild           objects.BuiltInFunction `libzootr:"is_child,params=0"`
+	IsStartingAge     objects.BuiltInFunction `libzootr:"is_starting_age,params=0"`
 }
 
 func (this BuiltIns) Table() objects.BuiltInFunctions {

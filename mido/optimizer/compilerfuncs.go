@@ -1,8 +1,8 @@
 package optimizer
 
 import (
-	"sudonters/zootler/mido/ast"
-	"sudonters/zootler/mido/symbols"
+	"sudonters/libzootr/mido/ast"
+	"sudonters/libzootr/mido/symbols"
 )
 
 type CompilerFunction func([]ast.Node, ast.Rewriting) (ast.Node, error)

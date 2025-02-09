@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"math"
 	"slices"
-	"sudonters/zootler/mido/symbols"
+	"sudonters/libzootr/mido/symbols"
 )
 
 const MAX_STR_SIZE = math.MaxUint8

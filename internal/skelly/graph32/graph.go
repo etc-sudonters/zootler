@@ -3,7 +3,7 @@ package graph32
 import (
 	"errors"
 	"fmt"
-	"sudonters/zootler/internal/skelly/bitset32"
+	"sudonters/libzootr/internal/skelly/bitset32"
 )
 
 // an entity in the graph
