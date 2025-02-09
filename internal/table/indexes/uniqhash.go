@@ -1,10 +1,10 @@
 package indexes
 
 import (
+	"sudonters/zootler/internal/skelly/bitset32"
 	"sudonters/zootler/internal/table"
 
 	"github.com/etc-sudonters/substrate/mirrors"
-	"github.com/etc-sudonters/substrate/skelly/bitset"
 )
 
 type TableHashingFunc[T comparable] func(table.Value) (T, bool)
@@ -60,12 +60,12 @@ func (h *UniqueHashIndex[TIndex]) Unset(e table.RowId) {
 	}
 }
 
-func (h *UniqueHashIndex[TIndex]) Rows(c table.Value) (b bitset.Bitset64) {
+func (h *UniqueHashIndex[TIndex]) Rows(c table.Value) (b bitset32.Bitset) {
 	idx, hashed := h.hasher(c)
 	if hashed {
 		entity, exists := h.members[idx]
 		if exists {
-			b.Set(uint64(entity))
+			b.Set(uint32(entity))
 		}
 	}
 

@@ -1,10 +1,10 @@
 package settings
 
-func Default() ZootrSettings {
-	var s ZootrSettings
+func Default() Zootr {
+	var s Zootr
 	s.LogicRules = LogicGlitchess
-	s.TriforceHunt = nil
-	s.LacsCondition = CreateLacs(CondDefault, 0)
+	s.TriforceHunt = TriforceHunt{}
+	s.LacsCondition = CreateLacs(CondVanilla, 0)
 	s.BridgeCondition = CreateBridge(CondMedallions, 6)
 	s.BlueFireArrows = false
 	s.DisabledLocations = nil
@@ -14,6 +14,7 @@ func Default() ZootrSettings {
 
 	s.KeyShuffle.BossKeys = KeysDungeon
 	s.KeyShuffle.GanonBKShuffle = GanonBKRemove
+	s.KeyShuffle.GanonBKCondition = CreateGanonBK(CondMedallions, 6)
 	s.KeyShuffle.HideoutKeys = KeysRemove
 	s.KeyShuffle.Keyrings = KeyRingsOff
 	s.KeyShuffle.SilverRupeePouches = SilverRupeesOff
@@ -104,6 +105,7 @@ func Default() ZootrSettings {
 
 	s.Skips.EponaRace = true
 	s.Skips.TowerEscape = true
+	s.Skips.ChildZelda = true
 
 	s.Minigames.BigPoeCount = 1
 	s.Minigames.CollapsePhases = true

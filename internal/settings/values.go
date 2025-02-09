@@ -1,6 +1,10 @@
 package settings
 
-import "github.com/etc-sudonters/substrate/slipup"
+import (
+	"fmt"
+
+	"github.com/etc-sudonters/substrate/slipup"
+)
 
 const (
 	Forest Medallions = 0b00000001
@@ -22,6 +26,26 @@ const (
 	TrialsEnabledSpirit               = TrialsEnabled(Spirit)
 	TrialsEnabledLight                = TrialsEnabled(Light)
 )
+
+func (this TrialsEnabled) Count() uint8 {
+	switch this {
+	case TrialsEnabledNone:
+		return 0
+	case TrialsEnabledAll:
+		return 6
+	case TrialsEnabledRandom:
+		panic("cannot count random trials")
+	default:
+		var count uint8
+		every := []TrialsEnabled{TrialsEnabledForest, TrialsEnabledFire, TrialsEnabledWater, TrialsEnabledShadow, TrialsEnabledSpirit, TrialsEnabledLight}
+		for _, trial := range every {
+			if Has(this, trial) {
+				count++
+			}
+		}
+		return count
+	}
+}
 
 const (
 	KeyRingsRandom        Keyrings = 0b1010101010101010
@@ -46,10 +70,37 @@ const (
 	LogicNone                   = 8
 )
 
+func (this LogicRuleSet) String() string {
+	switch this {
+	case LogicGlitchess:
+		return "glitchless"
+	case LogicGlitched:
+		return "glitched"
+	case LogicNone:
+		return "none"
+	default:
+		panic(fmt.Errorf("unknown logic set %x", uint8(this)))
+	}
+}
+
 const (
-	ReachableAll      ReachableLocations = 2
-	ReachableRequired                    = 4
+	ReachableAll       ReachableLocations = 2
+	ReachableRequired                     = 4
+	ReachableGoalsOnly                    = 8
 )
+
+func (this ReachableLocations) String() string {
+	switch this {
+	case ReachableAll:
+		return "all"
+	case ReachableGoalsOnly:
+		return "goals"
+	case ReachableRequired:
+		return "beatable"
+	default:
+		panic(fmt.Errorf("unknown reachable setting %x", uint8(this)))
+	}
+}
 
 const (
 	GanonBKRemove GanonBKShuffleKind = 1 << iota
@@ -78,8 +129,30 @@ const (
 	DungeonRewardAnywhere
 )
 
+func (this DungeonRewardShuffle) String() string {
+	switch this {
+	case DungeonRewardVanilla:
+		return "vanilla"
+	case DungeonRewardComplete:
+		return "complete"
+	case DungeonRewardDungeon:
+		return "dungeon"
+	case DungeonRewardRegional:
+		return "regional"
+	case DungeonRewardOverworld:
+		return "overworld"
+	case DungeonRewardAnyDungeon:
+		return "any_dungeon"
+	case DungeonRewardAnywhere:
+		return "anywhere"
+	default:
+		panic(fmt.Errorf("unknown dungeon reward shuffle value %x", uint8(this)))
+	}
+
+}
+
 const (
-	KeysVanilla KeyShuffle = 1 << iota
+	KeysVanilla KeyShuffle = iota
 	KeysRemove
 	KeysDungeon
 	KeysRegional
@@ -87,6 +160,29 @@ const (
 	KeysAnyDungeon
 	KeysAnywhere
 )
+
+func (this KeyShuffle) String() string {
+	switch this {
+	case KeysVanilla:
+		return "vanilla"
+	case KeysRemove:
+		return "remove"
+	case KeysDungeon:
+		return "dungeon"
+	case KeysRegional:
+		return "regional"
+	case KeysOverworld:
+		return "overworld"
+	case KeysAnyDungeon:
+		return "any_dungeon"
+	case KeysAnywhere:
+		return "keysanity"
+
+	default:
+		panic(fmt.Errorf("unknown keyshuffle setting %x", uint8(this)))
+	}
+
+}
 
 const (
 	SilverRupeesOff              SilverRupeePouches = 0b00000000000000000000000000000000
@@ -133,11 +229,37 @@ const (
 	KokriForestDekuClosed
 )
 
+func (this OpenForest) String() string {
+	switch this {
+	case KokriForestClosed:
+		return "closed"
+	case KokriForestOpen:
+		return "open"
+	case KokriForestDekuClosed:
+		return "closed_deku"
+	default:
+		panic(fmt.Errorf("unknown open forest value %x", uint8(this)))
+	}
+}
+
 const (
 	KakGateClosed OpenKak = iota
 	KakGateLetter
 	KakGateOpen
 )
+
+func (this OpenKak) String() string {
+	switch this {
+	case KakGateClosed:
+		return "closed"
+	case KakGateLetter:
+		return "zelda"
+	case KakGateOpen:
+		return "open"
+	default:
+		panic(fmt.Errorf("unknown open kak setting %x", uint8(this)))
+	}
+}
 
 const (
 	ZoraFountainClosed OpenZoraFountain = iota
@@ -165,6 +287,19 @@ const (
 	GerudoFortressFast
 	GerudoFortressOpen
 )
+
+func (this GerudoFortress) String() string {
+	switch this {
+	case GerudoFortressNormal:
+		return "normal"
+	case GerudoFortressFast:
+		return "fast"
+	case GerudoFortressOpen:
+		return "open"
+	default:
+		panic(fmt.Errorf("unknown Gerudo fortress setting %x", uint8(this)))
+	}
+}
 
 const (
 	ShortcutsOff    DungeonShortcuts = 0b0000000000000000
@@ -288,6 +423,24 @@ const (
 	ShuffleScrubsRandom                    = 4
 )
 
+func (this ShuffleScrubs) String() string {
+	switch this {
+	case ShuffleScrubsOff:
+		return "really off"
+	case ShuffleScrubsUpgradeOnly:
+		return "off"
+	case ShuffleScrubsAffordable:
+		return "low"
+	case ShuffleScrubsExpensive:
+		return "regular"
+	case ShuffleScrubsRandom:
+		return "random"
+	default:
+		panic(fmt.Errorf("unknown scrub shuffle setting %x", uint8(this)))
+	}
+
+}
+
 const (
 	ShuffleFreestandingsOff       ShuffleFreestandings = 0
 	ShuffleFreestandingsDungeon                        = 1
@@ -296,17 +449,47 @@ const (
 
 const (
 	ShufflePotsOff       ShufflePots = 0
-	ShuffleEmptyPots                 = 1
+	ShufflePotsAll                   = 1
 	ShufflePotsDungeons              = 2
 	ShufflePotsOverworld             = 4
 )
 
+func (this ShufflePots) String() string {
+	switch this {
+	case ShufflePotsOff:
+		return "off"
+	case ShufflePotsAll:
+		return "all"
+	case ShufflePotsDungeons:
+		return "dungeons"
+	case ShufflePotsOverworld:
+		return "overworld"
+	default:
+		panic(fmt.Errorf("unknown pot shuffle value %x", uint8(this)))
+	}
+}
+
 const (
 	ShuffleCratesOff       ShuffleCrates = 0
-	ShuffleEmptyCrates                   = 1
+	ShuffleCratesAll                     = 1
 	ShuffleCratesDungeons                = 2
 	ShuffleCratesOverworld               = 4
 )
+
+func (this ShuffleCrates) String() string {
+	switch this {
+	case ShuffleCratesOff:
+		return "off"
+	case ShuffleCratesAll:
+		return "all"
+	case ShuffleCratesDungeons:
+		return "dungeons"
+	case ShuffleCratesOverworld:
+		return "overworld"
+	default:
+		panic(fmt.Errorf("unknown crate shuffle value %x", uint8(this)))
+	}
+}
 
 const (
 	ShuffleLoachRewardOff     ShuffleLoachReward = 0
@@ -326,6 +509,22 @@ const (
 	HintsRevealedStone                = 2
 	HintsRevealedAlways               = 4
 )
+
+func (this HintsRevealed) String() string {
+	switch this {
+	case HintsRevealedNever:
+		return "none"
+	case HintsRevealedMask:
+		return "mask"
+	case HintsRevealedStone:
+		return "agony"
+	case HintsRevealedAlways:
+		return "always"
+
+	default:
+		panic(fmt.Errorf("unknown hints value %x", uint8(this)))
+	}
+}
 
 const (
 	DamageMultiplierHalf   DamageMultiplier = 0
@@ -393,6 +592,18 @@ const (
 	StartingTimeOfDayWitching
 )
 
+func (this StartingTimeOfDay) IsNight() bool {
+	switch this {
+	case StartingTimeOfDayEvening,
+		StartingTimeOfDaySunset,
+		StartingTimeOfDayMidnight,
+		StartingTimeOfDayWitching:
+		return true
+	default:
+		return false
+	}
+}
+
 const (
 	ItemPoolMinimal ItemPool = iota
 	ItemPoolScarce
@@ -448,7 +659,3 @@ const (
 	ForestTempleAmyMeg                    = 1
 	ForestTempleJoBeth                    = 2
 )
-
-func HasFlag[F ~uint8 | ~uint16 | ~uint32 | ~uint64](value, flag F) bool {
-	return value&flag == flag
-}

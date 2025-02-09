@@ -9,11 +9,11 @@ func Has[F flagged](setting, expecting F) bool {
 
 }
 
-type ZootrSettings struct {
+type Zootr struct {
 	Seed            uint64
 	Worlds          uint8
 	LogicRules      LogicRuleSet
-	TriforceHunt    *TriforceHunt
+	TriforceHunt    TriforceHunt
 	LacsCondition   LacsCondition
 	BridgeCondition BridgeCondition
 	KeyShuffle      KeyShuffling
@@ -31,11 +31,16 @@ type ZootrSettings struct {
 	ItemPool        ItemPool
 
 	// uncategorized
-	BlueFireArrows    bool
-	DisabledLocations []string
-	FixBrokenDrops    bool
-	FreeBombchuDrops  bool
-	HintsRevealed     HintsRevealed
+	BlueFireArrows       bool
+	DisabledLocations    []string
+	FixBrokenDrops       bool
+	FreeBombchuDrops     bool
+	HintsRevealed        HintsRevealed
+	ClearerHints         bool
+	EnhanceMapAndCompass bool
+	UsefulCutscenes      bool
+	FastChests           bool
+	NoCollectibleHearts  bool
 }
 
 type LogicRuleSet uint8
@@ -121,7 +126,9 @@ type Tricks struct {
 type Skips struct {
 	TowerEscape bool
 	EponaRace   bool
+	ChildZelda  bool
 
+	RutoAlreadyOnFloor1 bool
 	HyruleCastleStealth bool
 }
 
@@ -129,29 +136,32 @@ type Minigames struct {
 	CollapsePhases bool
 	KakChickens    uint8
 	BigPoeCount    uint8
+
+	TreasureChestGameRequiresLens bool
 }
 
 type Shuffling struct {
-	Beans                  bool
-	Beehives               bool
-	Cows                   bool
-	Crates                 ShuffleCrates
-	ExpensiveMerchants     bool
-	Freestandings          ShuffleFreestandings
-	FrogRupeeRewards       bool
-	GerudoCard             bool
-	KokriSword             bool
-	LoachReward            ShuffleLoachReward
-	NightTokensWithoutSuns bool
-	OcarinaNotes           bool
-	Ocarinas               bool
-	Pots                   ShufflePots
-	Scrubs                 ShuffleScrubs
-	Shops                  ShuffleShops
-	SongPatterns           ShuffleSongPatterns
-	Songs                  ShuffleSongs
-	Tokens                 ShuffleTokens
-	WonderItems            bool
+	Beans                                bool
+	Beehives                             bool
+	Cows                                 bool
+	Crates                               ShuffleCrates
+	ExpensiveMerchants                   bool
+	Freestandings                        ShuffleFreestandings
+	FrogRupeeRewards                     bool
+	GerudoCard                           bool
+	KokriSword                           bool
+	LoachReward                          ShuffleLoachReward
+	NightTokensWithoutSuns               bool
+	OcarinaNotes                         bool
+	Ocarinas                             bool
+	Pots                                 ShufflePots
+	Scrubs                               ShuffleScrubs
+	Shops                                ShuffleShops
+	SongPatterns                         ShuffleSongPatterns
+	Songs                                ShuffleSongs
+	Tokens                               ShuffleTokens
+	WonderItems                          bool
+	IncludeEmptyPots, IncludeEmptyCrates bool
 }
 
 type SpawnSettings struct {
@@ -186,6 +196,12 @@ type EntranceRandomizer struct {
 	RiverExit        bool
 	OwlDrops         bool
 	WarpSongs        bool
+	Tower            bool
+	ValleyExit       bool
+}
+
+func (this EntranceRandomizer) AffectedTodChecks() bool {
+	return this.Overworld || (this.Interior != InteriorShuffleOff)
 }
 
 type Dungeons struct {
@@ -196,6 +212,9 @@ type Dungeons struct {
 	MapsCompasses MapsCompasses
 	OneItemPer    bool
 	Completed     CompletedDungeons
+
+	RandomTrials bool
+
 	ForestTemplePoes
 }
 
@@ -215,7 +234,7 @@ type TriforceHunt struct {
 
 type KeyShuffling struct {
 	BossKeys           KeyShuffle
-	ChestGameKeys      KeyShuffle
+	TreasureChestGame  KeyShuffle
 	GanonBKCondition   GanonBKCondition
 	GanonBKShuffle     GanonBKShuffleKind
 	HideoutKeys        KeyShuffle

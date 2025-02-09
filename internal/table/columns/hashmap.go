@@ -2,13 +2,16 @@ package columns
 
 import (
 	"reflect"
+	"sudonters/zootler/internal/skelly/bitset32"
 	"sudonters/zootler/internal/table"
-
-	"github.com/etc-sudonters/substrate/skelly/bitset"
 )
 
 func NewMap() *Map {
-	return &Map{make(map[table.RowId]table.Value)}
+	return NewMapWithCapacity(16)
+}
+
+func NewMapWithCapacity(capacity uint32) *Map {
+	return &Map{make(map[table.RowId]table.Value, capacity)}
 }
 
 type Map struct {
@@ -27,10 +30,10 @@ func (s *Map) Unset(e table.RowId) {
 	delete(s.entities, e)
 }
 
-func (s *Map) ScanFor(v table.Value) (b bitset.Bitset64) {
+func (s *Map) ScanFor(v table.Value) (b bitset32.Bitset) {
 	for id, value := range s.entities {
 		if reflect.DeepEqual(v, value) {
-			b.Set(uint64(id))
+			b.Set(uint32(id))
 		}
 	}
 
@@ -43,4 +46,8 @@ func (s *Map) Len() int {
 
 func HashMapColumn[T any]() *table.ColumnBuilder {
 	return table.BuildColumnOf[T](NewMap())
+}
+
+func SizedHashMapColumn[T any](capacity uint32) *table.ColumnBuilder {
+	return table.BuildColumnOf[T](NewMapWithCapacity(capacity))
 }

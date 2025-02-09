@@ -1,13 +1,17 @@
 package columns
 
 import (
+	"sudonters/zootler/internal/skelly/bitset32"
 	"sudonters/zootler/internal/table"
-
-	"github.com/etc-sudonters/substrate/skelly/bitset"
 )
 
 func NewBit(singleton table.Value) *Bit {
-	return &Bit{t: singleton, members: &bitset.Bitset64{}}
+	return &Bit{t: singleton, members: &bitset32.Bitset{}}
+}
+
+func NewSizedBit(singleton table.Value, capacity uint32) *Bit {
+	members := bitset32.WithBucketsFor(capacity)
+	return &Bit{t: singleton, members: &members}
 }
 
 /*
@@ -17,26 +21,26 @@ func NewBit(singleton table.Value) *Bit {
  */
 type Bit struct {
 	t       table.Value
-	members *bitset.Bitset64
+	members *bitset32.Bitset
 }
 
 func (m Bit) Get(e table.RowId) table.Value {
-	if m.members.IsSet(uint64(e)) {
+	if m.members.IsSet(uint32(e)) {
 		return m.t
 	}
 	return nil
 }
 
 func (m *Bit) Set(e table.RowId, c table.Value) {
-	m.members.Set(uint64(e))
+	m.members.Set(uint32(e))
 }
 
 func (m *Bit) Unset(e table.RowId) {
-	m.members.Unset(uint64(e))
+	m.members.Unset(uint32(e))
 }
 
-func (m *Bit) ScanFor(c table.Value) bitset.Bitset64 {
-	return bitset.Copy(*m.members)
+func (m *Bit) ScanFor(c table.Value) bitset32.Bitset {
+	return bitset32.Copy(*m.members)
 }
 
 func (m *Bit) Len() int {
@@ -50,4 +54,13 @@ func BitColumnOf[T any]() *table.ColumnBuilder {
 
 func BitColumnUsing[T any](t T) *table.ColumnBuilder {
 	return table.BuildColumnOf[T](NewBit(t))
+}
+
+func SizedBitColumnOf[T any](capacity uint32) *table.ColumnBuilder {
+	var t T
+	return SizedBitColumnUsing(t, capacity)
+}
+
+func SizedBitColumnUsing[T any](t T, capacity uint32) *table.ColumnBuilder {
+	return table.BuildColumnOf[T](NewSizedBit(t, capacity))
 }
