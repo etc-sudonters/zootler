@@ -4,24 +4,24 @@ import (
 	"sudonters/libzootr/zecs"
 )
 
-func NewInventory() Inventory {
-	return Inventory{make(map[zecs.Entity]float64)}
+func EmptyInventory() Inventory {
+	return Inventory{make(map[zecs.Entity]uint32)}
 }
 
 type Inventory struct {
-	onhand map[zecs.Entity]float64
+	onhand map[zecs.Entity]uint32
 }
 
 func (this *Inventory) CollectOne(entity zecs.Entity) {
 	this.Collect(entity, 1)
 }
 
-func (this *Inventory) Collect(entity zecs.Entity, n float64) {
+func (this *Inventory) Collect(entity zecs.Entity, n uint32) {
 	has := this.onhand[entity]
 	this.onhand[entity] = has + n
 }
 
-func (this *Inventory) Remove(entity zecs.Entity, n float64) float64 {
+func (this *Inventory) Remove(entity zecs.Entity, n uint32) uint32 {
 	has := this.onhand[entity]
 
 	switch {
@@ -41,12 +41,12 @@ func (this *Inventory) Remove(entity zecs.Entity, n float64) float64 {
 	}
 }
 
-func (this *Inventory) Count(entity zecs.Entity) float64 {
+func (this *Inventory) Count(entity zecs.Entity) uint32 {
 	return this.onhand[entity]
 }
 
-func (this *Inventory) Sum(entities []zecs.Entity) float64 {
-	var total float64
+func (this *Inventory) Sum(entities []zecs.Entity) uint32 {
+	var total uint32
 
 	for _, entity := range entities {
 		total += this.onhand[entity]

@@ -23,3 +23,7 @@ func Unset[T u32](b *Bitset, t T) {
 func IsSet[T u32](b *Bitset, t T) bool {
 	return b.IsSet(uint32(t))
 }
+
+func Intersects(this, other Bitset) bool {
+	return !this.Intersect(other).IsEmpty()
+}

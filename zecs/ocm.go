@@ -42,12 +42,17 @@ func (this *Ocm) Engine() query.Engine {
 }
 
 func (this *Ocm) Query() Q {
-	return Q{this, this.eng.CreateQuery()}
+	return Q{this, this.eng.CreateQuery(), query.RetrieveOptions{}}
 }
 
 type Q struct {
-	set *Ocm
-	q   query.Query
+	set  *Ocm
+	q    query.Query
+	opts query.RetrieveOptions
+}
+
+func (this *Q) Configure(opt func(*query.RetrieveOptions)) {
+	opt(&this.opts)
 }
 
 func (this *Q) Build(build BuildQuery, builds ...BuildQuery) *Q {
