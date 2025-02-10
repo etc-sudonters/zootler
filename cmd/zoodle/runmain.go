@@ -33,13 +33,11 @@ func runMain(ctx context.Context, opts cliOptions) stageleft.ExitCode {
 	}
 
 	theseSettings := settings.Default()
-	theseSettings.Seed = 0x76E76E14E9691280
-	theseSettings.Shuffling.OcarinaNotes = true
-	theseSettings.Spawns.StartingAge = settings.StartAgeAdult
-	theseSettings.Locations.OpenDoorOfTime = true
+	FinalizeSettings(&theseSettings)
 	generation := setup(paths, &theseSettings)
 	generation.Settings = theseSettings
 	CollectStartingItems(&generation)
+
 	visited := bitset32.Bitset{}
 	workset := generation.World.Graph.Roots()
 	xplr := magicbean.Exploration{
@@ -55,10 +53,19 @@ func runMain(ctx context.Context, opts cliOptions) stageleft.ExitCode {
 	return stageleft.ExitCode(0)
 }
 
+func FinalizeSettings(these *settings.Zootr) {
+	these.Seed = 0x76E76E14E9691280
+	these.Shuffling.OcarinaNotes = true
+	these.Spawns.StartingAge = settings.StartAgeAdult
+	these.Locations.OpenDoorOfTime = true
+}
+
 func setup(paths bootstrap.LoadPaths, settings *settings.Zootr) (generation magicbean.Generation) {
 	ocm := bootstrap.Phase1_InitializeStorage(nil)
 	trackSet := tracking.NewTrackingSet(&ocm)
-	bootstrap.PanicWhenErr(bootstrap.Phase2_ImportFromFiles(&ocm, &trackSet, paths))
+
+	phase2Error := bootstrap.Phase2_ImportFromFiles(&ocm, &trackSet, paths)
+	internal.PanicOnError(phase2Error)
 
 	compileEnv := bootstrap.Phase3_ConfigureCompiler(&ocm, settings)
 
@@ -73,17 +80,15 @@ func setup(paths bootstrap.LoadPaths, settings *settings.Zootr) (generation magi
 	generation.Ocm = ocm
 	generation.World = world
 	generation.Objects = objects.TableFrom(compileEnv.Objects)
-	generation.Inventory = magicbean.NewInventory()
+	generation.Inventory = magicbean.EmptyInventory()
 	generation.Rng = *rand.New(rng.NewXoshiro256PPFromU64(settings.Seed))
 
 	return generation
 }
 
-func noop() {}
-
 func profileto(path string) func() {
 	if path == "" {
-		return noop
+		return func() {}
 	}
 
 	f, err := os.Create(path)

@@ -1,4 +1,4 @@
-package shufflequeue
+package shuffle
 
 import (
 	"errors"
@@ -13,15 +13,15 @@ var ErrCannotRequeue = errors.New("cannot requeue item")
 // is "sorted" in place. Unlike most in place FY implementations, this
 // structure moves swapped elements to the front of the slice rather than the
 // end. this allows new items to be added after dequeues have happened
-func Empty[T comparable](rng *rand.Rand) *FisherYatesQueue[T] {
-	r := new(FisherYatesQueue[T])
+func Empty[T comparable](rng *rand.Rand) *Q[T] {
+	r := new(Q[T])
 	r.rng = rng
 	return r
 }
 
 // the passed slice is immediately shuffled
-func From[T comparable](rng *rand.Rand, ts []T) *FisherYatesQueue[T] {
-	r := new(FisherYatesQueue[T])
+func From[T comparable](rng *rand.Rand, ts []T) *Q[T] {
+	r := new(Q[T])
 	r.rng = rng
 	r.members = ts
 	r.ShuffleRemaining()
@@ -33,17 +33,17 @@ func From[T comparable](rng *rand.Rand, ts []T) *FisherYatesQueue[T] {
 // _beginning_ of the slice.  This allows the queue to grow after some items
 // have been dequeued. Additionally data is never discarded which provides a
 // convenient and fast dequeue and requeue method for the fillers.
-type FisherYatesQueue[T comparable] struct {
+type Q[T comparable] struct {
 	dqCount int
 	members []T
 	rng     *rand.Rand
 }
 
-func (r *FisherYatesQueue[T]) Len() int {
+func (r *Q[T]) Len() int {
 	return len(r.members) - r.dqCount
 }
 
-func (r *FisherYatesQueue[T]) Dequeue() (T, error) {
+func (r *Q[T]) Dequeue() (T, error) {
 	var empty T
 	curLen := len(r.members)
 
@@ -54,7 +54,7 @@ func (r *FisherYatesQueue[T]) Dequeue() (T, error) {
 	return r.dequeue(), nil
 }
 
-func (r *FisherYatesQueue[T]) dequeue() T {
+func (r *Q[T]) dequeue() T {
 	// IntN is the half open range 0 (inclusive) to N (exclusive)
 	// r.Len() is len(r.members) - r.dqCount and provides N.
 	//   note: len(r.members) is the exclusive upper bound, any number 0
@@ -69,15 +69,18 @@ func (r *FisherYatesQueue[T]) dequeue() T {
 	return r.members[current]
 }
 
-func (r *FisherYatesQueue[T]) Enqueue(t T) {
+func (r *Q[T]) Enqueue(t T) {
 	r.members = append(r.members, t)
 }
 
-func (r *FisherYatesQueue[T]) EnqueueSlice(ts []T) {
-	r.members = append(r.members, ts...)
+func (r *Q[T]) EnqueueSlice(ts []T) {
+	members := make([]T, 0, len(r.members)+len(ts))
+	members = append(members, r.members...)
+	members = append(members, ts...)
+	r.members = members
 }
 
-func (r *FisherYatesQueue[T]) Requeue(t T) error {
+func (r *Q[T]) Requeue(t T) error {
 	if r.dqCount == 0 {
 		return ErrEmptyQueue
 	}
@@ -91,13 +94,13 @@ func (r *FisherYatesQueue[T]) Requeue(t T) error {
 }
 
 // Shuffles only indexes eligble for dequeuing.
-func (r *FisherYatesQueue[T]) ShuffleRemaining() {
+func (r *Q[T]) ShuffleRemaining() {
 	r.rng.Shuffle(r.Len(), func(i, j int) {
 		r.swap(i+r.dqCount, j+r.dqCount)
 	})
 }
 
-func (r *FisherYatesQueue[T]) swap(i, j int) {
+func (r *Q[T]) swap(i, j int) {
 	r.members[i], r.members[j] = r.members[j], r.members[i]
 }
 
@@ -118,7 +121,7 @@ func (r *FisherYatesQueue[T]) swap(i, j int) {
 // be possible to end up in a situation where the predicate _always_ rejects
 // the item, placing it back into the queue and eventually the queue consists
 // exclusively of items the predicate will reject.
-func (r *FisherYatesQueue[T]) All(yield func(T) bool) {
+func (r *Q[T]) All(yield func(T) bool) {
 	for r.Len() > 0 {
 		if !yield(r.dequeue()) {
 			return

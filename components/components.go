@@ -1,4 +1,4 @@
-package magicbean
+package components
 
 import (
 	"fmt"
@@ -10,6 +10,10 @@ import (
 	"sudonters/libzootr/zecs"
 )
 
+type region = zecs.Entity
+type token = zecs.Entity
+type placement = zecs.Entity
+
 type Name string
 type AliasingName string
 
@@ -18,10 +22,11 @@ func NameF(tpl string, v ...any) Name {
 }
 
 type Connection struct{ From, To zecs.Entity }
-type Region struct{}
-type Placement struct{}
+type RegionMarker struct{}
+type PlacementLocationMarker struct{}
+type TokenMarker struct{}
+type CollectableToken token
 type DefaultPlacement zecs.Entity
-type Token struct{}
 type Fixed struct{}
 
 type ScriptDecl string
@@ -33,14 +38,14 @@ type RuleParsed struct{ ast.Node }
 type RuleOptimized struct{ ast.Node }
 type RuleCompiled compiler.Bytecode
 
-type Eligibility bitset32.Bitset
 type HoldsToken zecs.Entity
+type HeldAt zecs.Entity
 type Empty struct{}
 type Generated struct{}
 type Ptr objects.Object
 
 type Collectable struct{}
-type Location struct{}
+type LocationMarker struct{}
 type EdgeKind uint8
 type HintRegion string
 type AltHintRegion string

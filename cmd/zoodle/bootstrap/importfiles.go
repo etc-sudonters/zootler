@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sudonters/libzootr/components"
 	"sudonters/libzootr/internal"
-	"sudonters/libzootr/magicbean"
 	"sudonters/libzootr/magicbean/tracking"
 	"sudonters/libzootr/mido/optimizer"
 	"sudonters/libzootr/zecs"
@@ -15,9 +15,9 @@ import (
 	"github.com/etc-sudonters/substrate/slipup"
 )
 
-var namef = magicbean.NameF
+var namef = components.NameF
 
-type name = magicbean.Name
+type name = components.Name
 
 type FilePath = string
 type DirPath = string
@@ -79,7 +79,7 @@ func (this LoadPaths) readrelationsdir(store func(relations) error) error {
 func storeScripts(ocm *zecs.Ocm, paths LoadPaths) error {
 	eng := ocm.Engine()
 	for decl, source := range paths.readscripts() {
-		eng.InsertRow(magicbean.ScriptDecl(decl), magicbean.ScriptSource(source), name(optimizer.FastScriptNameFromDecl(decl)))
+		eng.InsertRow(components.ScriptDecl(decl), components.ScriptSource(source), name(optimizer.FastScriptNameFromDecl(decl)))
 	}
 	return nil
 }
@@ -90,97 +90,97 @@ func storeTokens(tokens tracking.Tokens, paths LoadPaths) error {
 		token := tokens.Named(name(raw.Name))
 
 		if raw.Advancement {
-			attachments.Add(magicbean.PriorityAdvancement)
+			attachments.Add(components.PriorityAdvancement)
 		} else if raw.Priority {
-			attachments.Add(magicbean.PriorityMajor)
+			attachments.Add(components.PriorityMajor)
 		} else if raw.Special != nil {
 			if _, exists := raw.Special["junk"]; exists {
-				attachments.Add(magicbean.PriorityJunk)
+				attachments.Add(components.PriorityJunk)
 			}
 		}
 
 		switch raw.Type {
 		case "BossKey", "bosskey":
-			attachments.Add(magicbean.BossKey{}, magicbean.ParseDungeonGroup(raw.Name))
+			attachments.Add(components.BossKey{}, components.ParseDungeonGroup(raw.Name))
 			break
 		case "Compass", "compass":
-			attachments.Add(magicbean.Compass{}, magicbean.ParseDungeonGroup(raw.Name))
+			attachments.Add(components.Compass{}, components.ParseDungeonGroup(raw.Name))
 			break
 		case "Drop", "drop":
-			attachments.Add(magicbean.Drop{})
+			attachments.Add(components.Drop{})
 			break
 		case "DungeonReward", "dungeonreward":
-			attachments.Add(magicbean.DungeonReward{})
+			attachments.Add(components.DungeonReward{})
 			break
 		case "Event", "event":
-			attachments.Add(magicbean.Event{})
+			attachments.Add(components.Event{})
 			break
 		case "GanonBossKey", "ganonbosskey":
-			attachments.Add(magicbean.BossKey{}, magicbean.DUNGEON_GANON_CASTLE)
+			attachments.Add(components.BossKey{}, components.DUNGEON_GANON_CASTLE)
 			break
 		case "Item", "item":
-			attachments.Add(magicbean.Item{})
+			attachments.Add(components.Item{})
 			break
 		case "Map", "map":
-			attachments.Add(magicbean.Map{}, magicbean.ParseDungeonGroup(raw.Name))
+			attachments.Add(components.Map{}, components.ParseDungeonGroup(raw.Name))
 			break
 		case "Refill", "refill":
-			attachments.Add(magicbean.Refill{})
+			attachments.Add(components.Refill{})
 			break
 		case "Shop", "shop":
-			attachments.Add(magicbean.Shop{})
+			attachments.Add(components.Shop{})
 			break
 		case "SilverRupee", "silverrupee":
-			attachments.Add(magicbean.ParseSilverRupeePuzzle(raw.Name))
+			attachments.Add(components.ParseSilverRupeePuzzle(raw.Name))
 
 			if strings.Contains(raw.Name, "Pouch") {
-				attachments.Add(magicbean.SilverRupeePouch{})
+				attachments.Add(components.SilverRupeePouch{})
 			} else {
-				attachments.Add(magicbean.SilverRupee{})
+				attachments.Add(components.SilverRupee{})
 			}
 			break
 		case "SmallKey", "smallkey",
 			"HideoutSmallKey", "hideoutsmallkey",
 			"TCGSmallKey", "tcgsmallkey":
-			attachments.Add(magicbean.SmallKey{}, magicbean.ParseDungeonGroup(raw.Name))
+			attachments.Add(components.SmallKey{}, components.ParseDungeonGroup(raw.Name))
 			break
 		case "SmallKeyRing", "smallkeyring",
 			"HideoutSmallKeyRing", "hideoutsmallkeyring",
 			"TCGSmallKeyRing", "tcgsmallkeyring":
-			attachments.Add(magicbean.DungeonKeyRing{}, magicbean.ParseDungeonGroup(raw.Name))
+			attachments.Add(components.DungeonKeyRing{}, components.ParseDungeonGroup(raw.Name))
 			break
 		case "Song", "song":
 			switch raw.Name {
 			case "Prelude of Light":
-				attachments.Add(magicbean.SONG_PRELUDE, magicbean.SongNotes("^>^><^"))
+				attachments.Add(components.SONG_PRELUDE, components.SongNotes("^>^><^"))
 			case "Bolero of Fire":
-				attachments.Add(magicbean.SONG_BOLERO, magicbean.SongNotes("vAvA>v>v"))
+				attachments.Add(components.SONG_BOLERO, components.SongNotes("vAvA>v>v"))
 			case "Minuet of Forest":
-				attachments.Add(magicbean.SONG_MINUET, magicbean.SongNotes("A^<><>"))
+				attachments.Add(components.SONG_MINUET, components.SongNotes("A^<><>"))
 			case "Serenade of Water":
-				attachments.Add(magicbean.SONG_SERENADE, magicbean.SongNotes("Av>><"))
+				attachments.Add(components.SONG_SERENADE, components.SongNotes("Av>><"))
 			case "Requiem of Spirit":
-				attachments.Add(magicbean.SONG_REQUIEM, magicbean.SongNotes("AvA>vA"))
+				attachments.Add(components.SONG_REQUIEM, components.SongNotes("AvA>vA"))
 			case "Nocturne of Shadow":
-				attachments.Add(magicbean.SONG_NOCTURNE, magicbean.SongNotes("<>>A<>v"))
+				attachments.Add(components.SONG_NOCTURNE, components.SongNotes("<>>A<>v"))
 			case "Sarias Song":
-				attachments.Add(magicbean.SONG_SARIA, magicbean.SongNotes("v><v><"))
+				attachments.Add(components.SONG_SARIA, components.SongNotes("v><v><"))
 			case "Eponas Song":
-				attachments.Add(magicbean.SONG_EPONA, magicbean.SongNotes("^<>^<>"))
+				attachments.Add(components.SONG_EPONA, components.SongNotes("^<>^<>"))
 			case "Zeldas Lullaby":
-				attachments.Add(magicbean.SONG_LULLABY, magicbean.SongNotes("<^><^>"))
+				attachments.Add(components.SONG_LULLABY, components.SongNotes("<^><^>"))
 			case "Suns Song":
-				attachments.Add(magicbean.SONG_SUN, magicbean.SongNotes(">v^>v^"))
+				attachments.Add(components.SONG_SUN, components.SongNotes(">v^>v^"))
 			case "Song of Time":
-				attachments.Add(magicbean.SONG_TIME, magicbean.SongNotes(">Av>Av"))
+				attachments.Add(components.SONG_TIME, components.SongNotes(">Av>Av"))
 			case "Song of Storms":
-				attachments.Add(magicbean.SONG_STORMS, magicbean.SongNotes("Av^Av^"))
+				attachments.Add(components.SONG_STORMS, components.SongNotes("Av^Av^"))
 			default:
 				panic(fmt.Errorf("unknown song %q", raw.Name))
 			}
 			break
 		case "GoldSkulltulaToken", "goldskulltulatoken":
-			attachments.Add(magicbean.GoldSkulltulaToken{})
+			attachments.Add(components.GoldSkulltulaToken{})
 			break
 		}
 
@@ -213,57 +213,57 @@ func storeRelations(nodes tracking.Nodes, tokens tracking.Tokens, paths LoadPath
 
 		for exit, rule := range raw.Exits {
 			transit := region.ConnectsTo(nodes.Region(name(exit)))
-			transit.Proxy.Attach(magicbean.RuleSource(rule), magicbean.EdgeTransit)
+			transit.Proxy.Attach(components.RuleSource(rule), components.EdgeTransit)
 		}
 
 		for location, rule := range raw.Locations {
 			placename := namef("%s %s", raw.RegionName, location)
 			placement := nodes.Placement(placename)
 			edge := region.Has(placement)
-			edge.Attach(magicbean.RuleSource(rule))
+			edge.Attach(components.RuleSource(rule))
 		}
 
 		for event, rule := range raw.Events {
 			token := tokens.Named(name(event))
-			token.Attach(magicbean.Event{})
+			token.Attach(components.Event{})
 			placement := nodes.Placement(namef("%s %s", raw.RegionName, event))
 			placement.Fixed(token)
 			edge := region.Has(placement)
-			edge.Attach(magicbean.RuleSource(rule))
+			edge.Attach(components.RuleSource(rule))
 		}
 
 		var attachments zecs.Attaching
 
 		if raw.RegionName == "Root" {
-			attachments.Add(magicbean.WorldGraphRoot{})
+			attachments.Add(components.WorldGraphRoot{})
 		}
 
 		if raw.Hint != "" {
-			attachments.Add(magicbean.HintRegion(raw.Hint))
+			attachments.Add(components.HintRegion(raw.Hint))
 		}
 
 		if raw.AltHint != "" {
-			attachments.Add(magicbean.AltHintRegion(raw.AltHint))
+			attachments.Add(components.AltHintRegion(raw.AltHint))
 		}
 
 		if raw.Dungeon != "" {
-			attachments.Add(magicbean.DungeonName(raw.Dungeon))
+			attachments.Add(components.DungeonName(raw.Dungeon))
 		}
 
 		if raw.IsBossRoom {
-			attachments.Add(magicbean.IsBossRoom{})
+			attachments.Add(components.IsBossRoom{})
 		}
 
 		if raw.Savewarp != "" {
-			attachments.Add(magicbean.Savewarp(raw.Savewarp))
+			attachments.Add(components.Savewarp(raw.Savewarp))
 		}
 
 		if raw.Scene != "" {
-			attachments.Add(magicbean.Scene(raw.Scene))
+			attachments.Add(components.Scene(raw.Scene))
 		}
 
 		if raw.TimePasses {
-			attachments.Add(magicbean.TimePassess{})
+			attachments.Add(components.TimePassess{})
 		}
 
 		return region.AttachFrom(attachments)
