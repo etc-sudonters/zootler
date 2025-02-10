@@ -92,11 +92,11 @@ func CollectStartingItems(generation *magicbean.Generation) {
 
 	type collecting struct {
 		entity zecs.Entity
-		qty    float64
+		qty    uint32
 	}
 	var starting []collecting
 
-	collect := func(token tracking.Token, qty float64) {
+	collect := func(token tracking.Token, qty uint32) {
 		starting = append(starting, collecting{token.Entity(), qty})
 	}
 

@@ -81,7 +81,7 @@ func CreateBuiltInHasFuncs(builtins *BuiltIns, pocket *Pocket, flags ShuffleFlag
 		}
 
 		ptr := objects.UnpackPtr32(args[0])
-		qty := objects.UnpackF64(args[1])
+		qty := objects.UnpackU32(args[1])
 		result := pocket.Has(zecs.Entity(ptr.Addr), qty)
 		return objects.PackBool(result), nil
 	}
@@ -113,7 +113,7 @@ func CreateBuiltInHasFuncs(builtins *BuiltIns, pocket *Pocket, flags ShuffleFlag
 	}
 
 	builtins.HasDungeonRewards = func(_ *objects.Table, args []objects.Object) (objects.Object, error) {
-		qty := objects.UnpackF64(args[0])
+		qty := objects.UnpackU32(args[0])
 		return objects.PackBool(pocket.HasDungeonRewards(qty)), nil
 	}
 
@@ -123,12 +123,12 @@ func CreateBuiltInHasFuncs(builtins *BuiltIns, pocket *Pocket, flags ShuffleFlag
 	}
 
 	builtins.HasStones = func(_ *objects.Table, args []objects.Object) (objects.Object, error) {
-		qty := objects.UnpackF64(args[0])
+		qty := objects.UnpackU32(args[0])
 		return objects.PackBool(pocket.HasStones(qty)), nil
 	}
 
 	builtins.HasMedallions = func(_ *objects.Table, args []objects.Object) (objects.Object, error) {
-		qty := objects.UnpackF64(args[0])
+		qty := objects.UnpackU32(args[0])
 		return objects.PackBool(pocket.HasMedallions(qty)), nil
 	}
 

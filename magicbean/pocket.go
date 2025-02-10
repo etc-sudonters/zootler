@@ -31,7 +31,7 @@ type Pocket struct {
 	bottles, stones, meds, rewards, notes []zecs.Entity
 }
 
-func (this Pocket) Has(entity zecs.Entity, n float64) bool {
+func (this Pocket) Has(entity zecs.Entity, n uint32) bool {
 	return this.inventory.Count(entity) >= n
 }
 
@@ -57,20 +57,20 @@ func (this Pocket) HasBottle() bool {
 	return this.HasAny(this.bottles)
 }
 
-func (this Pocket) HasStones(n float64) bool {
+func (this Pocket) HasStones(n uint32) bool {
 	return this.inventory.Sum(this.stones) >= n
 }
 
-func (this Pocket) HasMedallions(n float64) bool {
+func (this Pocket) HasMedallions(n uint32) bool {
 	return this.inventory.Sum(this.meds) >= n
 }
 
-func (this Pocket) HasDungeonRewards(n float64) bool {
+func (this Pocket) HasDungeonRewards(n uint32) bool {
 	return this.inventory.Sum(this.rewards) >= n
 }
 
 func (this Pocket) HasHearts(n float64) bool {
-	pieces := this.inventory.Count(this.heartPiece)
+	pieces := float64(this.inventory.Count(this.heartPiece))
 	hearts := pieces / 4
 	return hearts >= n
 }

@@ -7,4 +7,5 @@ import (
 )
 
 func PlaceAll(ctx context.Context, generation *magicbean.Generation, algo fill.Algorithm) error {
+	panic("not implemented")
 }

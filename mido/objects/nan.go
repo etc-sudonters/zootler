@@ -76,6 +76,11 @@ func PackF64(f64 float64) Object {
 	return Object(math.Float64bits(f64))
 }
 
+func UnpackU32(obj Object) uint32 {
+	f64 := UnpackF64(obj)
+	return uint32(f64)
+}
+
 func UnpackF64(obj Object) float64 {
 	f64 := math.Float64frombits(uint64(obj))
 	if math.IsNaN(f64) {

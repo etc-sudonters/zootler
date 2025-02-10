@@ -3,7 +3,6 @@ package components
 import (
 	"fmt"
 	"regexp"
-	"sudonters/libzootr/internal/skelly/bitset32"
 	"sudonters/libzootr/mido/ast"
 	"sudonters/libzootr/mido/compiler"
 	"sudonters/libzootr/mido/objects"
