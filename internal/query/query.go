@@ -196,6 +196,16 @@ func (e *engine) InsertRow(vs ...table.Value) (table.RowId, error) {
 }
 
 func (e engine) Retrieve(b Query) (bundle.Interface, error) {
+	return e.RetrieveWithOptions(b, RetrieveOptions{
+		Bundler: bundle.Bundle,
+	})
+}
+
+type RetrieveOptions struct {
+	Bundler bundle.Bundler
+}
+
+func (e engine) RetrieveWithOptions(b Query, opts RetrieveOptions) (bundle.Interface, error) {
 	q, ok := b.(*query)
 	if !ok {
 		return nil, fmt.Errorf("%T: %w", b, ErrInvalidQuery)
@@ -219,7 +229,11 @@ func (e engine) Retrieve(b Query) (bundle.Interface, error) {
 		columns = append(columns, column)
 	}
 
-	return bundle.Bundle(fill, columns)
+	bundler := opts.Bundler
+	if bundler == nil {
+		bundler = bundle.Bundle
+	}
+	return bundler(fill, columns)
 }
 
 func saturatedSet(numBuckets uint32) bitset32.Bitset {

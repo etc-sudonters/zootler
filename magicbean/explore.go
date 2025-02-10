@@ -3,6 +3,7 @@ package magicbean
 import (
 	"context"
 	"fmt"
+	"sudonters/libzootr/components"
 	"sudonters/libzootr/internal"
 	"sudonters/libzootr/internal/skelly/bitset32"
 	"sudonters/libzootr/internal/skelly/graph32"
@@ -16,20 +17,21 @@ import (
 )
 
 type ExplorableEdge struct {
-	Kind   EdgeKind
+	Kind   components.EdgeKind
 	Entity zecs.Entity
-	Rule   RuleCompiled
-	Src    RuleSource
-	Name   Name
+	Rule   components.RuleCompiled
+	Src    components.RuleSource
+	Name   components.Name
 }
 
 type ExplorableWorld struct {
 	Graph graph32.Directed
-	Edges map[Connection]ExplorableEdge
+	Edges map[components.Connection]ExplorableEdge
 }
 
 func (this ExplorableWorld) Edge(from, to graph32.Node) (ExplorableEdge, bool) {
-	edge, exists := this.Edges[Connection{zecs.Entity(from), zecs.Entity(to)}]
+	conn := components.Connection{From: zecs.Entity(from), To: zecs.Entity(to)}
+	edge, exists := this.Edges[conn]
 	return edge, exists
 }
 

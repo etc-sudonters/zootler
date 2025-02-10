@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"sudonters/libzootr/components"
 	"sudonters/libzootr/internal/settings"
-	"sudonters/libzootr/magicbean"
 	"sudonters/libzootr/magicbean/tracking"
 	"sudonters/libzootr/mido"
 	"sudonters/libzootr/mido/ast"
@@ -23,7 +23,7 @@ var kind2tag = map[symbols.Kind]objects.PtrTag{
 
 func createptrs(ocm *zecs.Ocm, syms *symbols.Table, objs *objects.Builder) {
 	q := ocm.Query()
-	q.Build(zecs.Load[symbols.Kind], zecs.WithOut[magicbean.Ptr], zecs.Load[magicbean.Name])
+	q.Build(zecs.Load[symbols.Kind], zecs.WithOut[components.Ptr], zecs.Load[components.Name])
 
 	for ent, tup := range q.Rows {
 		kind := tup.Values[0].(symbols.Kind)
@@ -31,7 +31,7 @@ func createptrs(ocm *zecs.Ocm, syms *symbols.Table, objs *objects.Builder) {
 		if !exists {
 			continue
 		}
-		name := tup.Values[1].(magicbean.Name)
+		name := tup.Values[1].(components.Name)
 		symbol := syms.LookUpByName(string(name))
 
 		if symbol == nil {
@@ -41,16 +41,16 @@ func createptrs(ocm *zecs.Ocm, syms *symbols.Table, objs *objects.Builder) {
 		entity := ocm.Proxy(ent)
 		ptr := objects.PackPtr32(objects.Ptr32{Tag: tag, Addr: objects.Addr32(ent)})
 		objs.AssociateSymbol(symbol, ptr)
-		entity.Attach(magicbean.Ptr(ptr))
+		entity.Attach(components.Ptr(ptr))
 	}
 }
 
 func loadsymbols(ocm *zecs.Ocm, syms *symbols.Table) error {
 	batches := []tagging{
-		{kind: symbols.REGION, q: []zecs.BuildQuery{zecs.With[magicbean.Region]}},
-		{kind: symbols.TRANSIT, q: []zecs.BuildQuery{zecs.With[magicbean.Connection]}},
-		{kind: symbols.TOKEN, q: []zecs.BuildQuery{zecs.With[magicbean.Token]}},
-		{kind: symbols.SCRIPTED_FUNC, q: []zecs.BuildQuery{zecs.With[magicbean.ScriptDecl]}},
+		{kind: symbols.REGION, q: []zecs.BuildQuery{zecs.With[components.RegionMarker]}},
+		{kind: symbols.TRANSIT, q: []zecs.BuildQuery{zecs.With[components.Connection]}},
+		{kind: symbols.TOKEN, q: []zecs.BuildQuery{zecs.With[components.TokenMarker]}},
+		{kind: symbols.SCRIPTED_FUNC, q: []zecs.BuildQuery{zecs.With[components.ScriptDecl]}},
 	}
 
 	for _, batch := range batches {
@@ -82,9 +82,9 @@ func loadscripts(ocm *zecs.Ocm, env *mido.CompileEnv) error {
 	q := ocm.Query()
 	q.Build(
 		zecs.Load[name],
-		zecs.Load[magicbean.ScriptDecl],
-		zecs.Load[magicbean.ScriptSource],
-		zecs.WithOut[magicbean.RuleParsed],
+		zecs.Load[components.ScriptDecl],
+		zecs.Load[components.ScriptSource],
+		zecs.WithOut[components.RuleParsed],
 	)
 
 	rows, rowErr := q.Execute()
@@ -92,8 +92,8 @@ func loadscripts(ocm *zecs.Ocm, env *mido.CompileEnv) error {
 	decls := make(map[string]string, rows.Len())
 
 	for _, tup := range rows.All {
-		decl := tup.Values[1].(magicbean.ScriptDecl)
-		body := tup.Values[2].(magicbean.ScriptSource)
+		decl := tup.Values[1].(components.ScriptDecl)
+		body := tup.Values[2].(components.ScriptSource)
 		decls[string(decl)] = string(body)
 	}
 
@@ -106,7 +106,7 @@ func loadscripts(ocm *zecs.Ocm, env *mido.CompileEnv) error {
 		if !exists {
 			panic(fmt.Errorf("somehow scripted func %s is missing, a mystery", name))
 		}
-		eng.SetValues(entity, zecs.Values{magicbean.ScriptParsed{script.Body}})
+		eng.SetValues(entity, zecs.Values{components.ScriptParsed{script.Body}})
 	}
 
 	return nil
@@ -114,7 +114,7 @@ func loadscripts(ocm *zecs.Ocm, env *mido.CompileEnv) error {
 
 func aliassymbols(ocm *zecs.Ocm, syms *symbols.Table) error {
 	q := ocm.Query()
-	q.Build(zecs.Load[name], zecs.With[magicbean.Token])
+	q.Build(zecs.Load[name], zecs.With[components.TokenMarker])
 	eng := ocm.Engine()
 	rows, err := q.Execute()
 	PanicWhenErr(err)
@@ -129,7 +129,7 @@ func aliassymbols(ocm *zecs.Ocm, syms *symbols.Table) error {
 		case symbols.TOKEN:
 			alias := escape(name)
 			syms.Alias(original, alias)
-			PanicWhenErr(eng.SetValues(id, zecs.Values{magicbean.AliasingName(alias)}))
+			PanicWhenErr(eng.SetValues(id, zecs.Values{components.AliasingName(alias)}))
 		default:
 			panic(fmt.Errorf("expected to only alias function or token: %s", original))
 		}
@@ -241,22 +241,22 @@ type ConnectionGenerator struct {
 func (this ConnectionGenerator) AddConnectionTo(region string, rule ast.Node) (*symbols.Sym, error) {
 	hash := ast.Hash(rule)
 	suffix := fmt.Sprintf("#%s#%16x", region, hash)
-	tokenName := magicbean.NameF("Token%s", suffix)
+	tokenName := components.NameF("Token%s", suffix)
 
 	if symbol := this.Symbols.LookUpByName(string(tokenName)); symbol != nil {
 		return symbol, nil
 	}
 
 	token := this.Tokens.Named(tokenName)
-	placement := this.Nodes.Placement(magicbean.NameF("Place%s", suffix))
+	placement := this.Nodes.Placement(components.NameF("Place%s", suffix))
 
 	placement.Fixed(token)
 	ptr := objects.PackPtr32(objects.Ptr32{Tag: objects.PtrToken, Addr: objects.Addr32(token.Entity())})
-	token.Attach(magicbean.Event{}, ptr)
+	token.Attach(components.Event{}, ptr)
 
-	node := this.Nodes.Region(magicbean.Name(region))
+	node := this.Nodes.Region(components.Name(region))
 	edge := node.Has(placement)
-	edge.Proxy.Attach(magicbean.RuleParsed{rule})
+	edge.Proxy.Attach(components.RuleParsed{rule})
 
 	symbol := this.Symbols.Declare(string(tokenName), symbols.TOKEN)
 	this.Objects.AssociateSymbol(symbol, ptr)

@@ -1,4 +1,4 @@
-package shufflequeue
+package shuffle
 
 import (
 	"math/rand/v2"
@@ -15,7 +15,7 @@ func TestDequeueAllItems(t *testing.T) {
 	result := map[int]int{}
 
 	for res := range q.All {
-		result[*res] = 1
+		result[res] = 1
 	}
 
 	checkWasDequeued := func(x int) {

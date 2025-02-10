@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"math/rand/v2"
 	"sudonters/libzootr/cmd/zoodle/bootstrap"
+	"sudonters/libzootr/components"
 	"sudonters/libzootr/internal/query"
 	"sudonters/libzootr/internal/settings"
-	"sudonters/libzootr/internal/shufflequeue"
+	"sudonters/libzootr/internal/shuffle"
 	"sudonters/libzootr/internal/table"
 	"sudonters/libzootr/magicbean"
 	"sudonters/libzootr/magicbean/tracking"
@@ -70,13 +71,13 @@ func explore(ctx context.Context, xplr *magicbean.Exploration, generation *magic
 
 func PtrsMatching(ocm *zecs.Ocm, query ...zecs.BuildQuery) []objects.Object {
 	q := ocm.Query()
-	q.Build(zecs.Load[magicbean.Ptr], zecs.With[magicbean.Token])
+	q.Build(zecs.Load[components.Ptr], zecs.With[components.TokenMarker])
 	rows, err := q.Execute()
 	bootstrap.PanicWhenErr(err)
 	ptrs := make([]objects.Object, 0, rows.Len())
 
 	for _, tup := range rows.All {
-		ptr := tup.Values[0].(magicbean.Ptr)
+		ptr := tup.Values[0].(components.Ptr)
 		ptrs = append(ptrs, objects.Object(ptr))
 	}
 
@@ -122,19 +123,19 @@ func CollectStartingItems(generation *magicbean.Generation) {
 
 	collect(tokens.MustGet("Deku Stick (1)"), 10)
 
-	starting = append(starting, collecting{OneOfRandomly(ocm, rng, zecs.With[magicbean.Song]), 1})
-	starting = append(starting, collecting{OneOfRandomly(ocm, rng, zecs.With[magicbean.DungeonReward]), 1})
+	starting = append(starting, collecting{OneOfRandomly(ocm, rng, zecs.With[components.Song]), 1})
+	starting = append(starting, collecting{OneOfRandomly(ocm, rng, zecs.With[components.DungeonReward]), 1})
 
 	for _, collect := range starting {
-		selected, err := eng.GetValues(collect.entity, table.ColumnIds{query.MustAsColumnId[magicbean.Name](eng)})
+		selected, err := eng.GetValues(collect.entity, table.ColumnIds{query.MustAsColumnId[components.Name](eng)})
 		bootstrap.PanicWhenErr(err)
-		fmt.Printf("starting with %f %s\n", collect.qty, selected.Values[0].(magicbean.Name))
+		fmt.Printf("starting with %f %s\n", collect.qty, selected.Values[0].(components.Name))
 		generation.Inventory.Collect(collect.entity, collect.qty)
 	}
 }
 
 func OneOfRandomly(ocm *zecs.Ocm, rng *rand.Rand, query ...zecs.BuildQuery) zecs.Entity {
-	matching := shufflequeue.From(rng, zecs.EntitiesMatching(ocm, query...))
+	matching := shuffle.From(rng, zecs.EntitiesMatching(ocm, query...))
 	randomly, err := matching.Dequeue()
 	bootstrap.PanicWhenErr(err)
 	return randomly
