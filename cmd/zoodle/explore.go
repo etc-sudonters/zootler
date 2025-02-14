@@ -129,7 +129,7 @@ func CollectStartingItems(generation *magicbean.Generation) {
 	for _, collect := range starting {
 		selected, err := eng.GetValues(collect.entity, table.ColumnIds{query.MustAsColumnId[components.Name](eng)})
 		bootstrap.PanicWhenErr(err)
-		fmt.Printf("starting with %f %s\n", collect.qty, selected.Values[0].(components.Name))
+		fmt.Printf("starting with %d %s\n", collect.qty, selected.Values[0].(components.Name))
 		generation.Inventory.Collect(collect.entity, collect.qty)
 	}
 }

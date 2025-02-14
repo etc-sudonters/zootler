@@ -27,6 +27,7 @@ type TokenMarker struct{}
 type CollectableToken token
 type DefaultPlacement zecs.Entity
 type Fixed struct{}
+type Collected struct{}
 
 type ScriptDecl string
 type ScriptSource string
@@ -42,7 +43,7 @@ type HeldAt zecs.Entity
 type Empty struct{}
 type Generated struct{}
 type Ptr objects.Object
-
+type Price int
 type Collectable struct{}
 type LocationMarker struct{}
 type EdgeKind uint8

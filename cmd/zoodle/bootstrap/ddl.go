@@ -57,7 +57,9 @@ func staticddl() []zecs.DDL {
 		columns.HashMapColumn[components.DungeonGroup],
 		columns.HashMapColumn[components.SilverRupeePuzzle],
 		columns.HashMapColumn[components.Song],
+		columns.HashMapColumn[components.Price],
 
+		columns.BitColumnOf[components.Collected],
 		columns.BitColumnOf[components.TokenMarker],
 		columns.BitColumnOf[components.RegionMarker],
 		columns.BitColumnOf[components.IsBossRoom],

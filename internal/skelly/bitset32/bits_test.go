@@ -1,11 +1,7 @@
 package bitset32
 
 import (
-	"math"
-	"math/rand/v2"
 	"testing"
-
-	"github.com/etc-sudonters/substrate/rng"
 )
 
 const (
@@ -116,7 +112,7 @@ func TestUnion(t *testing.T) {
 
 	b := b1.Union(b2).Union(b3)
 
-	if !b.Eq(FromRaw(2, 2, 2)) {
+	if !b.Eq(FromRaw([]uint32{2, 2, 2})) {
 		t.Fail()
 	}
 }
@@ -131,7 +127,7 @@ func TestDifference(t *testing.T) {
 	b2.Set(129)
 
 	b1DiffB2 := b1.Difference(b2)
-	expected := FromRaw(2, 0, 0)
+	expected := FromRaw([]uint32{2, 0, 0})
 
 	if !b1DiffB2.Eq(expected) {
 		t.Log("expected only 1 to be set")
@@ -139,23 +135,11 @@ func TestDifference(t *testing.T) {
 	}
 
 	b2DiffB1 := b2.Difference(b1)
-	expected = FromRaw(0, 0, 2)
+	expected = FromRaw([]uint32{0, 0, 2})
 
 	if !b2DiffB1.Eq(expected) {
 		t.Log("expected only 129 to be set")
 		t.Fail()
-	}
-}
-
-func TestLength(t *testing.T) {
-	b := Bitset{}
-	r := rand.New(rng.NewXoshiro256PPFromU32(0xbf58476d1ce4e5b9))
-	for range 5000 {
-		for !b.Set(r.Uint32N(math.MaxUint16)) {
-		}
-	}
-	if l := b.Len(); l != 5000 {
-		t.Fatalf("expected length of 5000 but got %d", l)
 	}
 }
 

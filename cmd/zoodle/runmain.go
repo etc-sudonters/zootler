@@ -30,11 +30,12 @@ func runMain(ctx context.Context, opts cliOptions) stageleft.ExitCode {
 		Placements: filepath.Join(opts.dataDir, "locations.json"),
 		Scripts:    filepath.Join(opts.logicDir, "..", "helpers.json"),
 		Relations:  opts.logicDir,
+		Spoiler:    opts.spoiler,
 	}
 
 	theseSettings := settings.Default()
 	FinalizeSettings(&theseSettings)
-	generation := setup(paths, &theseSettings)
+	generation := setup(ctx, paths, &theseSettings)
 	generation.Settings = theseSettings
 	CollectStartingItems(&generation)
 
@@ -60,7 +61,7 @@ func FinalizeSettings(these *settings.Zootr) {
 	these.Locations.OpenDoorOfTime = true
 }
 
-func setup(paths bootstrap.LoadPaths, settings *settings.Zootr) (generation magicbean.Generation) {
+func setup(ctx context.Context, paths bootstrap.LoadPaths, settings *settings.Zootr) (generation magicbean.Generation) {
 	ocm := bootstrap.Phase1_InitializeStorage(nil)
 	trackSet := tracking.NewTrackingSet(&ocm)
 
@@ -76,6 +77,15 @@ func setup(paths bootstrap.LoadPaths, settings *settings.Zootr) (generation magi
 	))
 
 	world := bootstrap.Phase5_CreateWorld(&ocm, settings, objects.TableFrom(compileEnv.Objects))
+
+	if paths.Spoiler != "" {
+		fh, err := os.Open(paths.Spoiler)
+		internal.PanicOnError(err)
+		defer func() {
+			fh.Close()
+		}()
+		internal.PanicOnError(bootstrap.LoadSpoilerData(ctx, fh, settings, &trackSet.Nodes, &trackSet.Tokens))
+	}
 
 	generation.Ocm = ocm
 	generation.World = world

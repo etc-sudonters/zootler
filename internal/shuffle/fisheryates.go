@@ -39,22 +39,22 @@ type Q[T comparable] struct {
 	rng     *rand.Rand
 }
 
-func (r *Q[T]) Len() int {
-	return len(r.members) - r.dqCount
+func (this *Q[T]) Len() int {
+	return len(this.members) - this.dqCount
 }
 
-func (r *Q[T]) Dequeue() (T, error) {
+func (this *Q[T]) Dequeue() (T, error) {
 	var empty T
-	curLen := len(r.members)
+	curLen := len(this.members)
 
-	if curLen == 0 || r.dqCount == curLen {
+	if curLen == 0 || this.dqCount == curLen {
 		return empty, ErrEmptyQueue
 	}
 
-	return r.dequeue(), nil
+	return this.dequeue(), nil
 }
 
-func (r *Q[T]) dequeue() T {
+func (this *Q[T]) dequeue() T {
 	// IntN is the half open range 0 (inclusive) to N (exclusive)
 	// r.Len() is len(r.members) - r.dqCount and provides N.
 	//   note: len(r.members) is the exclusive upper bound, any number 0
@@ -62,46 +62,57 @@ func (r *Q[T]) dequeue() T {
 	// Since we swap to the _front_ of the slice we add the dqCount count to
 	// this generated index to get the actual swapping index.
 	// do the swap and spit out a pointer to the selected item
-	swap := r.rng.IntN(r.Len()) + r.dqCount
-	current := r.dqCount
-	r.dqCount += 1
-	r.swap(current, swap)
-	return r.members[current]
+	swap := this.rng.IntN(this.Len()) + this.dqCount
+	current := this.dqCount
+	this.dqCount += 1
+	this.swap(current, swap)
+	return this.members[current]
 }
 
-func (r *Q[T]) Enqueue(t T) {
-	r.members = append(r.members, t)
+func (this *Q[T]) Enqueue(t T) {
+	this.members = append(this.members, t)
 }
 
-func (r *Q[T]) EnqueueSlice(ts []T) {
-	members := make([]T, 0, len(r.members)+len(ts))
-	members = append(members, r.members...)
+func (this *Q[T]) EnqueueSlice(ts []T) {
+	members := make([]T, 0, len(this.members)+len(ts))
+	members = append(members, this.members...)
 	members = append(members, ts...)
-	r.members = members
+	this.members = members
 }
 
-func (r *Q[T]) Requeue(t T) error {
-	if r.dqCount == 0 {
+func (this *Q[T]) Requeue(t T) error {
+	if this.dqCount == 0 {
 		return ErrEmptyQueue
 	}
 
-	if r.members[r.dqCount] != t {
+	if this.members[this.dqCount] != t {
 		return ErrCannotRequeue
 	}
 
-	r.dqCount -= 1
+	this.dqCount -= 1
 	return nil
 }
 
 // Shuffles only indexes eligble for dequeuing.
-func (r *Q[T]) ShuffleRemaining() {
-	r.rng.Shuffle(r.Len(), func(i, j int) {
-		r.swap(i+r.dqCount, j+r.dqCount)
+func (this *Q[T]) ShuffleRemaining() {
+	this.rng.Shuffle(this.Len(), func(i, j int) {
+		this.swap(i+this.dqCount, j+this.dqCount)
 	})
 }
 
-func (r *Q[T]) swap(i, j int) {
-	r.members[i], r.members[j] = r.members[j], r.members[i]
+// Returns slices of dequeued and remaining T
+func (r *Q[T]) Parts() (dequeued []T, remaining []T) {
+	dequeued = make([]T, r.dqCount)
+	remaining = make([]T, r.Len())
+
+	copy(dequeued, r.members[:r.dqCount])
+	copy(remaining, r.members[r.dqCount:])
+
+	return dequeued, remaining
+}
+
+func (this *Q[T]) swap(i, j int) {
+	this.members[i], this.members[j] = this.members[j], this.members[i]
 }
 
 // Convenience iterator that repeatedly randomly dequeues until all items are
@@ -121,9 +132,9 @@ func (r *Q[T]) swap(i, j int) {
 // be possible to end up in a situation where the predicate _always_ rejects
 // the item, placing it back into the queue and eventually the queue consists
 // exclusively of items the predicate will reject.
-func (r *Q[T]) All(yield func(T) bool) {
-	for r.Len() > 0 {
-		if !yield(r.dequeue()) {
+func (this *Q[T]) All(yield func(T) bool) {
+	for this.Len() > 0 {
+		if !yield(this.dequeue()) {
 			return
 		}
 	}

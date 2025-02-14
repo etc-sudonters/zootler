@@ -23,8 +23,8 @@ type FilePath = string
 type DirPath = string
 
 type LoadPaths struct {
-	Tokens, Placements, Scripts FilePath
-	Relations                   DirPath
+	Spoiler, Tokens, Placements, Scripts FilePath
+	Relations                            DirPath
 }
 
 func (this LoadPaths) readscripts() map[string]string {
@@ -217,7 +217,7 @@ func storeRelations(nodes tracking.Nodes, tokens tracking.Tokens, paths LoadPath
 		}
 
 		for location, rule := range raw.Locations {
-			placename := namef("%s %s", raw.RegionName, location)
+			placename := namef("%s", location)
 			placement := nodes.Placement(placename)
 			edge := region.Has(placement)
 			edge.Attach(components.RuleSource(rule))

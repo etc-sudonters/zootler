@@ -12,8 +12,6 @@ import (
 	"sudonters/libzootr/mido/compiler"
 	"sudonters/libzootr/mido/objects"
 	"sudonters/libzootr/zecs"
-
-	"github.com/etc-sudonters/substrate/dontio"
 )
 
 type ExplorableEdge struct {
@@ -62,21 +60,12 @@ func (this *Exploration) evaluateRule(bytecode compiler.Bytecode) bool {
 }
 
 func (this *Exploration) CanTransit(ctx context.Context, world *ExplorableWorld, from, to graph32.Node) bool {
-	std, nostd := dontio.StdFromContext(ctx)
-	internal.PanicOnError(nostd)
-
 	edge, exists := world.Edge(from, to)
 	if !exists {
 		panic(fmt.Errorf("no edge registered between %d %d", from, to))
 	}
-	fmt.Printf("exploring %q\n", edge.Name)
-	if edge.Src != "" {
-		std.WriteLineOut(string(edge.Src))
-	}
 	bytecode := compiler.Bytecode(edge.Rule)
-	this.VM.Dis(std.Out, bytecode)
 	result := this.evaluateRule(bytecode)
-	std.WriteLineOut("\tcrossed? %t\n\n", result)
 	return result
 }
 
