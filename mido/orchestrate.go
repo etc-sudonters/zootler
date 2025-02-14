@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"sudonters/libzootr/internal/ruleparser"
-	"sudonters/libzootr/internal/settings"
 	"sudonters/libzootr/mido/ast"
 	"sudonters/libzootr/mido/compiler"
 	"sudonters/libzootr/mido/objects"
@@ -108,12 +107,23 @@ func CompilerWithTokens(names []string) ConfigureCompiler {
 	}
 }
 
+func CompilerWithGenerationSettings(names []string) ConfigureCompiler {
+	return func(env *CompileEnv) {
+		for i, name := range names {
+			symbol := env.Symbols.Declare(name, symbols.SETTING)
+			env.Objects.AssociateSymbol(
+				symbol,
+				objects.PackPtr32(objects.Ptr32{Tag: objects.PtrSetting, Addr: objects.Addr32(i)}),
+			)
+		}
+	}
+}
+
 func CompilerDefaults() ConfigureCompiler {
 	return func(env *CompileEnv) {
 		env.Optimize.Passes = 10
 
 		env.Symbols.DeclareMany(symbols.GLOBAL, GlobalNames())
-		env.Symbols.DeclareMany(symbols.SETTING, settings.Names())
 
 		env.Optimize.AddOptimizer(func(env *CompileEnv) ast.Rewriter {
 			return optimizer.InlineCalls(env.Optimize.Context, env.Symbols, env.ScriptedFuncs)

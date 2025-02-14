@@ -5,13 +5,13 @@ import (
 	"regexp"
 	"strings"
 	"sudonters/libzootr/components"
-	"sudonters/libzootr/internal/settings"
 	"sudonters/libzootr/magicbean/tracking"
 	"sudonters/libzootr/mido"
 	"sudonters/libzootr/mido/ast"
 	"sudonters/libzootr/mido/objects"
 	"sudonters/libzootr/mido/optimizer"
 	"sudonters/libzootr/mido/symbols"
+	"sudonters/libzootr/settings"
 	"sudonters/libzootr/zecs"
 )
 
@@ -139,22 +139,21 @@ func aliassymbols(ocm *zecs.Ocm, syms *symbols.Table) error {
 	return nil
 }
 
-func installCompilerFunctions(these *settings.Zootr) mido.ConfigureCompiler {
+func installCompilerFunctions(these *settings.Model) mido.ConfigureCompiler {
 
 	return func(env *mido.CompileEnv) {
 		hasNotesForSong := env.Symbols.Declare("has_notes_for_song", symbols.BUILT_IN_FUNCTION)
-		checkTod := env.Symbols.Declare("check_tod", symbols.BUILT_IN_FUNCTION)
 		isTrickEnabled := func(args []ast.Node, _ ast.Rewriting) (ast.Node, error) {
 			switch arg := args[0].(type) {
 			case ast.String:
-				return ast.Boolean(these.Tricks.Enabled[string(arg)]), nil
+				return ast.Boolean(these.Logic.Tricks[string(arg)]), nil
 			default:
 				return nil, fmt.Errorf("is_trick_enabled expects string as first argument got %#v", arg)
 			}
 		}
 
 		hasAllNotesForSong := func(args []ast.Node, _ ast.Rewriting) (ast.Node, error) {
-			if !these.Shuffling.OcarinaNotes {
+			if !settings.HasFlag(these.Logic.Shuffling.Flags, settings.ShuffleOcarinaNotes) {
 				return ast.Boolean(true), nil
 			}
 
@@ -164,35 +163,10 @@ func installCompilerFunctions(these *settings.Zootr) mido.ConfigureCompiler {
 			}, nil
 		}
 
-		isTrialSkipped := func(args []ast.Node, _ ast.Rewriting) (ast.Node, error) {
-			return ast.Boolean(false), nil
-		}
-
-		regionHasShortcuts := func(args []ast.Node, _ ast.Rewriting) (ast.Node, error) {
-			return ast.Boolean(false), nil
-		}
-
-		needsTodChecks := func(tod string) optimizer.CompilerFunction {
-			return func(args []ast.Node, _ ast.Rewriting) (ast.Node, error) {
-				if !these.Entrances.AffectedTodChecks() {
-					return ast.Boolean(true), nil
-				}
-
-				return ast.Invoke{
-					Target: ast.IdentifierFrom(checkTod),
-					Args:   []ast.Node{ast.String(tod)},
-				}, nil
-			}
-		}
-
-		hadNightStart := ConstCompileFunc(these.Starting.TimeOfDay.IsNight())
-		for i, name := range settings.Names() {
-			symbol := env.Symbols.Declare(name, symbols.SETTING)
-			env.Objects.AssociateSymbol(
-				symbol,
-				objects.PackPtr32(objects.Ptr32{Tag: objects.PtrSetting, Addr: objects.Addr32(i)}),
-			)
-		}
+		isTrialSkipped := ConstCompileFunc(true)
+		regionHasShortcuts := ConstCompileFunc(false)
+		hasTodAccess := ConstCompileFunc(true)
+		hadNightStart := ConstCompileFunc(these.Logic.Spawns.StartTimeOfDay.IsNight())
 
 		mido.WithCompilerFunctions(func(*mido.CompileEnv) optimizer.CompilerFunctionTable {
 			return optimizer.CompilerFunctionTable{
@@ -200,9 +174,9 @@ func installCompilerFunctions(these *settings.Zootr) mido.ConfigureCompiler {
 				"is_trick_enabled":       isTrickEnabled,
 				"had_night_start":        hadNightStart,
 				"has_all_notes_for_song": hasAllNotesForSong,
-				"at_dampe_time":          needsTodChecks("dampe"),
-				"at_day":                 needsTodChecks("day"),
-				"at_night":               needsTodChecks("night"),
+				"at_dampe_time":          hasTodAccess,
+				"at_day":                 hasTodAccess,
+				"at_night":               hasTodAccess,
 				"is_trial_skipped":       isTrialSkipped,
 			}
 		})(env)

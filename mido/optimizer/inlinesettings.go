@@ -3,40 +3,45 @@ package optimizer
 import (
 	"fmt"
 	"sudonters/libzootr/internal"
-	"sudonters/libzootr/internal/settings"
 	"sudonters/libzootr/mido/ast"
 	"sudonters/libzootr/mido/symbols"
 )
 
-type reader func(*settings.Zootr, string) ast.Node
+type reader func(SettingReader, string) ast.Node
 
-func InlineSettings(these *settings.Zootr, symbols *symbols.Table) ast.Rewriter {
+type SettingReader interface {
+	String(string) (string, error)
+	Number(string) (float64, error)
+	Bool(string) (bool, error)
+}
+
+func InlineSettings(these SettingReader, symbols *symbols.Table) ast.Rewriter {
 	inliner := newinliner(these, symbols)
 	return ast.Rewriter{
 		Identifier: inliner.Identifier,
 	}
 }
 
-func str(these *settings.Zootr, name string) ast.Node {
+func str(these SettingReader, name string) ast.Node {
 	value, err := these.String(name)
 	internal.PanicOnError(err)
 	return ast.String(value)
 }
 
-func f64(these *settings.Zootr, name string) ast.Node {
-	value, err := these.Float64(name)
+func f64(these SettingReader, name string) ast.Node {
+	value, err := these.Number(name)
 	internal.PanicOnError(err)
 	return ast.Number(value)
 }
 
-func boolean(these *settings.Zootr, name string) ast.Node {
+func boolean(these SettingReader, name string) ast.Node {
 	value, err := these.Bool(name)
 	internal.PanicOnError(err)
 	return ast.Boolean(value)
 }
 
 type settinginline struct {
-	these   *settings.Zootr
+	these   SettingReader
 	symbols *symbols.Table
 	readers map[string]reader
 }
@@ -45,10 +50,6 @@ func (this settinginline) Identifier(node ast.Identifier, _ ast.Rewriting) (ast.
 	symbol := this.symbols.LookUpByIndex(node.AsIndex())
 	if symbol == nil {
 		return node, nil
-	}
-
-	if "shuffle_gerudo_fortress_heart_piece" == symbol.Name {
-		_ = symbol.Name
 	}
 
 	reader, exists := this.readers[symbol.Name]
@@ -76,7 +77,7 @@ func (this settinginline) Identifier(node ast.Identifier, _ ast.Rewriting) (ast.
 	return result, nil
 }
 
-func newinliner(these *settings.Zootr, symbols *symbols.Table) settinginline {
+func newinliner(these SettingReader, symbols *symbols.Table) settinginline {
 	var inliner settinginline
 	inliner.symbols = symbols
 	inliner.these = these

@@ -6,9 +6,9 @@ import (
 	"os"
 	"path/filepath"
 	"sudonters/libzootr/internal"
-	"sudonters/libzootr/internal/settings"
 	"sudonters/libzootr/internal/skelly/bitset32"
 	"sudonters/libzootr/magicbean/tracking"
+	"sudonters/libzootr/settings"
 
 	"github.com/etc-sudonters/substrate/dontio"
 	"github.com/etc-sudonters/substrate/rng"
@@ -65,7 +65,7 @@ func setup(ctx context.Context, paths bootstrap.LoadPaths, settings *settings.Zo
 	ocm := bootstrap.Phase1_InitializeStorage(nil)
 	trackSet := tracking.NewTrackingSet(&ocm)
 
-	phase2Error := bootstrap.Phase2_ImportFromFiles(&ocm, &trackSet, paths)
+	phase2Error := bootstrap.Phase2_ImportFromFiles(ctx, settings, &ocm, &trackSet, paths)
 	internal.PanicOnError(phase2Error)
 
 	compileEnv := bootstrap.Phase3_ConfigureCompiler(&ocm, settings)
@@ -77,15 +77,6 @@ func setup(ctx context.Context, paths bootstrap.LoadPaths, settings *settings.Zo
 	))
 
 	world := bootstrap.Phase5_CreateWorld(&ocm, settings, objects.TableFrom(compileEnv.Objects))
-
-	if paths.Spoiler != "" {
-		fh, err := os.Open(paths.Spoiler)
-		internal.PanicOnError(err)
-		defer func() {
-			fh.Close()
-		}()
-		internal.PanicOnError(bootstrap.LoadSpoilerData(ctx, fh, settings, &trackSet.Nodes, &trackSet.Tokens))
-	}
 
 	generation.Ocm = ocm
 	generation.World = world

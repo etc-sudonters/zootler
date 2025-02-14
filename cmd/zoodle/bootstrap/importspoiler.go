@@ -4,9 +4,10 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"sudonters/libzootr/components"
 	"sudonters/libzootr/internal/json"
-	"sudonters/libzootr/internal/settings"
 	"sudonters/libzootr/magicbean/tracking"
+	"sudonters/libzootr/settings"
 
 	"github.com/etc-sudonters/substrate/dontio"
 )
@@ -18,7 +19,7 @@ func malformed(err error) error {
 func LoadSpoilerData(
 	ctx context.Context,
 	r io.Reader,
-	these *settings.Zootr,
+	these *settings.Model,
 	nodes *tracking.Nodes,
 	tokens *tracking.Tokens) error {
 
@@ -77,61 +78,127 @@ func LoadSpoilerData(
 	return nil
 }
 
-func CopySettings(these *settings.Zootr, obj *json.ObjectParser) error {
-	return obj.DiscardRemaining()
+func CopySettings(these *settings.Model, obj *json.ObjectParser) error {
+	for obj.More() {
+		setting, err := obj.ReadPropertyName()
+		if err != nil {
+			return err
+		}
+		if err := readSetting(setting, these, obj); err != nil {
+			return fmt.Errorf("while reading setting %q: %w", setting, err)
+		}
+	}
+	return obj.ReadEnd()
+}
+
+func readSetting(name string, these *settings.Model, obj *json.ObjectParser) error {
+	var err error
+
+	tradeShuffle := these.Logic.Trade.AdultItems
+	switch name {
+	case "adult_trade_start":
+		for i, name := range json.ReadStringArray(obj, &err) {
+			switch name {
+			case "Pocket Egg":
+				tradeShuffle |= settings.AdultTradeStartPocketEgg
+			case "Pocket Cucco":
+				tradeShuffle |= settings.AdultTradeStartPocketCucco
+			case "Odd Mushroom":
+				tradeShuffle |= settings.AdultTradeStartOddMushroom
+			case "Odd Potion":
+				tradeShuffle |= settings.AdultTradeStartOddPotion
+			case "Poachers Saw":
+				tradeShuffle |= settings.AdultTradeStartPoachersSaw
+			case "Broken Sword":
+				tradeShuffle |= settings.AdultTradeStartBrokenSword
+			case "Prescription":
+				tradeShuffle |= settings.AdultTradeStartPrescription
+			case "Eyeball Frog":
+				tradeShuffle |= settings.AdultTradeStartEyeballFrog
+			case "Eyedrops":
+				tradeShuffle |= settings.AdultTradeStartEyedrops
+			case "Claim Check":
+				tradeShuffle |= settings.AdultTradeStartClaimCheck
+			default:
+				return fmt.Errorf("unknown adult trade shuffle item %q at index %d", name, i)
+			}
+		}
+		these.Logic.Trade.AdultItems = tradeShuffle
+		return err
+
+	default:
+		return obj.DiscardValue()
+	}
 }
 
 func CopyPlacements(tokens *tracking.Tokens, nodes *tracking.Nodes, obj *json.ObjectParser) error {
-	return obj.DiscardRemaining()
+	var err error
+
+	for node, placed := range json.ReadObjectProperties(obj, readPlacedItem, &err) {
+		node := nodes.Placement(components.Name(node))
+		token := tokens.MustGet(components.Name(placed.name))
+		if placed.price > -1 {
+			token.Attach(components.Price(placed.price))
+		}
+		node.Holding(token)
+	}
+	return err
 }
 
 func CopySkippedLocations(nodes *tracking.Nodes, obj *json.ObjectParser) error {
-	return obj.DiscardRemaining()
-}
-
-/*
-func notimpled() error {
-	panic("not implemented")
-}
-
-func (this spoiler) CopySettings(these *settings.Zootr) error {
-	for name, value := range this.Settings {
-		_, _ = name, value
-		notimpled()
+	var err error
+	for skipped := range obj.Keys(&err) {
+		node := nodes.Placement(components.Name(skipped))
+		node.Attach(components.Collected{})
 	}
 
-	return nil
+	return err
 }
 
-func (this spoiler) CopyPlacements(tokens *tracking.Tokens, nodes *tracking.Nodes) error {
-	for where, placed := range this.Placements {
-		placement := nodes.Placement(components.Name(where))
-		var token tracking.Token
-		switch placed := placed.(type) {
-		case string:
-			token = tokens.MustGet(components.Name(placed))
-		case map[string]any:
-			name := placed["item"].(string)
-			token = tokens.MustGet(components.Name(name))
-			if price, exists := placed["price"]; exists {
-				token.Attach(components.Price(price.(int)))
+type placed struct {
+	name  string
+	price int
+}
+
+func readPlacedItem(obj *json.ObjectParser) (placed, error) {
+	var placed placed
+	placed.price = -1
+	switch kind := obj.Current().Kind; kind {
+	case json.STRING:
+		var readErr error
+		placed.name, readErr = obj.ReadString()
+		if readErr != nil {
+			return placed, readErr
+		}
+		break
+	case json.OBJ_OPEN:
+		inner, readErr := obj.ReadObject()
+		if readErr != nil {
+			return placed, readErr
+		}
+		for inner.More() {
+			prop, err := obj.ReadPropertyName()
+			if err != nil {
+				return placed, err
 			}
-		default:
-			return errors.New("unexpected token")
+			switch prop {
+			case "item":
+				placed.name, readErr = obj.ReadString()
+				if readErr != nil {
+					return placed, err
+				}
+				break
+			case "price":
+				placed.price, readErr = obj.ReadInt()
+				if readErr != nil {
+					return placed, readErr
+				}
+				break
+			default:
+				return placed, fmt.Errorf("unexpected property: %q", prop)
+			}
 		}
 
-		placement.Holding(token)
 	}
-
-	return notimpled()
+	return placed, nil
 }
-
-func (this spoiler) MarkSkippedLocations(nodes *tracking.Nodes) error {
-	for where := range this.SkippedLocations {
-		placement := nodes.Placement(components.Name(where))
-		placement.Attach(components.Collected{})
-	}
-
-	return nil
-}
-*/

@@ -3,6 +3,7 @@ package magicbean
 import (
 	"fmt"
 	"sudonters/libzootr/mido/objects"
+	"sudonters/libzootr/settings"
 	"sudonters/libzootr/zecs"
 )
 
@@ -68,13 +69,7 @@ func CreateBuiltInDefs() []objects.BuiltInFunctionDef {
 	}
 }
 
-type ShuffleFlags uint64
-
-const (
-	SHUFFLE_OCARINA_NOTES = 1
-)
-
-func CreateBuiltInHasFuncs(builtins *BuiltIns, pocket *Pocket, flags ShuffleFlags) {
+func CreateBuiltInHasFuncs(builtins *BuiltIns, pocket *Pocket, flags settings.ShufflingFlags) {
 	builtins.Has = func(tbl *objects.Table, args []objects.Object) (objects.Object, error) {
 		if len(args) != 2 {
 			return objects.Null, fmt.Errorf("has expects 2 arguments, got %d", len(args))
@@ -132,7 +127,7 @@ func CreateBuiltInHasFuncs(builtins *BuiltIns, pocket *Pocket, flags ShuffleFlag
 		return objects.PackBool(pocket.HasMedallions(qty)), nil
 	}
 
-	if flags&SHUFFLE_OCARINA_NOTES == SHUFFLE_OCARINA_NOTES {
+	if settings.HasFlag(flags, settings.ShuffleOcarinaNotes) {
 		builtins.HasNotesForSong = func(_ *objects.Table, args []objects.Object) (objects.Object, error) {
 			ptr := objects.UnpackPtr32(args[0])
 			return objects.PackBool(pocket.HasAllNotes(zecs.Entity(ptr.Addr))), nil

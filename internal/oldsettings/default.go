@@ -1,4 +1,4 @@
-package settings
+package oldsettings
 
 func Default() Zootr {
 	var s Zootr

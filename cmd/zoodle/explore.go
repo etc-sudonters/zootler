@@ -7,7 +7,6 @@ import (
 	"sudonters/libzootr/cmd/zoodle/bootstrap"
 	"sudonters/libzootr/components"
 	"sudonters/libzootr/internal/query"
-	"sudonters/libzootr/internal/settings"
 	"sudonters/libzootr/internal/shuffle"
 	"sudonters/libzootr/internal/table"
 	"sudonters/libzootr/magicbean"
@@ -24,32 +23,15 @@ type Age bool
 const AgeAdult Age = true
 const AgeChild Age = false
 
-func fromStartingAge(start settings.StartingAge) Age {
-	switch start {
-	case settings.StartAgeAdult:
-		return AgeAdult
-	case settings.StartAgeChild:
-		return AgeChild
-	default:
-		panic("unknown starting age")
-
-	}
-}
-
 func explore(ctx context.Context, xplr *magicbean.Exploration, generation *magicbean.Generation, age Age) magicbean.ExplorationResults {
 	pockets := magicbean.NewPockets(&generation.Inventory, &generation.Ocm)
 
-	var shuffleFlags magicbean.ShuffleFlags
-	if generation.Settings.Shuffling.OcarinaNotes {
-		shuffleFlags = shuffleFlags | magicbean.SHUFFLE_OCARINA_NOTES
-	}
-
 	funcs := magicbean.BuiltIns{}
-	magicbean.CreateBuiltInHasFuncs(&funcs, &pockets, shuffleFlags)
+	magicbean.CreateBuiltInHasFuncs(&funcs, &pockets, generation.Settings.Logic.Shuffling.Flags)
 	funcs.CheckTodAccess = magicbean.ConstBool(true)
 	funcs.IsAdult = magicbean.ConstBool(age == AgeAdult)
 	funcs.IsChild = magicbean.ConstBool(age == AgeChild)
-	funcs.IsStartingAge = magicbean.ConstBool(age == fromStartingAge(generation.Settings.Spawns.StartingAge))
+	funcs.IsStartingAge = magicbean.ConstBool(age == Age(generation.Settings.Logic.Spawns.StartAge))
 
 	std, noStd := dontio.StdFromContext(ctx)
 	if noStd != nil {
@@ -112,7 +94,7 @@ func CollectStartingItems(generation *magicbean.Generation) {
 
 	tokens := tracking.NewTokens(ocm)
 
-	if these.Locations.OpenDoorOfTime {
+	if these.Logic.Connections.OpenDoorOfTime {
 		collect(tokens.MustGet("Time Travel"), 1)
 	}
 

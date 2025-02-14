@@ -2,7 +2,7 @@ package magicbean
 
 import (
 	"math/rand/v2"
-	"sudonters/libzootr/internal/settings"
+	"sudonters/libzootr/settings"
 
 	"sudonters/libzootr/mido/objects"
 	"sudonters/libzootr/zecs"
@@ -14,5 +14,5 @@ type Generation struct {
 	Objects   objects.Table
 	Inventory Inventory
 	Rng       rand.Rand
-	Settings  settings.Zootr
+	Settings  settings.Model
 }

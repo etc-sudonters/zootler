@@ -1,4 +1,4 @@
-package settings
+package oldsettings
 
 type flagged interface {
 	~uint8 | ~uint16 | ~uint32 | ~uint64
@@ -7,6 +7,13 @@ type flagged interface {
 func Has[F flagged](setting, expecting F) bool {
 	return setting&expecting == expecting
 
+}
+
+type Settings struct {
+	Logic      map[string]any
+	Cosmetic   map[string]any
+	Rom        map[string]any
+	Generation map[string]any
 }
 
 type Zootr struct {

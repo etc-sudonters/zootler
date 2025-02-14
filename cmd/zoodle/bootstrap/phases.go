@@ -1,14 +1,16 @@
 package bootstrap
 
 import (
+	"context"
+	"os"
 	"slices"
-	"sudonters/libzootr/internal/settings"
 	"sudonters/libzootr/magicbean"
 	"sudonters/libzootr/magicbean/tracking"
 	"sudonters/libzootr/mido"
 	"sudonters/libzootr/mido/ast"
 	"sudonters/libzootr/mido/objects"
 	"sudonters/libzootr/mido/optimizer"
+	"sudonters/libzootr/settings"
 	"sudonters/libzootr/zecs"
 )
 
@@ -25,20 +27,31 @@ func Phase1_InitializeStorage(ddl []zecs.DDL) zecs.Ocm {
 	return ocm
 }
 
-func Phase2_ImportFromFiles(ocm *zecs.Ocm, set *tracking.Set, paths LoadPaths) error {
+func Phase2_ImportFromFiles(ctx context.Context, settings *settings.Model, ocm *zecs.Ocm, set *tracking.Set, paths LoadPaths) error {
 	PanicWhenErr(storeScripts(ocm, paths))
 	PanicWhenErr(storeTokens(set.Tokens, paths))
 	PanicWhenErr(storePlacements(set.Nodes, set.Tokens, paths))
 	PanicWhenErr(storeRelations(set.Nodes, set.Tokens, paths))
+
+	if paths.Spoiler != "" {
+		fh, err := os.Open(paths.Spoiler)
+		PanicWhenErr(err)
+		defer func() {
+			fh.Close()
+		}()
+		PanicWhenErr(LoadSpoilerData(ctx, fh, settings, &set.Nodes, &set.Tokens))
+	}
 	return nil
 }
 
-func Phase3_ConfigureCompiler(ocm *zecs.Ocm, theseSettings *settings.Zootr, options ...mido.ConfigureCompiler) mido.CompileEnv {
+func Phase3_ConfigureCompiler(ocm *zecs.Ocm, theseSettings *settings.Model, options ...mido.ConfigureCompiler) mido.CompileEnv {
 	defaults := []mido.ConfigureCompiler{
 		mido.CompilerDefaults(),
+		mido.CompilerWithGenerationSettings(settings.Names()),
 		func(env *mido.CompileEnv) {
 			env.Optimize.AddOptimizer(func(env *mido.CompileEnv) ast.Rewriter {
-				return optimizer.InlineSettings(theseSettings, env.Symbols)
+				reader := settings.Reader{Model: theseSettings}
+				return optimizer.InlineSettings(reader, env.Symbols)
 			})
 			PanicWhenErr(loadsymbols(ocm, env.Symbols))
 			PanicWhenErr(loadscripts(ocm, env))
