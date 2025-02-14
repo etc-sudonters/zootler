@@ -7,6 +7,20 @@ import (
 	"io"
 )
 
+type ScanError struct {
+	Cause           error
+	Line, Pos, Char int
+}
+
+func (this ScanError) Error() string {
+	return fmt.Sprintf("line: %d, char: %d, pos: %d: %s", this.Line, this.Char, this.Pos, this.Cause)
+}
+
+type lexeme struct {
+	scanned scanned
+	body    []byte
+}
+
 func NewScanner(r io.Reader) *Scanner {
 	this := &Scanner{
 		inner: bufio.NewScanner(r),
@@ -18,11 +32,26 @@ func NewScanner(r io.Reader) *Scanner {
 type Scanner struct {
 	inner   *bufio.Scanner
 	scanned scanned
+
+	pos, line, char int
 }
 
-type lexeme struct {
-	scanned scanned
-	body    []byte
+func (this *Scanner) makePositionedError(cause error) error {
+	if cause != nil {
+		this.scanned = scanned_err
+		return ScanError{
+			Cause: cause,
+			Line:  this.line,
+			Char:  this.char,
+			Pos:   this.pos,
+		}
+	}
+	return nil
+}
+
+func (this *Scanner) recordLine() {
+	this.char = 0
+	this.line++
 }
 
 func (this *Scanner) Next() (lexeme, error) {
@@ -53,6 +82,16 @@ func (this *Scanner) Err() error {
 }
 
 func (this *Scanner) split(buffer []byte, atEof bool) (int, []byte, error) {
+	advance, token, err := this.scan(buffer, atEof)
+	if err != nil && err != bufio.ErrFinalToken {
+		err = this.makePositionedError(err)
+	}
+	this.pos += advance
+	this.char += advance
+	return advance, token, err
+}
+
+func (this *Scanner) scan(buffer []byte, atEof bool) (int, []byte, error) {
 	this.scanned = scanned_eof
 	if len(buffer) == 0 && atEof {
 		return 0, nil, bufio.ErrFinalToken
@@ -65,6 +104,10 @@ func (this *Scanner) split(buffer []byte, atEof bool) (int, []byte, error) {
 		char, err = this.scanWhitespace(buffer, atEof, &n)
 		if err != nil {
 			return n, nil, err
+		}
+
+		if char == eof && !atEof {
+			return n, nil, nil
 		}
 	}
 
@@ -129,6 +172,9 @@ func (this *Scanner) scanWhitespace(buffer []byte, _ bool, n *int) (byte, error)
 	found := eof
 	for _, char := range buffer[startAt:] {
 		(*n)++
+		if char == '\n' || char == '\r' {
+			this.recordLine()
+		}
 		if !isWhitespace(char) {
 			found = char
 			break
@@ -153,6 +199,9 @@ func (this *Scanner) scanString(buffer []byte, atEof bool, n *int) ([]byte, erro
 			i--
 			// overwrite \
 			token[i] = char
+		}
+		if char == '\n' || char == '\r' {
+			this.recordLine()
 		}
 		i++
 		(*n)++
@@ -185,6 +234,7 @@ func (this *Scanner) scanComment(buffer []byte, atEof bool, n *int) ([]byte, err
 	for _, char := range buffer[beginOfComment:] {
 		last = char
 		if char == '\n' || char == '\r' {
+			this.recordLine()
 			break
 		}
 		(*n)++

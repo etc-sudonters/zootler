@@ -12,11 +12,11 @@ type Token struct {
 	Body []byte
 }
 
-func unexpectedToken(t *Token) error {
-	return fmt.Errorf("unexpected token %s: %q", scanned(t.Kind), string(t.Body))
-}
-
 type Kind uint8
+
+func (this Kind) String() string {
+	return scanned(this).String()
+}
 
 const (
 	OBJ_OPEN  = Kind(scanned_obj_open)
@@ -51,6 +51,14 @@ func NewParser(scanner *Scanner) *Parser {
 	p.Next()
 	p.Next()
 	return p
+}
+
+func (this *Parser) makeError(cause error) error {
+	return this.scanner.makePositionedError(cause)
+}
+
+func (this *Parser) unexpected(t *Token) error {
+	return this.makeError(fmt.Errorf("unexpected token %s: %q", scanned(t.Kind), string(t.Body)))
 }
 
 func (this *Parser) Discard() error {
@@ -139,7 +147,7 @@ func (this *Parser) ReadInt() (int, error) {
 
 	number, err := strconv.Atoi(string(token.Body))
 	if err != nil {
-		return 0, fmt.Errorf("failed to parse number: %w", err)
+		return 0, this.scanner.makePositionedError(fmt.Errorf("failed to parse number: %w", err))
 	}
 
 	this.Next()
@@ -154,7 +162,7 @@ func (this *Parser) ReadFloat() (float64, error) {
 
 	number, err := strconv.ParseFloat(string(token.Body), 64)
 	if err != nil {
-		return 0, fmt.Errorf("failed to parse number: %w", err)
+		return 0, this.scanner.makePositionedError(fmt.Errorf("failed to parse number: %w", err))
 	}
 	this.Next()
 	return number, nil
@@ -168,7 +176,7 @@ func (this *Parser) ReadBool() (bool, error) {
 		this.Next()
 		return false, nil
 	} else {
-		return false, unexpectedToken(&this.curr)
+		return false, this.unexpected(&this.curr)
 	}
 }
 
@@ -178,7 +186,7 @@ func (this *Parser) expect(expected Kind) (Token, error) {
 	}
 
 	if this.curr.Kind != expected {
-		return Token{Kind: ERR}, unexpectedToken(&this.curr)
+		return Token{Kind: ERR}, this.unexpected(&this.curr)
 	}
 
 	return this.curr, nil
@@ -194,7 +202,7 @@ func (this *ObjectParser) ReadPropertyName() (string, error) {
 		return "", err
 	}
 	if this.p.curr.Kind != colon {
-		return str, unexpectedToken(&this.p.curr)
+		return str, this.p.unexpected(&this.p.curr)
 	}
 	this.p.Next()
 	return str, nil
@@ -270,6 +278,7 @@ func (this *ObjectParser) DiscardRemaining() error {
 	for this.More() {
 		if _, err := this.ReadPropertyName(); err != nil {
 			return err
+		} else {
 		}
 		if err := this.DiscardValue(); err != nil {
 			return err
@@ -350,10 +359,12 @@ func (this *ArrayParser) ReadObject() (*ObjectParser, error) {
 }
 
 func (this *ArrayParser) DiscardRemaining() error {
+	var i int
 	for this.More() {
 		if err := this.DiscardValue(); err != nil {
 			return err
 		}
+		i++
 	}
 	this.ReadEnd()
 	return nil

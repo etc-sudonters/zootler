@@ -3,7 +3,7 @@ package json
 import "testing"
 
 func TestCanDiscard(t *testing.T) {
-	input := `{"array": [1,2,3,4,5], "nested": {"property": 1}}`
+	input := `{"array": [1,2,3,4,5], "nested": {"property": 1}, "another": {}}`
 	parser := NewParser(scanner(input))
 	obj, err := parser.ReadObject()
 	fatalOnErr(t, err)
