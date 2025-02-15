@@ -27,8 +27,7 @@ func (this Reader) String(name string) (string, error) {
 		cond := this.Logic.WinConditions.Bridge.Kind()
 		val = cond.String()
 	case "shuffle_ganon_bosskey":
-		cond := this.Logic.WinConditions.GanonBossKey.Kind()
-		val = cond.String()
+		val = this.Logic.Dungeon.GanonBossKeyShuffle.String()
 	case "open_forest":
 		val = this.Logic.Connections.OpenKokriForest.String()
 	case "open_kakariko":
@@ -64,12 +63,12 @@ func (this Reader) String(name string) (string, error) {
 
 }
 
-func expectCondition(cond ConditionedAmount, expect ConditionKind) (float64, error) {
+func expectCondition(cond ConditionedAmount, expect ConditionKind) float64 {
 	kind, qty := cond.Decode()
 	if kind != expect {
-		return math.MaxFloat64, fmt.Errorf("expected condition %q but found %q", expect, kind)
+		return math.MaxFloat64
 	}
-	return float64(qty), nil
+	return float64(qty)
 }
 
 func (this Reader) Number(name string) (float64, error) {
@@ -81,37 +80,37 @@ func (this Reader) Number(name string) (float64, error) {
 	case "triforce_goal_per_world":
 		val = float64(this.Logic.WinConditions.TriforceGoal)
 	case "lacs_medallions":
-		val, err = expectCondition(this.Logic.WinConditions.Lacs, CondMedallions)
+		val = expectCondition(this.Logic.WinConditions.Lacs, CondMedallions)
 	case "lacs_stones":
-		val, err = expectCondition(this.Logic.WinConditions.Lacs, CondStones)
+		val = expectCondition(this.Logic.WinConditions.Lacs, CondStones)
 	case "lacs_rewards":
-		val, err = expectCondition(this.Logic.WinConditions.Lacs, CondRewards)
+		val = expectCondition(this.Logic.WinConditions.Lacs, CondRewards)
 	case "lacs_tokens":
-		val, err = expectCondition(this.Logic.WinConditions.Lacs, CondTokens)
+		val = expectCondition(this.Logic.WinConditions.Lacs, CondTokens)
 	case "lacs_hearts":
-		val, err = expectCondition(this.Logic.WinConditions.Lacs, CondHearts)
+		val = expectCondition(this.Logic.WinConditions.Lacs, CondHearts)
 	case "bridge_medallions":
-		val, err = expectCondition(this.Logic.WinConditions.Lacs, CondMedallions)
+		val = expectCondition(this.Logic.WinConditions.Lacs, CondMedallions)
 	case "bridge_stones":
-		val, err = expectCondition(this.Logic.WinConditions.Lacs, CondStones)
+		val = expectCondition(this.Logic.WinConditions.Lacs, CondStones)
 	case "bridge_rewards":
-		val, err = expectCondition(this.Logic.WinConditions.Lacs, CondRewards)
+		val = expectCondition(this.Logic.WinConditions.Lacs, CondRewards)
 	case "bridge_tokens":
-		val, err = expectCondition(this.Logic.WinConditions.Lacs, CondTokens)
+		val = expectCondition(this.Logic.WinConditions.Lacs, CondTokens)
 	case "bridge_hearts":
-		val, err = expectCondition(this.Logic.WinConditions.Lacs, CondHearts)
+		val = expectCondition(this.Logic.WinConditions.Lacs, CondHearts)
 	case "trials":
-		val = float64(this.Logic.WinConditions.Trials.Count())
+		val = float64(CountFlags(this.Logic.WinConditions.Trials))
 	case "ganon_bosskey_medallions":
-		val, err = expectCondition(this.Logic.WinConditions.Lacs, CondMedallions)
+		val = expectCondition(this.Logic.WinConditions.Lacs, CondMedallions)
 	case "ganon_bosskey_stones":
-		val, err = expectCondition(this.Logic.WinConditions.Lacs, CondStones)
+		val = expectCondition(this.Logic.WinConditions.Lacs, CondStones)
 	case "ganon_bosskey_rewards":
-		val, err = expectCondition(this.Logic.WinConditions.Lacs, CondRewards)
+		val = expectCondition(this.Logic.WinConditions.Lacs, CondRewards)
 	case "ganon_bosskey_tokens":
-		val, err = expectCondition(this.Logic.WinConditions.Lacs, CondTokens)
+		val = expectCondition(this.Logic.WinConditions.Lacs, CondTokens)
 	case "ganon_bosskey_hearts":
-		val, err = expectCondition(this.Logic.WinConditions.Lacs, CondHearts)
+		val = expectCondition(this.Logic.WinConditions.Lacs, CondHearts)
 	case "chicken_count":
 		val = float64(this.Logic.Minigames.KakarikoChickenGoal)
 	case "big_poe_count":
@@ -129,9 +128,38 @@ func (this Reader) Bool(name string) (bool, error) {
 	case "triforce_hunt":
 		val = this.Logic.WinConditions.TriforceHunt
 	case "open_door_of_time":
-		val = this.Logic.Connections.OpenDoorOfTime
+		val = HasFlag(this.Logic.Connections.Flags, ConnectionOpenDoorOfTime)
 	case "free_bombchu_drops":
 		val = this.Logic.FreeBombchuDrops
+	case "shuffle_individual_ocarina_notes":
+		val = HasFlag(this.Logic.Shuffling.Flags, ShuffleOcarinaNotes)
+	case "shuffle_silver_rupees":
+		val = this.Logic.Dungeon.SilverRupees != ShuffleKeysVanilla
+	case "skip_child_zelda":
+		val = HasFlag(this.Logic.Locations.Flags, LocationSkipChildZelda)
+	case "skip_reward_from_rauru":
+		val = HasFlag(this.Logic.Locations.Flags, LocationSkipRauruReward)
+	case "shuffle_hideout_entrances":
+		val = HasFlag(this.Logic.Connections.Flags, ConnectionShuffleHideoutEntrances)
+	case "plant_beans":
+		val = HasFlag(this.Logic.Locations.Flags, LocationsPlantBeans)
+	case "adult_trade_shuffle":
+		val = this.Logic.Trade.AdultItems != 0
+	case "free_scarecrow":
+		val = HasFlag(this.Logic.Locations.Flags, LocationsFreeScarecrow)
+	case "shuffle_interior_entrances":
+		val = this.Logic.Connections.Interior != 0
+	case "shuffle_expensive_merchants":
+		val = HasFlag(this.Logic.Shuffling.Flags, ShuffleExpensiveMerchants)
+	case "shuffle_overworld_entrances":
+		val = this.Logic.Connections.Overworld != 0
+	case "complete_mask_quest":
+		val = HasFlag(this.Logic.Locations.Flags, LocationsCompleteMaskQuest)
+	case "shuffle_empty_pots":
+		val = HasFlag(this.Logic.Shuffling.Flags, ShuffleEmptyPots)
+	case "fix_broken_drops":
+		val = this.Logic.FixBrokenDrops
+
 	default:
 		return val, unknown(name)
 	}

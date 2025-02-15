@@ -35,6 +35,7 @@ func runMain(ctx context.Context, opts cliOptions) stageleft.ExitCode {
 
 	theseSettings := settings.Default()
 	FinalizeSettings(&theseSettings)
+
 	generation := setup(ctx, paths, &theseSettings)
 	generation.Settings = theseSettings
 	CollectStartingItems(&generation)
@@ -54,14 +55,14 @@ func runMain(ctx context.Context, opts cliOptions) stageleft.ExitCode {
 	return stageleft.ExitCode(0)
 }
 
-func FinalizeSettings(these *settings.Zootr) {
-	these.Seed = 0x76E76E14E9691280
-	these.Shuffling.OcarinaNotes = true
-	these.Spawns.StartingAge = settings.StartAgeAdult
-	these.Locations.OpenDoorOfTime = true
+func FinalizeSettings(these *settings.Model) {
+	these.Generation.Seed = 0x76E76E14E9691280
+	these.Logic.Shuffling.Flags |= settings.ShuffleOcarinaNotes
+	these.Logic.Spawns.StartAge = settings.StartAgeAdult
+	these.Logic.Connections.Flags |= settings.ConnectionOpenDoorOfTime
 }
 
-func setup(ctx context.Context, paths bootstrap.LoadPaths, settings *settings.Zootr) (generation magicbean.Generation) {
+func setup(ctx context.Context, paths bootstrap.LoadPaths, settings *settings.Model) (generation magicbean.Generation) {
 	ocm := bootstrap.Phase1_InitializeStorage(nil)
 	trackSet := tracking.NewTrackingSet(&ocm)
 
@@ -82,7 +83,7 @@ func setup(ctx context.Context, paths bootstrap.LoadPaths, settings *settings.Zo
 	generation.World = world
 	generation.Objects = objects.TableFrom(compileEnv.Objects)
 	generation.Inventory = magicbean.EmptyInventory()
-	generation.Rng = *rand.New(rng.NewXoshiro256PPFromU64(settings.Seed))
+	generation.Rng = *rand.New(rng.NewXoshiro256PPFromU64(settings.Generation.Seed))
 
 	return generation
 }

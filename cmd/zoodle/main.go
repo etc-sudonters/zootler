@@ -5,7 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"runtime/debug"
+	//	"runtime/debug"
 
 	"github.com/etc-sudonters/substrate/dontio"
 	"github.com/etc-sudonters/substrate/stageleft"
@@ -29,7 +29,7 @@ func main() {
 			} else if str, ok := r.(string); ok {
 				std.WriteLineErr("%s", str)
 			}
-			_, _ = std.Err.Write(debug.Stack())
+			//			_, _ = std.Err.Write(debug.Stack())
 			if appExitCode != stageleft.ExitSuccess {
 				appExitCode = stageleft.AsExitCode(r, stageleft.ExitCode(126))
 			}

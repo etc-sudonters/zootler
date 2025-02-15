@@ -13,6 +13,7 @@ import (
 	"sudonters/libzootr/magicbean/tracking"
 	"sudonters/libzootr/mido"
 	"sudonters/libzootr/mido/objects"
+	"sudonters/libzootr/settings"
 	"sudonters/libzootr/zecs"
 
 	"github.com/etc-sudonters/substrate/dontio"
@@ -94,7 +95,7 @@ func CollectStartingItems(generation *magicbean.Generation) {
 
 	tokens := tracking.NewTokens(ocm)
 
-	if these.Logic.Connections.OpenDoorOfTime {
+	if settings.HasFlag(these.Logic.Connections.Flags, settings.ConnectionOpenDoorOfTime) {
 		collect(tokens.MustGet("Time Travel"), 1)
 	}
 

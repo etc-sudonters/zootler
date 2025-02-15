@@ -77,7 +77,7 @@ func Phase4_Compile(ocm *zecs.Ocm, compiler *mido.CodeGen) error {
 	return nil
 }
 
-func Phase5_CreateWorld(ocm *zecs.Ocm, settings *settings.Zootr, objects objects.Table) magicbean.ExplorableWorld {
+func Phase5_CreateWorld(ocm *zecs.Ocm, settings *settings.Model, objects objects.Table) magicbean.ExplorableWorld {
 	xplore := explorableworldfrom(ocm)
 	return xplore
 }

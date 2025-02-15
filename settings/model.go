@@ -22,5 +22,17 @@ func FromString(encoded string) (Model, error) {
 }
 
 func Default() Model {
-	panic(notImpled)
+	var m Model
+	m.Logic.Dungeon.GerudoFortressKeys = ShuffleKeysVanilla
+	m.Logic.Dungeon.SilverRupees = ShuffleKeysVanilla
+	m.Logic.Minigames.BigPoeGoal = 10
+	m.Logic.Minigames.KakarikoChickenGoal = 7
+	m.Logic.Minigames.TreasureChestGameKeys = ShuffleKeysVanilla
+	m.Logic.Shuffling.Flags = ShuffleKokiriSword
+	m.Logic.StartingHearts = 3
+	m.Logic.Trade.AdultItems = AdultTradeItemsAll
+	m.Logic.WinConditions.Bridge = EncodeConditionedAmount(CondMedallions, 6)
+	m.Logic.WinConditions.Lacs = EncodeConditionedAmount(CondVanilla, 0)
+	m.Logic.WinConditions.Trials = TrialAll
+	return m
 }

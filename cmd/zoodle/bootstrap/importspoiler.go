@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"strings"
 	"sudonters/libzootr/components"
 	"sudonters/libzootr/internal/json"
 	"sudonters/libzootr/magicbean/tracking"
@@ -91,44 +92,142 @@ func CopySettings(these *settings.Model, obj *json.ObjectParser) error {
 	return obj.ReadEnd()
 }
 
-func readSetting(name string, these *settings.Model, obj *json.ObjectParser) error {
+func readSetting(propertyName string, these *settings.Model, obj *json.ObjectParser) error {
 	var err error
 
-	tradeShuffle := these.Logic.Trade.AdultItems
-	switch name {
+	switch propertyName {
+	case "logic_rules":
+		value, err := obj.ReadString()
+		if err != nil {
+			return fmt.Errorf("logic_rules: valid settings: none, glitches, glitchless: %w")
+		}
+		switch value {
+		case "none":
+			these.Logic.Set = settings.LogicNone
+		case "glitched":
+			these.Logic.Set = settings.LogicGlitched
+		case "glitchless":
+			these.Logic.Set = settings.LogicGlitchless
+		default:
+			return fmt.Errorf("unknown logic_rules value: %q", value)
+		}
+	case "reachable_locations":
+		value, err := obj.ReadString()
+		if err != nil {
+			return fmt.Errorf("reachable_locations: valid settings: ... : %w", value)
+		}
+		switch value {
+		case "all":
+			these.Logic.Locations.Reachability = settings.ReachableAll
+		case "goals":
+			these.Logic.Locations.Reachability = settings.ReachableGoals
+		case "beatable":
+			these.Logic.Locations.Reachability = settings.ReachableNecessary
+		default:
+			return fmt.Errorf("reachable_locations: unknown setting: %q", value)
+		}
+	case "triforce_hunt":
+		value, err := obj.ReadBool()
+		these.Logic.WinConditions.TriforceHunt = value
+		return err
+	case "lacs_condition":
+		val, readErr := obj.ReadString()
+		if readErr != nil {
+			return readErr
+		}
+		cond, parseErr := settings.ParseCondition(val)
+		if parseErr != nil {
+			return parseErr
+		}
+		_, qty := these.Logic.WinConditions.Lacs.Decode()
+		these.Logic.WinConditions.Lacs = settings.EncodeConditionedAmount(cond, qty)
+	case "bridge":
+		val, readErr := obj.ReadString()
+		if readErr != nil {
+			return readErr
+		}
+		cond, parseErr := settings.ParseCondition(val)
+		if parseErr != nil {
+			return parseErr
+		}
+		_, qty := these.Logic.WinConditions.Bridge.Decode()
+		these.Logic.WinConditions.Bridge = settings.EncodeConditionedAmount(cond, qty)
+	case "trials":
+		// this only tells how many trials _MIGHT_ be enabled the spoiler
+		// already has these pinned down in its trials top level key
+		count, err := obj.ReadInt()
+		if err != nil {
+			return fmt.Errorf("expected number for trials: %w", err)
+		}
+		if count == 0 {
+			these.Logic.WinConditions.Trials = 0
+		}
+	case "shuffle_ganon_bosskey":
+		val, readErr := obj.ReadString()
+		if readErr != nil {
+			return fmt.Errorf("expected string for shuffle_ganon_bosskey: %w", readErr)
+		}
+		cond, err := settings.ParseGanonBossKeyShuffle(val)
+		if err != nil {
+			return err
+		}
+		these.Logic.Dungeon.GanonBossKeyShuffle = cond
+	case "ganon_bosskey_medallions",
+		"ganon_bosskey_stones",
+		"ganon_bosskey_rewards",
+		"ganon_bosskey_hearts",
+		"ganon_bosskey_tokens":
+		if these.Logic.WinConditions.GanonBossKey != 0 {
+			return fmt.Errorf("ganon_bosskey condition is already set")
+		}
+
+		qty, qtyErr := obj.ReadInt()
+		if qtyErr != nil {
+			fmt.Errorf("expected number for %s: %w", propertyName, qtyErr)
+		}
+
+		condStr, _ := strings.CutPrefix(propertyName, "ganon_bosskey_")
+		cond, condErr := settings.ConditionFrom(condStr, uint32(qty))
+		if condErr != nil {
+			return fmt.Errorf("could not parse %s: %w", propertyName, condErr)
+		}
+		these.Logic.WinConditions.GanonBossKey = cond
 	case "adult_trade_start":
-		for i, name := range json.ReadStringArray(obj, &err) {
-			switch name {
+		var adultTradeItems settings.AdultTradeItems
+		for i, propertyName := range json.ReadStringArray(obj, &err) {
+			switch propertyName {
 			case "Pocket Egg":
-				tradeShuffle |= settings.AdultTradeStartPocketEgg
+				adultTradeItems |= settings.AdultTradePocketEgg
 			case "Pocket Cucco":
-				tradeShuffle |= settings.AdultTradeStartPocketCucco
+				adultTradeItems |= settings.AdultTradePocketCucco
 			case "Odd Mushroom":
-				tradeShuffle |= settings.AdultTradeStartOddMushroom
+				adultTradeItems |= settings.AdultTradeOddMushroom
 			case "Odd Potion":
-				tradeShuffle |= settings.AdultTradeStartOddPotion
+				adultTradeItems |= settings.AdultTradeOddPotion
 			case "Poachers Saw":
-				tradeShuffle |= settings.AdultTradeStartPoachersSaw
+				adultTradeItems |= settings.AdultTradePoachersSaw
 			case "Broken Sword":
-				tradeShuffle |= settings.AdultTradeStartBrokenSword
+				adultTradeItems |= settings.AdultTradeBrokenSword
 			case "Prescription":
-				tradeShuffle |= settings.AdultTradeStartPrescription
+				adultTradeItems |= settings.AdultTradePrescription
 			case "Eyeball Frog":
-				tradeShuffle |= settings.AdultTradeStartEyeballFrog
+				adultTradeItems |= settings.AdultTradeEyeballFrog
 			case "Eyedrops":
-				tradeShuffle |= settings.AdultTradeStartEyedrops
+				adultTradeItems |= settings.AdultTradeEyedrops
 			case "Claim Check":
-				tradeShuffle |= settings.AdultTradeStartClaimCheck
+				adultTradeItems |= settings.AdultTradeClaimCheck
 			default:
-				return fmt.Errorf("unknown adult trade shuffle item %q at index %d", name, i)
+				return fmt.Errorf("unknown adult trade shuffle item %q at index %d", propertyName, i)
 			}
 		}
-		these.Logic.Trade.AdultItems = tradeShuffle
+		these.Logic.Trade.AdultItems = adultTradeItems
 		return err
 
 	default:
 		return obj.DiscardValue()
 	}
+
+	return nil
 }
 
 func CopyPlacements(tokens *tracking.Tokens, nodes *tracking.Nodes, obj *json.ObjectParser) error {

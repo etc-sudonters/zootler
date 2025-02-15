@@ -1,6 +1,8 @@
 package settings
 
-type Generation struct{}
+type Generation struct {
+	Seed uint64
+}
 
 func finalizeGeneration(z *Zootr, g *Generation) error {
 	return notImpled

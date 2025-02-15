@@ -7,6 +7,7 @@ type Logic struct {
 	FixBrokenDrops    bool
 	HintsRevealed     HintsRevealed
 	FreeBombchuDrops  bool
+	StartingHearts    int
 
 	Spawns struct {
 		StartTimeOfDay TimeOfDay
@@ -17,15 +18,13 @@ type Logic struct {
 
 	Shuffling struct {
 		DungeonRewards ShuffleDungeonRewards
-		Songs          Enum
-		Shops          Enum
+		Songs          ShuffleSongs
+		Shops          ShuffleShop
 		SkullTokens    ShuffleSkullTokens
 		Scrubs         ShuffleScrub
-		Freestandings  Enum
-		Fishing        Flags
+		Freestandings  ShuffleFreestanding
 		Pots           ShufflePots
 		Crates         ShuffleCrates
-		Cows           bool
 
 		RemoveCollectibleHearts bool
 
@@ -39,7 +38,7 @@ type Logic struct {
 
 	Locations struct {
 		Reachability LocationsReachable
-		Flags        Flags // rauru, zelda letter, mask quest, scarecrow, beans
+		Flags        LocationFlags // rauru, zelda letter, mask quest, scarecrow, beans
 		AdultSpawn   string
 		ChildSpawn   string
 
@@ -66,6 +65,7 @@ type Logic struct {
 		Shortcuts              Flags
 		GerudoFortressKeys     ShuffleKeys
 		GerudoFortress         GerudoFortressCarpenterRescue
+		GanonBossKeyShuffle    GanonBossKeyShuffle
 	}
 
 	Minigames struct {
@@ -78,15 +78,10 @@ type Logic struct {
 		OpenKakarikoGate OpenKakarikoGate
 		OpenKokriForest  OpenForest
 		OpenZoraFountain OpenZoraFountain
-		Interiors        InteriorShuffle
-		DungeonDoor      DungeonDoorShuffle
 
-		OpenDoorOfTime bool
-		Grottos        bool
-		Overworld      bool
-		ValleyRiver    bool
-		OwlDrops       bool
-		WarpSongs      bool
+		Flags     ConnectionFlag
+		Interior  InteriorShuffle
+		Overworld OverworldShuffle
 	}
 
 	WinConditions struct {
@@ -96,7 +91,7 @@ type Logic struct {
 		Lacs          ConditionedAmount
 		Bridge        ConditionedAmount
 		GanonBossKey  ConditionedAmount
-		Trials        Flags
+		Trials        TrialFlag
 	}
 
 	Tricks map[string]bool

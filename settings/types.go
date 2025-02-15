@@ -41,16 +41,13 @@ type ConditionKind uint32
 
 type BossShuffle uint8
 type InteriorShuffle uint8
+type OverworldShuffle uint8
 type DungeonDoorShuffle uint8
 
 type Enum uint8
 
 type Flags uint64
 type Flag uint64
-
-func (this Flags) Count() int {
-	return bits.OnesCount64(uint64(this))
-}
 
 func CountFlags[U ~uint64](union U) int {
 	return bits.OnesCount64(uint64(union))
@@ -74,20 +71,22 @@ func (this ConditionedAmount) Amount() uint32 {
 	return uint32(this)
 }
 
-func (this ConditionedAmount) Decode() (ConditionKind, int) {
+func (this ConditionedAmount) Decode() (ConditionKind, uint32) {
 	kind := ConditionKind(this >> 32)
-	qty := int(uint32(kind))
+	qty := uint32(kind)
 	return kind, qty
 }
 
-const (
-	LogicNone       LogicSetting = 1
-	LogicGlitched   LogicSetting = 2
-	LogicGlitchless LogicSetting = 3
+type TrialFlag uint64
 
-	ReachableAll       LocationsReachable = 1
-	ReachableGoals     LocationsReachable = 2
-	ReachableNecessary LocationsReachable = 3
+const (
+	LogicGlitchless LogicSetting = iota
+	LogicNone
+	LogicGlitched
+
+	ReachableAll LocationsReachable = iota
+	ReachableGoals
+	ReachableNecessary
 
 	CondUnitialized ConditionKind = iota
 	CondDefault
@@ -100,13 +99,13 @@ const (
 	CondVanilla
 	CondTriforce
 
-	_ Flag = iota
-	Forest
-	Fire
-	Water
-	Shadow
-	Spirit
-	Light
+	TrialForest TrialFlag = 1 << iota
+	TrialFire
+	TrialWater
+	TrialShadow
+	TrialSpirit
+	TrialLight
+	TrialAll = TrialForest | TrialFire | TrialWater | TrialShadow | TrialSpirit | TrialLight
 )
 
 func (this ConditionKind) String() string {
@@ -136,13 +135,46 @@ func (this ConditionKind) String() string {
 	}
 }
 
+func ParseCondition(raw string) (ConditionKind, error) {
+	switch raw {
+	case "medallions":
+		return CondMedallions, nil
+	case "stones":
+		return CondStones, nil
+	case "rewards":
+		return CondRewards, nil
+	case "tokens":
+		return CondTokens, nil
+	case "hearts":
+		return CondHearts, nil
+	case "default":
+		return CondDefault, nil
+	case "open":
+		return CondOpen, nil
+	case "vanilla":
+		return CondVanilla, nil
+	case "triforce":
+		return CondTriforce, nil
+	default:
+		return CondUnitialized, fmt.Errorf("unknown condition %q", raw)
+	}
+}
+
+func ConditionFrom(raw string, qty uint32) (ConditionedAmount, error) {
+	cond, err := ParseCondition(raw)
+	if err != nil {
+		return 0, err
+	}
+
+	return EncodeConditionedAmount(cond, qty), nil
+}
+
 type OpenForest uint8
 
 const (
-	_ OpenForest = iota
+	KokriForestClosed OpenForest = iota
 	KokriForestOpen
 	KokriForestClosedDeku
-	KokriForestClosed
 )
 
 func (this OpenForest) String() string {
@@ -161,10 +193,9 @@ func (this OpenForest) String() string {
 type OpenKakarikoGate uint8
 
 const (
-	_ OpenKakarikoGate = iota
+	KakGateClosed OpenKakarikoGate = iota
 	KakGateOpen
 	KakGateZelda
-	KakGateClosed
 )
 
 func (this OpenKakarikoGate) String() string {
@@ -183,8 +214,7 @@ func (this OpenKakarikoGate) String() string {
 type OpenZoraFountain uint8
 
 const (
-	_ OpenZoraFountain = iota
-	ZoraFountainClosed
+	ZoraFountainClosed OpenZoraFountain = iota
 	ZoraFountainOpenAdult
 	ZoraFountainOpen
 )
@@ -205,8 +235,7 @@ func (this OpenZoraFountain) String() string {
 type GerudoFortressCarpenterRescue uint8
 
 const (
-	_ GerudoFortressCarpenterRescue = iota
-	RescueAllCarpenters
+	RescueAllCarpenters GerudoFortressCarpenterRescue = iota
 	RescueOneCarpenters
 	RescueZeroCarpenters
 )
@@ -227,8 +256,7 @@ func (this GerudoFortressCarpenterRescue) String() string {
 type ShuffleScrub uint8
 
 const (
-	_ ShuffleScrub = iota
-	ShuffleUpgradeScrub
+	ShuffleUpgradeScrub ShuffleScrub = iota
 	ShuffleScrubsAffordable
 	ShuffleScrubsExpensive
 	ShuffleScrubsRandomPrices
@@ -254,6 +282,7 @@ type PartitionedShuffle uint8
 type ShuffleSkullTokens PartitionedShuffle
 type ShufflePots PartitionedShuffle
 type ShuffleCrates PartitionedShuffle
+type ShuffleFreestanding PartitionedShuffle
 
 const (
 	ShufflePartionOff PartitionedShuffle = iota
@@ -281,8 +310,8 @@ func (this PartitionedShuffle) String() string {
 type ShuffleDungeonRewards uint8
 
 const (
-	ShuffleDungeonRewardsVanilla ShuffleDungeonRewards = iota
-	ShuffleDungeonRewardsReward
+	ShuffleDungeonRewardsReward ShuffleDungeonRewards = iota
+	ShuffleDungeonRewardsVanilla
 	ShuffleDungeonRewardsOwnDungeon
 	ShuffleDungeonRewardsRegional
 	ShuffleDungeonRewardsOverworld
@@ -315,9 +344,9 @@ func (this ShuffleDungeonRewards) String() string {
 type ShuffleKeys uint8
 
 const (
-	ShuffleKeysVanilla ShuffleKeys = iota
+	ShuffleKeyOwnDungeon ShuffleKeys = iota
+	ShuffleKeysVanilla
 	ShuffleKeysRemove
-	ShuffleKeyOwnDungeon
 	ShuffleKeyRegional
 	ShuffleKeyOverworld
 	ShuffleKeyAnyDungeon
@@ -340,6 +369,86 @@ func (this ShuffleKeys) String() string {
 		return "keysanity"
 	default:
 		panic("unreachable")
+	}
+}
+
+type GanonBossKeyShuffle uint8
+
+const (
+	GanonBossKeyInDungeon GanonBossKeyShuffle = iota
+	GanonBossKeyRemove
+	GanonBossKeyVanilla
+	GanonBossKeyRegional
+	GanonBossKeyOverworld
+	GanonBossKeyAnyDungeon
+	GanonBossKeyAnywhere
+	GanonBossKeyOnLacs
+	GanonBossKeyStones
+	GanonBossKeyMedallions
+	GanonBossKeyTokens
+	GanonBossKeyHearts
+)
+
+func (this GanonBossKeyShuffle) String() string {
+	switch this {
+	case GanonBossKeyInDungeon:
+		return "dungeon"
+	case GanonBossKeyRemove:
+		return "remove"
+	case GanonBossKeyVanilla:
+		return "vanilla"
+	case GanonBossKeyRegional:
+		return "regional"
+	case GanonBossKeyOverworld:
+		return "overworld"
+	case GanonBossKeyAnyDungeon:
+		return "any_dungeon"
+	case GanonBossKeyAnywhere:
+		return "keysanity"
+	case GanonBossKeyOnLacs:
+		return "on_lacs"
+	case GanonBossKeyStones:
+		return "stones"
+	case GanonBossKeyMedallions:
+		return "medallions"
+	case GanonBossKeyTokens:
+		return "tokens"
+	case GanonBossKeyHearts:
+		return "hearts"
+	default:
+		panic("unreachable")
+	}
+
+}
+
+func ParseGanonBossKeyShuffle(raw string) (GanonBossKeyShuffle, error) {
+	switch raw {
+	case "dungeon":
+		return GanonBossKeyInDungeon, nil
+	case "remove":
+		return GanonBossKeyRemove, nil
+	case "vanilla":
+		return GanonBossKeyVanilla, nil
+	case "regional":
+		return GanonBossKeyRegional, nil
+	case "overworld":
+		return GanonBossKeyOverworld, nil
+	case "any_dungeon":
+		return GanonBossKeyAnyDungeon, nil
+	case "keysanity":
+		return GanonBossKeyAnywhere, nil
+	case "on_lacs":
+		return GanonBossKeyOnLacs, nil
+	case "stones":
+		return GanonBossKeyStones, nil
+	case "medallions":
+		return GanonBossKeyMedallions, nil
+	case "tokens":
+		return GanonBossKeyTokens, nil
+	case "hearts":
+		return GanonBossKeyHearts, nil
+	default:
+		return GanonBossKeyInDungeon, fmt.Errorf("unknown ganon boss key shuffle: %q", raw)
 	}
 }
 
@@ -427,6 +536,15 @@ const (
 	ShuffleEmptyCrates
 	ShuffleCows
 	ShuffleOcarinaNotes
+	ShuffleBeehives
+	ShuffleWonderItems
+	ShuffleKokiriSword
+	ShuffleOcarinas
+	ShuffleGerudoCard
+	ShuffleBeans
+	ShuffleExpensiveMerchants
+	ShuffleFrogRupees
+	ShuffleLoachReward
 )
 
 type TimeOfDay uint8
@@ -461,16 +579,21 @@ type ChildTradeItems uint64
 type AdultTradeItems uint64
 
 const (
-	AdultTradeStartPocketEgg AdultTradeItems = 1 << iota
-	AdultTradeStartPocketCucco
-	AdultTradeStartOddMushroom
-	AdultTradeStartOddPotion
-	AdultTradeStartPoachersSaw
-	AdultTradeStartBrokenSword
-	AdultTradeStartPrescription
-	AdultTradeStartEyeballFrog
-	AdultTradeStartEyedrops
-	AdultTradeStartClaimCheck
+	AdultTradePocketEgg AdultTradeItems = 1 << iota
+	AdultTradePocketCucco
+	AdultTradeOddMushroom
+	AdultTradeOddPotion
+	AdultTradePoachersSaw
+	AdultTradeBrokenSword
+	AdultTradePrescription
+	AdultTradeEyeballFrog
+	AdultTradeEyedrops
+	AdultTradeClaimCheck
+	AdultTradeItemsAll = AdultTradePocketEgg | AdultTradePocketCucco |
+		AdultTradeOddMushroom | AdultTradeOddPotion |
+		AdultTradePoachersSaw | AdultTradeBrokenSword |
+		AdultTradePrescription | AdultTradeEyeballFrog |
+		AdultTradeEyedrops | AdultTradeClaimCheck
 )
 
 type StartAge bool
@@ -478,4 +601,53 @@ type StartAge bool
 const (
 	StartAgeAdult StartAge = true
 	StartAgeChild StartAge = false
+)
+
+type LocationFlags uint64
+
+const (
+	LocationSkipRauruReward LocationFlags = 1 << iota
+	LocationSkipChildZelda
+	LocationsFreeScarecrow
+	LocationsPlantBeans
+	LocationsCompleteMaskQuest
+)
+
+type ShuffleSongs uint8
+
+const (
+	ShuffleSongsOnSongs ShuffleSongs = iota
+	ShuffleSongsOnDungeonRewards
+	ShuffleSongsAnywhere
+)
+
+type ShuffleShop uint8
+
+const (
+	ShuffleShopsOff ShuffleShop = iota
+	ShuffleShopsZero
+	ShuffleShopsOne
+	ShuffleShopTwo
+	ShuffleShopThree
+	ShuffleShopFour
+)
+
+type ShuffleMapCompass uint8
+
+const (
+	ShuffleMapCompassDungeon ShuffleMapCompass = iota
+	ShuffleMapCompassRemove
+	ShuffleMapCompassStartWith
+	ShuffleMapCompassVanilla
+	ShuffleMapCompassRegional
+	ShuffleMapCompassOverworld
+	ShuffleMapCompassAnyDungeon
+	ShuffleMapCompassAnywhere
+)
+
+type ConnectionFlag uint64
+
+const (
+	ConnectionOpenDoorOfTime ConnectionFlag = 1 << iota
+	ConnectionShuffleHideoutEntrances
 )
