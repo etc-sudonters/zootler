@@ -28,6 +28,7 @@ type CollectableToken token
 type DefaultPlacement zecs.Entity
 type Fixed struct{}
 type Collected struct{}
+type Skipped struct{}
 
 type ScriptDecl string
 type ScriptSource string

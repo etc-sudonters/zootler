@@ -1,4 +1,4 @@
-package bootstrap
+package boot
 
 import (
 	"sudonters/libzootr/components"
@@ -59,6 +59,7 @@ func staticddl() []zecs.DDL {
 		columns.HashMapColumn[components.Song],
 		columns.HashMapColumn[components.Price],
 
+		columns.BitColumnOf[components.Skipped],
 		columns.BitColumnOf[components.Collected],
 		columns.BitColumnOf[components.TokenMarker],
 		columns.BitColumnOf[components.RegionMarker],

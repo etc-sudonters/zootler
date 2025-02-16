@@ -3,6 +3,7 @@ package zecs
 import (
 	"errors"
 	"fmt"
+	"github.com/etc-sudonters/substrate/skelly/bitset32"
 	"sudonters/libzootr/internal/bundle"
 	"sudonters/libzootr/internal/query"
 	"sudonters/libzootr/internal/table"
@@ -65,6 +66,12 @@ func (this *Q) Build(build BuildQuery, builds ...BuildQuery) *Q {
 
 type BuildQuery func(*Q)
 
+func FromSubset(subset *bitset32.Bitset) BuildQuery {
+	return func(this *Q) {
+		this.q.FromSubset(subset)
+	}
+}
+
 func Optional[T Value](this *Q) {
 	this.q.Optional(query.MustAsColumnId[T](this.set.eng))
 }
@@ -93,24 +100,51 @@ func (this *Q) Rows(yield bundle.RowIter) {
 	rows.All(yield)
 }
 
-func EntitiesMatching(ocm *Ocm, query ...BuildQuery) []Entity {
-	if len(query) == 0 {
+func Bitset32Matching(ocm *Ocm, match ...BuildQuery) bitset32.Bitset {
+	if len(match) == 0 {
 		panic(errors.New("no entities specified"))
 	}
 
 	q := ocm.Query()
-	q.Build(query[0], query[1:]...)
+	q.Configure(func(config *query.RetrieveOptions) {
+		config.Bundler = bundle.BundleRowsOnly
+	})
+	q.Build(match[0], match[1:]...)
 	rows, err := q.Execute()
 	if err != nil {
 		panic(err)
 	}
-	ptrs := make([]Entity, 0, rows.Len())
+	entities := bitset32.WithBucketsFor(uint32(rows.Len()))
 
 	for row, _ := range rows.All {
-		ptrs = append(ptrs, row)
+		bitset32.Set(&entities, row)
 	}
 
-	return ptrs
+	return entities
+
+}
+
+func SliceMatching(ocm *Ocm, match ...BuildQuery) []Entity {
+	if len(match) == 0 {
+		panic(errors.New("no entities specified"))
+	}
+
+	q := ocm.Query()
+	q.Configure(func(config *query.RetrieveOptions) {
+		config.Bundler = bundle.BundleRowsOnly
+	})
+	q.Build(match[0], match[1:]...)
+	rows, err := q.Execute()
+	if err != nil {
+		panic(err)
+	}
+	entities := make([]Entity, 0, rows.Len())
+
+	for row, _ := range rows.All {
+		entities = append(entities, row)
+	}
+
+	return entities
 }
 
 func IndexEntities[Key ComparableValue](ocm *Ocm, query ...BuildQuery) map[Key]Entity {

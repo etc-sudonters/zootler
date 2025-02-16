@@ -7,6 +7,24 @@ import (
 	"sudonters/libzootr/internal"
 )
 
+// Three goals:
+// 1. Don't read the entire file into memory (except files <= buffer size)
+// 2. Deal with polymorphic types/unions in the json -- "prop": 1, "prop": "string"
+// 3. Handle comments in the json file
+
+type Reader interface {
+	ReadsArray
+	ReadsObject
+	ReadString() (string, error)
+	ReadInt() (int, error)
+	ReadFloat() (float64, error)
+	ReadBool() (bool, error)
+}
+
+var _ Reader = (*Parser)(nil)
+var _ Reader = (*ArrayParser)(nil)
+var _ Reader = (*ObjectParser)(nil)
+
 type Token struct {
 	Kind Kind
 	Body []byte

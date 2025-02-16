@@ -122,3 +122,12 @@ func ReadArrayValues[T any](arr *ArrayParser, read func(*ArrayParser) (T, error)
 		}
 	}
 }
+
+func IntoSlice[T any](arr *ArrayParser, read func(*ArrayParser) (T, error)) ([]T, error) {
+	var err error
+	var items []T
+	for _, item := range ReadArrayValues(arr, read, &err) {
+		items = append(items, item)
+	}
+	return items, err
+}

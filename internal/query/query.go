@@ -3,11 +3,10 @@ package query
 import (
 	"errors"
 	"fmt"
-	"math"
+	"github.com/etc-sudonters/substrate/skelly/bitset32"
 	"reflect"
 	"sudonters/libzootr/internal"
 	"sudonters/libzootr/internal/bundle"
-	"sudonters/libzootr/internal/skelly/bitset32"
 	"sudonters/libzootr/internal/table"
 	"sudonters/libzootr/internal/table/columns"
 
@@ -41,6 +40,7 @@ type Query interface {
 	Load(table.ColumnId)
 	Exists(table.ColumnId)
 	NotExists(table.ColumnId)
+	FromSubset(*bitset32.Bitset)
 }
 
 type query struct {
@@ -49,6 +49,11 @@ type query struct {
 	exists    *bitset32.Bitset
 	notExists *bitset32.Bitset
 	optional  *bitset32.Bitset
+	subset    *bitset32.Bitset
+}
+
+func (b *query) FromSubset(subset *bitset32.Bitset) {
+	b.subset = subset
 }
 
 func (b *query) Load(typ table.ColumnId) {
@@ -222,6 +227,10 @@ func (e engine) RetrieveWithOptions(b Query, opts RetrieveOptions) (bundle.Inter
 		}
 	}
 
+	if q.subset != nil {
+		fill = fill.Intersect(*q.subset)
+	}
+
 	var columns table.Columns
 	for _, col := range q.cols {
 		column, err := e.tbl.Column(col)
@@ -234,14 +243,6 @@ func (e engine) RetrieveWithOptions(b Query, opts RetrieveOptions) (bundle.Inter
 		bundler = bundle.Bundle
 	}
 	return bundler(fill, columns)
-}
-
-func saturatedSet(numBuckets uint32) bitset32.Bitset {
-	buckets := make([]uint32, numBuckets)
-	for i := range buckets {
-		buckets[i] = math.MaxUint32
-	}
-	return bitset32.FromRaw(buckets)
 }
 
 func (e *engine) SetValues(r table.RowId, vs table.Values) error {

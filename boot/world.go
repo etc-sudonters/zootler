@@ -1,13 +1,14 @@
-package bootstrap
+package boot
 
 import (
+	"errors"
+	"github.com/etc-sudonters/substrate/skelly/graph32"
 	"sudonters/libzootr/components"
-	"sudonters/libzootr/internal/skelly/graph32"
 	"sudonters/libzootr/magicbean"
 	"sudonters/libzootr/zecs"
 )
 
-func explorableworldfrom(ocm *zecs.Ocm) magicbean.ExplorableWorld {
+func explorableworldfrom(ocm *zecs.Ocm) (magicbean.ExplorableWorld, error) {
 	var world magicbean.ExplorableWorld
 	q := ocm.Query()
 	q.Build(
@@ -19,14 +20,16 @@ func explorableworldfrom(ocm *zecs.Ocm) magicbean.ExplorableWorld {
 	)
 
 	rows, err := q.Execute()
-	PanicWhenErr(err)
+	if err != nil {
+		return world, err
+	}
 
 	world.Edges = make(map[components.Connection]magicbean.ExplorableEdge, rows.Len())
 	world.Graph = graph32.WithCapacity(rows.Len() * 2)
 	directed := graph32.Builder{Graph: &world.Graph}
-	roots := zecs.EntitiesMatching(ocm, zecs.With[components.WorldGraphRoot])
+	roots := zecs.SliceMatching(ocm, zecs.With[components.WorldGraphRoot])
 	if len(roots) == 0 {
-		panic("no graph roots loaded")
+		return world, errors.New("no graph roots loaded")
 	}
 	for _, root := range roots {
 		directed.AddRoot(graph32.Node(root))
@@ -50,5 +53,5 @@ func explorableworldfrom(ocm *zecs.Ocm) magicbean.ExplorableWorld {
 		world.Edges[trans] = edge
 	}
 
-	return world
+	return world, nil
 }

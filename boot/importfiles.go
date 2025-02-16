@@ -1,4 +1,4 @@
-package bootstrap
+package boot
 
 import (
 	"fmt"
@@ -27,28 +27,20 @@ type LoadPaths struct {
 	Relations                            DirPath
 }
 
-func (this LoadPaths) readscripts() map[string]string {
-	scripts, err := internal.ReadJsonFileStringMap(string(this.Scripts))
-	PanicWhenErr(err)
-	return scripts
+func (this LoadPaths) readscripts() (map[string]string, error) {
+	return internal.ReadJsonFileStringMap(string(this.Scripts))
 }
 
-func (this LoadPaths) readtokens() []token {
-	tokens, err := internal.ReadJsonFileAs[[]token](string(this.Tokens))
-	PanicWhenErr(err)
-	return tokens
+func (this LoadPaths) readtokens() ([]token, error) {
+	return internal.ReadJsonFileAs[[]token](string(this.Tokens))
 }
 
-func (this LoadPaths) readplacements() []placement {
-	regions, err := internal.ReadJsonFileAs[[]placement](string(this.Placements))
-	PanicWhenErr(err)
-	return regions
+func (this LoadPaths) readplacements() ([]placement, error) {
+	return internal.ReadJsonFileAs[[]placement](string(this.Placements))
 }
 
-func readrelations(path string) []relations {
-	relations, err := internal.ReadJsonFileAs[[]relations](path)
-	PanicWhenErr(err)
-	return relations
+func readrelations(path string) ([]relations, error) {
+	return internal.ReadJsonFileAs[[]relations](path)
 }
 
 func (this LoadPaths) readrelationsdir(store func(relations) error) error {
@@ -68,9 +60,15 @@ func (this LoadPaths) readrelationsdir(store func(relations) error) error {
 			return nil
 		}
 
-		for _, relations := range readrelations(path) {
-			storeErr := store(relations)
-			PanicWhenErr(storeErr)
+		relations, relationsErr := readrelations(path)
+		if relationsErr != nil {
+			slipup.Describef(err, "while reading %s", path)
+		}
+		for _, relations := range relations {
+
+			if storeErr := store(relations); storeErr != nil {
+				return slipup.Describef(storeErr, "while storing relationships from %q", path)
+			}
 		}
 		return nil
 	})
@@ -78,14 +76,25 @@ func (this LoadPaths) readrelationsdir(store func(relations) error) error {
 
 func storeScripts(ocm *zecs.Ocm, paths LoadPaths) error {
 	eng := ocm.Engine()
-	for decl, source := range paths.readscripts() {
-		eng.InsertRow(components.ScriptDecl(decl), components.ScriptSource(source), name(optimizer.FastScriptNameFromDecl(decl)))
+	scripts, readErr := paths.readscripts()
+	if readErr != nil {
+		return readErr
+	}
+	for decl, source := range scripts {
+		_, err := eng.InsertRow(components.ScriptDecl(decl), components.ScriptSource(source), name(optimizer.FastScriptNameFromDecl(decl)))
+		if err != nil {
+			return slipup.Describef(err, "while storing script %q", decl)
+		}
 	}
 	return nil
 }
 
 func storeTokens(tokens tracking.Tokens, paths LoadPaths) error {
-	for _, raw := range paths.readtokens() {
+	fileTokens, readErr := paths.readtokens()
+	if readErr != nil {
+		return readErr
+	}
+	for _, raw := range fileTokens {
 		var attachments zecs.Attaching
 		token := tokens.Named(name(raw.Name))
 
@@ -191,13 +200,19 @@ func storeTokens(tokens tracking.Tokens, paths LoadPaths) error {
 			}
 		}
 
-		PanicWhenErr(token.AttachFrom(attachments))
+		if err := (token.AttachFrom(attachments)); err != nil { // attachment issues
+			return slipup.Describef(err, "while attaching components to %q", raw.Name)
+		}
 	}
 	return nil
 }
 
 func storePlacements(nodes tracking.Nodes, tokens tracking.Tokens, paths LoadPaths) error {
-	for _, raw := range paths.readplacements() {
+	placements, readErr := paths.readplacements()
+	if readErr != nil {
+		return readErr
+	}
+	for _, raw := range placements {
 		place := nodes.Placement(name(raw.Name))
 		if raw.Default != "" {
 			place.DefaultToken(tokens.Named(name(raw.Default)))

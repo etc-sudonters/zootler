@@ -74,3 +74,71 @@ func ReadFloatObject(this ReadsObject, err *error) iter.Seq2[string, float64] {
 func ReadIntObject(this ReadsObject, err *error) iter.Seq2[string, int] {
 	return ReadObjectOf(this, (*ObjectParser).ReadInt, err)
 }
+
+func ReadIntObjectInto(this ReadsObject, dest map[string]int) (err error) {
+	for key, val := range ReadIntObject(this, &err) {
+		dest[key] = val
+	}
+	return
+}
+
+func ParseStringWith[T any](r Reader, parse func(string) (T, error)) (T, error) {
+	var t T
+	str, err := r.ReadString()
+	if err != nil {
+		return t, err
+	}
+	return parse(str)
+}
+
+func ParseStringInto[T any](r Reader, into *T, parse func(string) (T, error)) error {
+	val, err := ParseStringWith(r, parse)
+	if err == nil {
+		*into = val
+	}
+	return err
+}
+
+func ReadStringInto[T ~string](r Reader, into *T) error {
+	val, err := r.ReadString()
+	if err == nil {
+		*into = T(val)
+	}
+	return err
+}
+
+func ReadBoolInto[T ~bool](r Reader, into *T) error {
+	val, err := r.ReadBool()
+	if err == nil {
+		*into = T(val)
+	}
+	return err
+}
+
+func ReadFloatInto[T ~float64](r Reader, into *T) error {
+	val, err := r.ReadFloat()
+	if err == nil {
+		*into = T(val)
+	}
+	return err
+}
+
+func ReadIntInto[T ~int](r Reader, into *T) error {
+	val, err := r.ReadInt()
+	if err == nil {
+		*into = T(val)
+	}
+	return err
+}
+
+func ReadStringSlice(r Reader) (strs []string, err error) {
+	err = ReadStringArrayInto(r, &strs)
+	return
+}
+
+func ReadStringArrayInto(r Reader, strs *[]string) (err error) {
+	for _, str := range ReadStringArray(r, &err) {
+		*strs = append(*strs, str)
+	}
+	return
+}

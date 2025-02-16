@@ -2,30 +2,33 @@ package main
 
 import (
 	"context"
-	"math/rand/v2"
+	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"sudonters/libzootr/components"
 	"sudonters/libzootr/internal"
-	"sudonters/libzootr/internal/skelly/bitset32"
 	"sudonters/libzootr/magicbean/tracking"
 	"sudonters/libzootr/settings"
+	"sudonters/libzootr/zecs"
+	"text/tabwriter"
+
+	"github.com/etc-sudonters/substrate/skelly/bitset32"
+	"github.com/etc-sudonters/substrate/slipup"
 
 	"github.com/etc-sudonters/substrate/dontio"
-	"github.com/etc-sudonters/substrate/rng"
 	"github.com/etc-sudonters/substrate/stageleft"
 
 	"runtime/pprof"
-	"sudonters/libzootr/cmd/zoodle/bootstrap"
+	"sudonters/libzootr/boot"
 	"sudonters/libzootr/magicbean"
-	"sudonters/libzootr/mido"
-	"sudonters/libzootr/mido/objects"
 )
 
-func runMain(ctx context.Context, opts cliOptions) stageleft.ExitCode {
+func runMain(ctx context.Context, std *dontio.Std, opts *cliOptions) stageleft.ExitCode {
 	stopProfiling := profileto(opts.profile)
 	defer stopProfiling()
 
-	paths := bootstrap.LoadPaths{
+	paths := boot.LoadPaths{
 		Tokens:     filepath.Join(opts.dataDir, "items.json"),
 		Placements: filepath.Join(opts.dataDir, "locations.json"),
 		Scripts:    filepath.Join(opts.logicDir, "..", "helpers.json"),
@@ -36,56 +39,82 @@ func runMain(ctx context.Context, opts cliOptions) stageleft.ExitCode {
 	theseSettings := settings.Default()
 	FinalizeSettings(&theseSettings)
 
-	generation := setup(ctx, paths, &theseSettings)
-	generation.Settings = theseSettings
-	CollectStartingItems(&generation)
-
-	visited := bitset32.Bitset{}
-	workset := generation.World.Graph.Roots()
-	xplr := magicbean.Exploration{
-		Visited: &visited,
-		Workset: &workset,
+	generation, err := boot.Default(ctx, paths, &theseSettings)
+	if err != nil {
+		fmt.Fprintf(std.Err, "failed to boot zootr engine: %w", err)
+		return 5
 	}
-	results := explore(ctx, &xplr, &generation, AgeAdult)
-	std, err := dontio.StdFromContext(ctx)
+	magicbean.CollectStartingItems(&generation)
+
+	tokenNames, err := tracking.NameTableFrom(&generation.Ocm, zecs.With[components.TokenMarker])
 	internal.PanicOnError(err)
-	std.WriteLineOut("Visited %d", visited.Len())
-	std.WriteLineOut("Reached %d", results.Reached.Len())
-	std.WriteLineOut("Pending %d", results.Pending.Len())
+
+	internal.PanicOnError(PrintInventory(std.Out, generation.Inventory, tokenNames))
+
+	adult := Search{
+		Workset:    generation.World.Graph.Roots(),
+		Generation: &generation,
+		Age:        AgeAdult,
+	}
+	child := Search{
+		Workset:    generation.World.Graph.Roots(),
+		Generation: &generation,
+		Age:        AgeChild,
+	}
+	var i int
+	for {
+		i++
+		std.WriteLineOut("")
+		std.WriteLineOut("Sphere %d", i)
+		adultReached := adult.Visit(ctx)
+		childReached := child.Visit(ctx)
+		reached := adultReached.Union(childReached)
+		if reached.Len() == 0 {
+			std.WriteLineOut("did not reach more nodes in either age")
+			break
+		}
+		internal.PanicOnError(magicbean.CollectTokensFrom(
+			&generation.Ocm,
+			reached,
+			generation.Inventory,
+		))
+
+		std.WriteLineOut("Inventory after collection")
+		internal.PanicOnError(PrintInventory(std.Out, generation.Inventory, tokenNames))
+
+		tabber := tabwriter.NewWriter(std.Out, 8, 2, 1, ' ', 0)
+		fmt.Fprintf(tabber, "\tAdult\tChild\n")
+		fmt.Fprintf(tabber, "Visited\t%3d\t%3d\n", adult.Visited.Len(), child.Visited.Len())
+		fmt.Fprintf(tabber, "Reached\t%3d\t%3d\n", adultReached.Len(), childReached.Len())
+		fmt.Fprintf(tabber, "Pending\t%3d\t%3d\n", adult.Workset.Len(), child.Workset.Len())
+		tabber.Flush()
+	}
 	return stageleft.ExitCode(0)
 }
 
-func FinalizeSettings(these *settings.Model) {
-	these.Generation.Seed = 0x76E76E14E9691280
-	these.Logic.Shuffling.Flags |= settings.ShuffleOcarinaNotes
-	these.Logic.Spawns.StartAge = settings.StartAgeAdult
-	these.Logic.Connections.Flags |= settings.ConnectionOpenDoorOfTime
+type Search struct {
+	Visited    bitset32.Bitset
+	Workset    bitset32.Bitset
+	Generation *magicbean.Generation
+	Age        Age
 }
 
-func setup(ctx context.Context, paths bootstrap.LoadPaths, settings *settings.Model) (generation magicbean.Generation) {
-	ocm := bootstrap.Phase1_InitializeStorage(nil)
-	trackSet := tracking.NewTrackingSet(&ocm)
+func (this *Search) Visit(ctx context.Context) (reached bitset32.Bitset) {
+	xplr := magicbean.Exploration{
+		Visited: &this.Visited,
+		Workset: &this.Workset,
+	}
 
-	phase2Error := bootstrap.Phase2_ImportFromFiles(ctx, settings, &ocm, &trackSet, paths)
-	internal.PanicOnError(phase2Error)
+	results := explore(ctx, &xplr, this.Generation, this.Age)
+	this.Workset = results.Pending
+	return results.Reached
+}
 
-	compileEnv := bootstrap.Phase3_ConfigureCompiler(&ocm, settings)
-
-	codegen := mido.Compiler(&compileEnv)
-
-	bootstrap.PanicWhenErr(bootstrap.Phase4_Compile(
-		&ocm, &codegen,
-	))
-
-	world := bootstrap.Phase5_CreateWorld(&ocm, settings, objects.TableFrom(compileEnv.Objects))
-
-	generation.Ocm = ocm
-	generation.World = world
-	generation.Objects = objects.TableFrom(compileEnv.Objects)
-	generation.Inventory = magicbean.EmptyInventory()
-	generation.Rng = *rand.New(rng.NewXoshiro256PPFromU64(settings.Generation.Seed))
-
-	return generation
+func FinalizeSettings(these *settings.Model) {
+	these.Seed = 0x76E76E14E9691280
+	these.Logic.Shuffling.Flags |= settings.ShuffleOcarinaNotes
+	these.Logic.Spawns.StartAge = settings.StartAgeChild
+	these.Logic.Connections.Flags |= settings.ConnectionOpenDoorOfTime
 }
 
 func profileto(path string) func() {
@@ -94,7 +123,25 @@ func profileto(path string) func() {
 	}
 
 	f, err := os.Create(path)
-	bootstrap.PanicWhenErr(err)
+	slipup.NeedsErrorHandling(err)
 	pprof.StartCPUProfile(f)
 	return func() { pprof.StopCPUProfile() }
+}
+
+func PrintInventory(w io.Writer, inventory magicbean.Inventory, names tracking.NameTable) error {
+	tabber := tabwriter.NewWriter(w, 8, 8, 2, ' ', 0)
+	if _, err := fmt.Fprintln(tabber, "Inventory:"); err != nil {
+		return err
+	}
+	for ent, qty := range inventory {
+		name, hasName := names[ent]
+		if !hasName {
+			continue
+		}
+
+		if _, err := fmt.Fprintf(tabber, "%s\t%d\n", name, qty); err != nil {
+			return err
+		}
+	}
+	return tabber.Flush()
 }

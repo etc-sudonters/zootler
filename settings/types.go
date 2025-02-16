@@ -57,8 +57,6 @@ func HasFlag[U ~uint64](union U, flag U) bool {
 	return uint64(union)&uint64(flag) == uint64(flag)
 }
 
-type NavigationShuffle uint8
-
 func EncodeConditionedAmount(kind ConditionKind, qty uint32) ConditionedAmount {
 	return ConditionedAmount(uint64(kind)<<32 | uint64(qty))
 }
@@ -78,6 +76,33 @@ func (this ConditionedAmount) Decode() (ConditionKind, uint32) {
 }
 
 type TrialFlag uint64
+
+func ParseLogic(raw string) (LogicSetting, error) {
+	switch raw {
+	case "none":
+		return LogicNone, nil
+	case "glitched":
+		return LogicGlitched, nil
+	case "glitchless":
+		return LogicGlitchless, nil
+	default:
+		return LogicGlitchless, fmt.Errorf("unknown logic setting: %q", raw)
+	}
+}
+
+func ParseReachability(value string) (LocationsReachable, error) {
+	switch value {
+	case "all":
+		return ReachableAll, nil
+	case "goals":
+		return ReachableGoals, nil
+	case "beatable":
+		return ReachableNecessary, nil
+	default:
+		return ReachableAll, fmt.Errorf("unknown reachable_locations: %q", value)
+	}
+
+}
 
 const (
 	LogicGlitchless LogicSetting = iota
@@ -190,6 +215,19 @@ func (this OpenForest) String() string {
 	}
 }
 
+func ParseOpenForest(raw string) (OpenForest, error) {
+	switch raw {
+	case "open":
+		return KokriForestOpen, nil
+	case "closed_deku":
+		return KokriForestClosedDeku, nil
+	case "closed":
+		return KokriForestClosed, nil
+	default:
+		return 0, fmt.Errorf("unknown open forest setting: %q", raw)
+	}
+}
+
 type OpenKakarikoGate uint8
 
 const (
@@ -208,6 +246,19 @@ func (this OpenKakarikoGate) String() string {
 		return "closed"
 	default:
 		panic("unreachable")
+	}
+}
+
+func ParseKakarikoGate(raw string) (OpenKakarikoGate, error) {
+	switch raw {
+	case "open":
+		return KakGateOpen, nil
+	case "zelda":
+		return KakGateZelda, nil
+	case "closed":
+		return KakGateClosed, nil
+	default:
+		return 0, fmt.Errorf("unknown open kakariko gate setting: %q", raw)
 	}
 }
 
@@ -232,6 +283,19 @@ func (this OpenZoraFountain) String() string {
 	}
 }
 
+func ParseOpenZoraFountain(raw string) (OpenZoraFountain, error) {
+	switch raw {
+	case "closed":
+		return ZoraFountainClosed, nil
+	case "adult":
+		return ZoraFountainOpenAdult, nil
+	case "open":
+		return ZoraFountainOpen, nil
+	default:
+		return 0, fmt.Errorf("unknown open zora fountain setting: %q", raw)
+	}
+}
+
 type GerudoFortressCarpenterRescue uint8
 
 const (
@@ -250,6 +314,19 @@ func (this GerudoFortressCarpenterRescue) String() string {
 		return "open"
 	default:
 		panic("unreachable")
+	}
+}
+
+func ParseGerudoFortressCarpenterRescue(raw string) (GerudoFortressCarpenterRescue, error) {
+	switch raw {
+	case "normal":
+		return RescueAllCarpenters, nil
+	case "fast":
+		return RescueOneCarpenters, nil
+	case "open":
+		return RescueZeroCarpenters, nil
+	default:
+		return 0, fmt.Errorf("unknown gerudo fortress carpenter rescue setting: %q", raw)
 	}
 }
 
@@ -304,7 +381,21 @@ func (this PartitionedShuffle) String() string {
 	default:
 		panic("unreachable")
 	}
+}
 
+func ParsePartitionedShuffle(raw string) (PartitionedShuffle, error) {
+	switch raw {
+	case "off":
+		return ShufflePartionOff, nil
+	case "dungeons":
+		return ShufflePartitionDungeons, nil
+	case "overworld":
+		return ShufflePartitionOverworld, nil
+	case "all":
+		return ShufflePartionAll, nil
+	default:
+		return 0, fmt.Errorf("unknown partition %q", raw)
+	}
 }
 
 type ShuffleDungeonRewards uint8
@@ -341,6 +432,28 @@ func (this ShuffleDungeonRewards) String() string {
 	}
 }
 
+func ParseShuffleDungeonReward(raw string) (ShuffleDungeonRewards, error) {
+
+	switch raw {
+	case "vanilla":
+		return ShuffleDungeonRewardsVanilla, nil
+	case "reward":
+		return ShuffleDungeonRewardsReward, nil
+	case "dungeon":
+		return ShuffleDungeonRewardsOwnDungeon, nil
+	case "regional":
+		return ShuffleDungeonRewardsRegional, nil
+	case "overworld":
+		return ShuffleDungeonRewardsOverworld, nil
+	case "any_dungeon":
+		return ShuffleDungeonRewardsAnyDungeon, nil
+	case "anywhere":
+		return ShuffleDungeonRewardsAnywhere, nil
+	default:
+		return 0, fmt.Errorf("unknown shuffle_dungeon_rewards: %q", raw)
+	}
+}
+
 type ShuffleKeys uint8
 
 const (
@@ -361,6 +474,8 @@ func (this ShuffleKeys) String() string {
 		return "remove"
 	case ShuffleKeyOwnDungeon:
 		return "dungeon"
+	case ShuffleKeyRegional:
+		return "regional"
 	case ShuffleKeyOverworld:
 		return "overworld"
 	case ShuffleKeyAnyDungeon:
@@ -369,6 +484,27 @@ func (this ShuffleKeys) String() string {
 		return "keysanity"
 	default:
 		panic("unreachable")
+	}
+}
+
+func ParseShuffleKeys(raw string) (ShuffleKeys, error) {
+	switch raw {
+	case "vanilla":
+		return ShuffleKeysVanilla, nil
+	case "remove":
+		return ShuffleKeysRemove, nil
+	case "dungeon":
+		return ShuffleKeyOwnDungeon, nil
+	case "regional":
+		return ShuffleKeyRegional, nil
+	case "overworld":
+		return ShuffleKeyOverworld, nil
+	case "any_dungeon":
+		return ShuffleKeyAnyDungeon, nil
+	case "keysanity":
+		return ShuffleKeysAnywhere, nil
+	default:
+		return ShuffleKeyOwnDungeon, fmt.Errorf("unknown key shuffle: %s", raw)
 	}
 }
 
@@ -477,7 +613,6 @@ func (this HintsRevealed) String() string {
 }
 
 type DamageMultiplier uint8
-type DeadlyBonks DamageMultiplier
 
 const (
 	DamageMultiplierNormal DamageMultiplier = iota
@@ -485,6 +620,7 @@ const (
 	DamageMultiplierDouble
 	DamageMultiplierQuadruple
 	DamageMultiplierOHKO
+	DamageMultiplierNone // deadly bonks
 )
 
 func (this DamageMultiplier) String() string {
@@ -499,13 +635,30 @@ func (this DamageMultiplier) String() string {
 		return "quadruple"
 	case DamageMultiplierOHKO:
 		return "ohko"
+	case DamageMultiplierNone:
+		return "none"
 	default:
 		panic("unreachable")
 	}
 }
 
-func (this DeadlyBonks) String() string {
-	return DamageMultiplier(this).String()
+func ParseDamageMultiplier(raw string) (DamageMultiplier, error) {
+	switch raw {
+	case "normal":
+		return DamageMultiplierNormal, nil
+	case "half":
+		return DamageMultiplierHalf, nil
+	case "double":
+		return DamageMultiplierDouble, nil
+	case "quadruple":
+		return DamageMultiplierQuadruple, nil
+	case "ohko":
+		return DamageMultiplierOHKO, nil
+	case "none":
+		return DamageMultiplierNone, nil
+	default:
+		return 0, fmt.Errorf("unknown damage multiplier %q", raw)
+	}
 }
 
 type GerudoFortressHeartPiece uint
@@ -544,13 +697,33 @@ const (
 	ShuffleBeans
 	ShuffleExpensiveMerchants
 	ShuffleFrogRupees
-	ShuffleLoachReward
 )
+
+type ShuffleLoachReward uint8
+
+const (
+	ShuffleLoachRewardOff ShuffleLoachReward = iota
+	ShuffleLoachRewardVanilla
+	ShuffleLoachRewardEasy
+)
+
+func ParseShuffleLoachReward(raw string) (ShuffleLoachReward, error) {
+	switch raw {
+	case "off":
+		return ShuffleLoachRewardOff, nil
+	case "vanilla":
+		return ShuffleLoachRewardVanilla, nil
+	case "easy":
+		return ShuffleLoachRewardEasy, nil
+	default:
+		return 0, fmt.Errorf("unknown loach shuffle setting: %q", raw)
+	}
+}
 
 type TimeOfDay uint8
 
 const (
-	_ TimeOfDay = iota
+	TimeOfDayDefault TimeOfDay = iota
 	TimeOfDaySunrise
 	TimeOfDayMorning
 	TimeOfDayNoon
@@ -570,6 +743,31 @@ func (this TimeOfDay) IsNight() bool {
 		return true
 	default:
 		return false
+	}
+}
+
+func ParseTimeOfDay(raw string) (TimeOfDay, error) {
+	switch raw {
+	case "default":
+		return TimeOfDayDefault, nil
+	case "sunrise":
+		return TimeOfDaySunrise, nil
+	case "morning":
+		return TimeOfDayMorning, nil
+	case "noon":
+		return TimeOfDayNoon, nil
+	case "afternoon":
+		return TimeOfDayAfternoon, nil
+	case "sunset":
+		return TimeOfDaySunset, nil
+	case "evening":
+		return TimeOfDayEvening, nil
+	case "midnight":
+		return TimeOfDayMidnight, nil
+	case "witching-hour":
+		return TimeOfDayWitching, nil
+	default:
+		return 0, fmt.Errorf("unknown time of day: %q", raw)
 	}
 
 }
@@ -594,7 +792,80 @@ const (
 		AdultTradePoachersSaw | AdultTradeBrokenSword |
 		AdultTradePrescription | AdultTradeEyeballFrog |
 		AdultTradeEyedrops | AdultTradeClaimCheck
+
+	ChildTradeItemWeirdEgg ChildTradeItems = iota
+	ChildTradeItemChicken
+	ChildTradeItemZeldasLetter
+	ChildTradeItemKeatonMask
+	ChildTradeItemSkullMask
+	ChildTradeItemSpookyMask
+	ChildTradeItemBunnyHood
+	ChildTradeItemGoronMask
+	ChildTradeItemZoraMask
+	ChildTradeItemGerudoMask
+	ChildTradeItemMaskOfTruth
+	ChildTradeItemsAll = ChildTradeItemWeirdEgg | ChildTradeItemChicken |
+		ChildTradeItemZeldasLetter | ChildTradeItemKeatonMask |
+		ChildTradeItemSkullMask | ChildTradeItemSpookyMask |
+		ChildTradeItemBunnyHood | ChildTradeItemGoronMask | ChildTradeItemZoraMask |
+		ChildTradeItemGerudoMask | ChildTradeItemMaskOfTruth
 )
+
+func ParseChildTradeItem(raw string) (ChildTradeItems, error) {
+	switch raw {
+	case "Weird Egg":
+		return ChildTradeItemWeirdEgg, nil
+	case "Chicken":
+		return ChildTradeItemChicken, nil
+	case "Zeldas Letter":
+		return ChildTradeItemZeldasLetter, nil
+	case "Keaton Mask":
+		return ChildTradeItemKeatonMask, nil
+	case "Skull Mask":
+		return ChildTradeItemSkullMask, nil
+	case "Spooky Mask":
+		return ChildTradeItemSpookyMask, nil
+	case "Bunny Hood":
+		return ChildTradeItemBunnyHood, nil
+	case "Goron Mask":
+		return ChildTradeItemGoronMask, nil
+	case "Zora Mask":
+		return ChildTradeItemZoraMask, nil
+	case "Gerudo Mask":
+		return ChildTradeItemGerudoMask, nil
+	case "Mask of Truth":
+		return ChildTradeItemMaskOfTruth, nil
+	default:
+		return 0, fmt.Errorf("unknown child trade item %q", raw)
+	}
+}
+
+func ParseAdultTradeItem(raw string) (AdultTradeItems, error) {
+	switch raw {
+	case "Pocket Egg":
+		return AdultTradePocketEgg, nil
+	case "Pocket Cucco":
+		return AdultTradePocketCucco, nil
+	case "Odd Mushroom":
+		return AdultTradeOddMushroom, nil
+	case "Odd Potion":
+		return AdultTradeOddPotion, nil
+	case "Poachers Saw":
+		return AdultTradePoachersSaw, nil
+	case "Broken Sword":
+		return AdultTradeBrokenSword, nil
+	case "Prescription":
+		return AdultTradePrescription, nil
+	case "Eyeball Frog":
+		return AdultTradeEyeballFrog, nil
+	case "Eyedrops":
+		return AdultTradeEyedrops, nil
+	case "Claim Check":
+		return AdultTradeClaimCheck, nil
+	default:
+		return 0, fmt.Errorf("unknown adult trade shuffle item %q", raw)
+	}
+}
 
 type StartAge bool
 
@@ -621,6 +892,20 @@ const (
 	ShuffleSongsAnywhere
 )
 
+func ParseShuffleSong(raw string) (ShuffleSongs, error) {
+	switch raw {
+	case "song":
+		return ShuffleSongsOnSongs, nil
+	case "dungeon":
+		return ShuffleSongsOnDungeonRewards, nil
+	case "any":
+		return ShuffleSongsAnywhere, nil
+	default:
+		return 0, fmt.Errorf("unknown song shuffle: %q", raw)
+	}
+
+}
+
 type ShuffleShop uint8
 
 const (
@@ -631,6 +916,55 @@ const (
 	ShuffleShopThree
 	ShuffleShopFour
 )
+
+func ParseShuffleShop(raw string) (ShuffleShop, error) {
+	switch raw {
+	case "off":
+		return ShuffleShopsOff, nil
+	case "0":
+		return ShuffleShopsZero, nil
+	case "1":
+		return ShuffleShopsOne, nil
+	case "2":
+		return ShuffleShopTwo, nil
+	case "3":
+		return ShuffleShopFour, nil
+	case "4":
+		return ShuffleShopFour, nil
+	default:
+		return 0, fmt.Errorf("unknown shop shuffle setting %q", raw)
+	}
+}
+
+type ShuffleShopPrices uint8
+
+const (
+	ShuffleShopPricesRandom ShuffleShopPrices = iota
+	ShuffleShopPricesStartingWallet
+	ShuffleShopPricesAdultWallet
+	ShuffleShopPricesGiantWallet
+	ShuffleShopPricesTycoonWallet
+	ShuffleShopPricesAffordable
+)
+
+func ParseShuffleShopPrices(raw string) (ShuffleShopPrices, error) {
+	switch raw {
+	case "random":
+		return ShuffleShopPricesRandom, nil
+	case "random_starting":
+		return ShuffleShopPricesStartingWallet, nil
+	case "random_adult":
+		return ShuffleShopPricesAdultWallet, nil
+	case "random_giant":
+		return ShuffleShopPricesGiantWallet, nil
+	case "random_tycoon":
+		return ShuffleShopPricesTycoonWallet, nil
+	case "affordable":
+		return ShuffleShopPricesAffordable, nil
+	default:
+		return 0, fmt.Errorf("unknown shop price shuffle %q", raw)
+	}
+}
 
 type ShuffleMapCompass uint8
 
@@ -645,9 +979,56 @@ const (
 	ShuffleMapCompassAnywhere
 )
 
+func ParseMapCompass(raw string) (ShuffleMapCompass, error) {
+	switch raw {
+	case "remove":
+		return ShuffleMapCompassRemove, nil
+	case "startwith":
+		return ShuffleMapCompassStartWith, nil
+	case "vanilla":
+		return ShuffleMapCompassVanilla, nil
+	case "dungeon":
+		return ShuffleMapCompassDungeon, nil
+	case "regional":
+		return ShuffleMapCompassRegional, nil
+	case "overworld":
+		return ShuffleMapCompassOverworld, nil
+	case "any_dungeon":
+		return ShuffleMapCompassAnyDungeon, nil
+	case "keysanity":
+		return ShuffleMapCompassAnywhere, nil
+	default:
+		return 0, fmt.Errorf("unknown map & compass shuffle: %q", raw)
+	}
+}
+
 type ConnectionFlag uint64
 
 const (
 	ConnectionOpenDoorOfTime ConnectionFlag = 1 << iota
 	ConnectionShuffleHideoutEntrances
 )
+
+type ShuffleSongComposition uint8
+
+const (
+	ShuffleSongCompositionOff ShuffleSongComposition = iota
+	ShuffleSongCompositionFrogs
+	ShuffleSongCompositionWarp
+	ShuffleSongCompositionAll
+)
+
+func ParseShuffleSongComposition(raw string) (ShuffleSongComposition, error) {
+	switch raw {
+	case "off":
+		return ShuffleSongCompositionOff, nil
+	case "frog":
+		return ShuffleSongCompositionFrogs, nil
+	case "warp":
+		return ShuffleSongCompositionWarp, nil
+	case "all":
+		return ShuffleSongCompositionAll, nil
+	default:
+		return 0, fmt.Errorf("unknown shuffle song composition setting %q", raw)
+	}
+}

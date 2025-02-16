@@ -1,4 +1,4 @@
-package bootstrap
+package boot
 
 import (
 	"fmt"
@@ -54,7 +54,9 @@ func loadsymbols(ocm *zecs.Ocm, syms *symbols.Table) error {
 	}
 
 	for _, batch := range batches {
-		batch.tagall(ocm, syms)
+		if err := batch.tagall(ocm, syms); err != nil {
+			return fmt.Errorf("while tagging batch %v: %w", batch.kind, err)
+		}
 	}
 
 	return nil
@@ -65,17 +67,20 @@ type tagging struct {
 	q    []zecs.BuildQuery
 }
 
-func (this tagging) tagall(ocm *zecs.Ocm, syms *symbols.Table) {
+func (this tagging) tagall(ocm *zecs.Ocm, syms *symbols.Table) error {
 	q := ocm.Query()
 	q.Build(zecs.Load[name], this.q...)
 	rows, err := q.Execute()
-	PanicWhenErr(err)
+	if err != nil {
+		return err
+	}
 	for ent, tup := range rows.All {
 		entity := ocm.Proxy(ent)
 		name := string(tup.Values[0].(name))
 		syms.Declare(name, this.kind)
 		entity.Attach(this.kind)
 	}
+	return nil
 }
 
 func loadscripts(ocm *zecs.Ocm, env *mido.CompileEnv) error {
@@ -88,7 +93,9 @@ func loadscripts(ocm *zecs.Ocm, env *mido.CompileEnv) error {
 	)
 
 	rows, rowErr := q.Execute()
-	PanicWhenErr(rowErr)
+	if rowErr != nil {
+		return rowErr
+	}
 	decls := make(map[string]string, rows.Len())
 
 	for _, tup := range rows.All {
@@ -97,7 +104,9 @@ func loadscripts(ocm *zecs.Ocm, env *mido.CompileEnv) error {
 		decls[string(decl)] = string(body)
 	}
 
-	PanicWhenErr(env.BuildScriptedFuncs(decls))
+	if err := (env.BuildScriptedFuncs(decls)); err != nil {
+		return fmt.Errorf("while building scripted func declarations: %w", err)
+	}
 
 	eng := ocm.Engine()
 	for entity, tup := range rows.All {
@@ -117,7 +126,9 @@ func aliassymbols(ocm *zecs.Ocm, syms *symbols.Table) error {
 	q.Build(zecs.Load[name], zecs.With[components.TokenMarker])
 	eng := ocm.Engine()
 	rows, err := q.Execute()
-	PanicWhenErr(err)
+	if err != nil {
+		return err
+	}
 
 	for id, tup := range rows.All {
 		name := string(tup.Values[0].(name))
@@ -129,7 +140,10 @@ func aliassymbols(ocm *zecs.Ocm, syms *symbols.Table) error {
 		case symbols.TOKEN:
 			alias := escape(name)
 			syms.Alias(original, alias)
-			PanicWhenErr(eng.SetValues(id, zecs.Values{components.AliasingName(alias)}))
+
+			if err := (eng.SetValues(id, zecs.Values{components.AliasingName(alias)})); err != nil {
+				return fmt.Errorf("while aliasing %q: %w", alias, err)
+			}
 		default:
 			panic(fmt.Errorf("expected to only alias function or token: %s", original))
 		}
@@ -166,7 +180,7 @@ func installCompilerFunctions(these *settings.Model) mido.ConfigureCompiler {
 		isTrialSkipped := ConstCompileFunc(true)
 		regionHasShortcuts := ConstCompileFunc(false)
 		hasTodAccess := ConstCompileFunc(true)
-		hadNightStart := ConstCompileFunc(these.Logic.Spawns.StartTimeOfDay.IsNight())
+		hadNightStart := ConstCompileFunc(these.Logic.Spawns.TimeOfDay.IsNight())
 
 		mido.WithCompilerFunctions(func(*mido.CompileEnv) optimizer.CompilerFunctionTable {
 			return optimizer.CompilerFunctionTable{

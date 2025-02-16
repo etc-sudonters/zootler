@@ -77,7 +77,7 @@ func CreateBuiltInHasFuncs(builtins *BuiltIns, pocket *Pocket, flags settings.Sh
 
 		ptr := objects.UnpackPtr32(args[0])
 		qty := objects.UnpackU32(args[1])
-		result := pocket.Has(zecs.Entity(ptr.Addr), qty)
+		result := pocket.Has(zecs.Entity(ptr.Addr), int(qty))
 		return objects.PackBool(result), nil
 	}
 
@@ -109,7 +109,7 @@ func CreateBuiltInHasFuncs(builtins *BuiltIns, pocket *Pocket, flags settings.Sh
 
 	builtins.HasDungeonRewards = func(_ *objects.Table, args []objects.Object) (objects.Object, error) {
 		qty := objects.UnpackU32(args[0])
-		return objects.PackBool(pocket.HasDungeonRewards(qty)), nil
+		return objects.PackBool(pocket.HasDungeonRewards(int(qty))), nil
 	}
 
 	builtins.HasHearts = func(_ *objects.Table, args []objects.Object) (objects.Object, error) {
@@ -119,12 +119,12 @@ func CreateBuiltInHasFuncs(builtins *BuiltIns, pocket *Pocket, flags settings.Sh
 
 	builtins.HasStones = func(_ *objects.Table, args []objects.Object) (objects.Object, error) {
 		qty := objects.UnpackU32(args[0])
-		return objects.PackBool(pocket.HasStones(qty)), nil
+		return objects.PackBool(pocket.HasStones(int(qty))), nil
 	}
 
 	builtins.HasMedallions = func(_ *objects.Table, args []objects.Object) (objects.Object, error) {
 		qty := objects.UnpackU32(args[0])
-		return objects.PackBool(pocket.HasMedallions(qty)), nil
+		return objects.PackBool(pocket.HasMedallions(int(qty))), nil
 	}
 
 	if settings.HasFlag(flags, settings.ShuffleOcarinaNotes) {

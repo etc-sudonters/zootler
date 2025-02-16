@@ -1,8 +1,8 @@
 package zecs
 
 import (
+	"github.com/etc-sudonters/substrate/skelly/bitset32"
 	"sudonters/libzootr/internal/query"
-	"sudonters/libzootr/internal/skelly/bitset32"
 )
 
 type Membership struct {

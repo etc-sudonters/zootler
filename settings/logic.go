@@ -1,30 +1,34 @@
 package settings
 
 type Logic struct {
-	Set               LogicSetting
-	StartingTimeOfDay Enum
-	BlueFireArrows    bool
-	FixBrokenDrops    bool
-	HintsRevealed     HintsRevealed
-	FreeBombchuDrops  bool
-	StartingHearts    int
+	Set              LogicSetting
+	BlueFireArrows   bool
+	FixBrokenDrops   bool
+	HintsRevealed    HintsRevealed
+	FreeBombchuDrops bool
 
 	Spawns struct {
-		StartTimeOfDay TimeOfDay
-		AdultSpawn     string
-		ChildSpawn     string
-		StartAge       StartAge
+		TimeOfDay  TimeOfDay
+		AdultSpawn string
+		ChildSpawn string
+		StartAge   StartAge
+		Hearts     int
+		Items      map[string]int
 	}
 
 	Shuffling struct {
 		DungeonRewards ShuffleDungeonRewards
 		Songs          ShuffleSongs
 		Shops          ShuffleShop
-		SkullTokens    ShuffleSkullTokens
+		ShopPrices     ShuffleShopPrices
+		SkullTokens    PartitionedShuffle
 		Scrubs         ShuffleScrub
-		Freestandings  ShuffleFreestanding
-		Pots           ShufflePots
-		Crates         ShuffleCrates
+		Freestandings  PartitionedShuffle
+		Pots           PartitionedShuffle
+		Crates         PartitionedShuffle
+		Loach          ShuffleLoachReward
+
+		SongComposition ShuffleSongComposition
 
 		RemoveCollectibleHearts bool
 
@@ -33,21 +37,20 @@ type Logic struct {
 
 	Damage struct {
 		Multiplier DamageMultiplier
-		Bonks      DeadlyBonks
+		Bonks      DamageMultiplier
 	}
 
 	Locations struct {
 		Reachability LocationsReachable
-		Flags        LocationFlags // rauru, zelda letter, mask quest, scarecrow, beans
-		AdultSpawn   string
-		ChildSpawn   string
-
-		Disabled []string
+		Flags        LocationFlags
+		Disabled     []string
 	}
 
 	Trade struct {
 		AdultItems AdultTradeItems
 		ChildItems ChildTradeItems
+
+		AdultTradeShuffle bool
 	}
 
 	Dungeon struct {
@@ -59,7 +62,7 @@ type Logic struct {
 		KeyRings               bool
 		KeyRingsIncludeBossKey bool
 		SilverRupeePouches     bool
-		MapCompass             NavigationShuffle
+		MapCompass             ShuffleMapCompass
 		Empty                  Flags
 		MasterQuest            Flags
 		Shortcuts              Flags
@@ -70,8 +73,8 @@ type Logic struct {
 
 	Minigames struct {
 		TreasureChestGameKeys ShuffleKeys
-		KakarikoChickenGoal   uint8
-		BigPoeGoal            uint8
+		KakarikoChickenGoal   int
+		BigPoeGoal            int
 	}
 
 	Connections struct {

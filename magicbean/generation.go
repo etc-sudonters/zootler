@@ -2,6 +2,7 @@ package magicbean
 
 import (
 	"math/rand/v2"
+	"sudonters/libzootr/magicbean/tracking"
 	"sudonters/libzootr/settings"
 
 	"sudonters/libzootr/mido/objects"
@@ -14,5 +15,7 @@ type Generation struct {
 	Objects   objects.Table
 	Inventory Inventory
 	Rng       rand.Rand
-	Settings  settings.Model
+	Settings  *settings.Model
+	Tokens    tracking.Tokens
+	Nodes     tracking.Nodes
 }

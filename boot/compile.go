@@ -1,6 +1,7 @@
-package bootstrap
+package boot
 
 import (
+	"fmt"
 	"sudonters/libzootr/components"
 	"sudonters/libzootr/internal/query"
 	"sudonters/libzootr/internal/table"
@@ -22,7 +23,9 @@ func parseall(ocm *zecs.Ocm, codegen *mido.CodeGen) error {
 		source := tup.Values[0].(components.RuleSource)
 
 		parsed, err := codegen.Parse(string(source))
-		PanicWhenErr(err)
+		if err != nil {
+			return err
+		}
 		entity.Attach(components.RuleParsed{parsed})
 	}
 
@@ -40,7 +43,9 @@ func optimizeall(ocm *zecs.Ocm, codegen *mido.CodeGen) error {
 
 	for {
 		rows, err := unoptimized.Execute()
-		PanicWhenErr(err)
+		if err != nil {
+			return err
+		}
 		if rows.Len() == 0 {
 			break
 		}
@@ -55,10 +60,14 @@ func optimizeall(ocm *zecs.Ocm, codegen *mido.CodeGen) error {
 					query.MustAsColumnId[components.Name](eng),
 				},
 			)
-			PanicWhenErr(parentErr)
+			if parentErr != nil {
+				return fmt.Errorf("while looking for parents name: %w", parentErr)
+			}
 			optimizer.SetCurrentLocation(codegen.Context, string(parent.Values[0].(components.Name)))
 			optimized, optimizeErr := codegen.Optimize(parsed.Node)
-			PanicWhenErr(optimizeErr)
+			if (optimizeErr) != nil {
+				return fmt.Errorf("while optimizing: %w", optimizeErr)
+			}
 			entity.Attach(components.RuleOptimized{optimized})
 		}
 	}
@@ -79,7 +88,9 @@ func compileall(ocm *zecs.Ocm, codegen *mido.CodeGen) error {
 		compiling := tup.Values[0].(components.RuleOptimized)
 
 		bytecode, err := codegen.Compile(compiling.Node)
-		PanicWhenErr(err)
+		if err != nil {
+			return fmt.Errorf("while compiling/codegen: %w", err)
+		}
 		entity.Attach(components.RuleCompiled(bytecode))
 	}
 
