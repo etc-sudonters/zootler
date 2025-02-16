@@ -79,8 +79,7 @@ func (m model) View() string {
 	return s
 }
 
-func runMain(ctx context.Context, _ *cliOptions) stageleft.ExitCode {
-	std, _ := dontio.StdFromContext(ctx)
+func runMain(ctx context.Context, std *dontio.Std, _ *cliOptions) stageleft.ExitCode {
 	initial := initialModel()
 	initial.std = std
 	p := tea.NewProgram(initial)

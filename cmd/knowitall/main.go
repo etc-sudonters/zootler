@@ -56,46 +56,18 @@ func main() {
 	}
 	ctx = dontio.AddStdToContext(ctx, &appStd)
 
-	appExitCode = runMain(ctx, &opts)
+	appExitCode = runMain(ctx, &appStd, &opts)
 	return
 }
 
 func redirectAppStd(std *dontio.Std, opts *cliOptions) (func(), error) {
-	var opened []*os.File
-	cleanup := func() {
-		for _, f := range opened {
-			if err := f.Sync(); err != nil {
-				panic(fmt.Errorf("failed to sync %s: %w", f.Name(), err))
-			}
-			if err := f.Close(); err != nil {
-				panic(fmt.Errorf("failed to close %s: %w", f.Name(), err))
-			}
-		}
-	}
-
-	std.In = closedStdIn{}
 	logDirErr := os.Mkdir(opts.logDir, 0777)
 	if logDirErr != nil && !os.IsExist(logDirErr) {
-		return cleanup, fmt.Errorf("failed to initialize log dir %s: %w", opts.logDir, logDirErr)
+		return nil, fmt.Errorf("failed to initialize log dir %s: %w", opts.logDir, logDirErr)
 	}
 
-	for _, name := range []string{"out", "err"} {
-		file, fileErr := os.Create(filepath.Join(opts.logDir, name))
-		if fileErr != nil {
-			return cleanup, fmt.Errorf("failed to initialize std%s: %w", name, fileErr)
-		}
-		opened = append(opened, file)
-	}
-
-	std.Out = opened[0]
-	std.Err = opened[1]
-	return cleanup, nil
-}
-
-type closedStdIn struct{}
-
-func (_ closedStdIn) Read([]byte) (int, error) {
-	return 0, io.ErrClosedPipe
+	std.In = dontio.AlwaysErrReader{io.ErrUnexpectedEOF}
+	return dontio.FileStd(std, opts.logDir)
 }
 
 type missingRequired string // option name

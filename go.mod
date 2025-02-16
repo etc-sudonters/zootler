@@ -4,7 +4,7 @@ go 1.23.0
 
 require (
 	github.com/charmbracelet/bubbletea v1.3.3
-	github.com/etc-sudonters/substrate v0.0.0-20240822020222-81166d48bea1
+	github.com/etc-sudonters/substrate v0.0.0-20250216052200-bc7e481a734b
 	muzzammil.xyz/jsonc v1.0.0
 )
 
