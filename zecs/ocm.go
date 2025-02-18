@@ -3,10 +3,11 @@ package zecs
 import (
 	"errors"
 	"fmt"
-	"github.com/etc-sudonters/substrate/skelly/bitset32"
 	"sudonters/libzootr/internal/bundle"
 	"sudonters/libzootr/internal/query"
 	"sudonters/libzootr/internal/table"
+
+	"github.com/etc-sudonters/substrate/skelly/bitset32"
 )
 
 type Entity = table.RowId
@@ -30,8 +31,28 @@ func Apply(ocm *Ocm, ddl []DDL) error {
 	return nil
 }
 
+type makesColId func(*Ocm) table.ColumnId
+
+func Get[T Value](ocm *Ocm) table.ColumnId {
+	return query.MustAsColumnId[T](ocm.eng)
+}
+
 type Ocm struct {
 	eng query.Engine
+}
+
+func (this *Ocm) GetValues(which Entity, cols ...makesColId) (Values, error) {
+	if len(cols) == 0 {
+		return nil, errors.New("no columns provided")
+	}
+
+	cids := make(table.ColumnIds, len(cols))
+	for i := range cols {
+		cids[i] = cols[i](this)
+	}
+
+	tup, err := this.eng.GetValues(which, cids)
+	return tup.Values, err
 }
 
 func (this *Ocm) Proxy(which Entity) Proxy {

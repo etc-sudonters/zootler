@@ -10,17 +10,14 @@ import (
 	"runtime/debug"
 
 	"github.com/etc-sudonters/substrate/dontio"
+	"github.com/etc-sudonters/substrate/slipup"
 	"github.com/etc-sudonters/substrate/stageleft"
 )
 
 func main() {
 	var opts cliOptions
 	var appExitCode stageleft.ExitCode = stageleft.ExitSuccess
-	realStd := dontio.Std{
-		In:  os.Stdin,
-		Out: os.Stdout,
-		Err: os.Stderr,
-	}
+	realStd := dontio.StdIo()
 	defer func() {
 		os.Exit(int(appExitCode))
 	}()
@@ -56,14 +53,24 @@ func main() {
 	}
 	ctx = dontio.AddStdToContext(ctx, &appStd)
 
-	appExitCode = runMain(ctx, &appStd, &opts)
+	if err := runMain(ctx, &appStd, &opts); err != nil {
+		fmt.Fprintln(realStd.Err, err)
+		appExitCode = stageleft.AsExitCode(err, 126)
+	}
 	return
 }
 
 func redirectAppStd(std *dontio.Std, opts *cliOptions) (func(), error) {
+	if !filepath.IsAbs(opts.logDir) {
+		path, pathErr := filepath.Abs(opts.logDir)
+		if pathErr != nil {
+			return nil, slipup.Describef(pathErr, "failed to initialize log dir %q", path)
+		}
+		opts.logDir = path
+	}
 	logDirErr := os.Mkdir(opts.logDir, 0777)
 	if logDirErr != nil && !os.IsExist(logDirErr) {
-		return nil, fmt.Errorf("failed to initialize log dir %s: %w", opts.logDir, logDirErr)
+		return nil, slipup.Describef(logDirErr, "failed to initialize log dir %q", opts.logDir)
 	}
 
 	std.In = dontio.AlwaysErrReader{io.ErrUnexpectedEOF}
@@ -77,27 +84,28 @@ func (arg missingRequired) Error() string {
 }
 
 type cliOptions struct {
-	logDir string
+	logDir   string
+	worldDir string
+	dataDir  string
+	spoiler  string
 }
 
 func (opts *cliOptions) init() error {
-	var path string
-	var pathErr error
-
-	flag.StringVar(&path, "l", "", "Directory open log files in")
+	flag.StringVar(&opts.logDir, "l", ".logs", "Directory open log files in")
+	flag.StringVar(&opts.worldDir, "w", "", "Directory where logic files are located")
+	flag.StringVar(&opts.dataDir, "d", "", "Directory where data files are stored")
+	flag.StringVar(&opts.spoiler, "s", "", "Path to spoiler log to import")
 	flag.Parse()
-
-	if path == "" {
-		path = ".logs"
-	}
-	opts.logDir, pathErr = filepath.Abs(path)
-	if pathErr != nil {
-		pathErr = fmt.Errorf("failed to initialize log dir %q: %w", path, pathErr)
+	if opts.worldDir == "" {
+		return missingRequired("-w")
 	}
 
-	if opts.logDir == "" {
-		return fmt.Errorf("failed to initialize log dir: empty path!")
+	if opts.dataDir == "" {
+		return missingRequired("-d")
 	}
 
-	return pathErr
+	if opts.spoiler == "" {
+		return missingRequired("-s")
+	}
+	return nil
 }

@@ -8,6 +8,30 @@ func EmptyInventory() Inventory {
 	return Inventory(make(map[zecs.Entity]int))
 }
 
+func CopyInventory(i Inventory) Inventory {
+	copy := make(Inventory, len(i))
+
+	for k, v := range i {
+		copy[k] = v
+	}
+	return copy
+}
+
+func DiffInventories(old, new Inventory) Inventory {
+	diff := make(Inventory, len(new))
+
+	for k := range new {
+		had := old[k]
+		has := new[k]
+		if has-had == 0 {
+			continue
+		}
+		diff[k] = has - had
+	}
+
+	return diff
+}
+
 type Inventory map[zecs.Entity]int
 
 func (this Inventory) CollectOne(entity zecs.Entity) {

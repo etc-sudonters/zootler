@@ -1,10 +1,7 @@
 package magicbean
 
 import (
-	"context"
 	"fmt"
-	"github.com/etc-sudonters/substrate/skelly/bitset32"
-	"github.com/etc-sudonters/substrate/skelly/graph32"
 	"sudonters/libzootr/components"
 	"sudonters/libzootr/internal"
 	"sudonters/libzootr/mido"
@@ -12,14 +9,16 @@ import (
 	"sudonters/libzootr/mido/compiler"
 	"sudonters/libzootr/mido/objects"
 	"sudonters/libzootr/zecs"
+
+	"github.com/etc-sudonters/substrate/skelly/bitset32"
+	"github.com/etc-sudonters/substrate/skelly/graph32"
 )
 
 type ExplorableEdge struct {
-	Kind   components.EdgeKind
 	Entity zecs.Entity
+	Kind   components.EdgeKind
 	Rule   components.RuleCompiled
-	Src    components.RuleSource
-	Name   components.Name
+	Conn   components.Connection
 }
 
 type ExplorableWorld struct {
@@ -36,7 +35,7 @@ func (this ExplorableWorld) Edge(from, to graph32.Node) (ExplorableEdge, bool) {
 type Exploration struct {
 	VM      mido.VM
 	Visited *bitset32.Bitset
-	Workset *bitset32.Bitset
+	Pending *bitset32.Bitset
 	Objects *objects.Table
 }
 
@@ -52,14 +51,14 @@ func (this *Exploration) evaluateRule(bytecode compiler.Bytecode) bool {
 
 	answer, vmErr := this.VM.Execute(bytecode)
 	if vmErr != nil {
-		fmt.Println(vmErr)
+		fmt.Fprintln(this.VM.Std.Err, vmErr)
 		answer = objects.PackedFalse
 	}
 
 	return this.VM.Truthy(answer)
 }
 
-func (this *Exploration) CanTransit(ctx context.Context, world *ExplorableWorld, from, to graph32.Node) bool {
+func (this *Exploration) CanTransit(world *ExplorableWorld, from, to graph32.Node) bool {
 	edge, exists := world.Edge(from, to)
 	if !exists {
 		panic(fmt.Errorf("no edge registered between %d %d", from, to))
@@ -72,22 +71,34 @@ func (this *Exploration) CanTransit(ctx context.Context, world *ExplorableWorld,
 type ExplorationResults struct {
 	Pending bitset32.Bitset
 	Reached bitset32.Bitset
+	Edges   []EdgeHandle
 }
 
-func (this *ExplorableWorld) ExploreAvailableEdges(ctx context.Context, xplr *Exploration) ExplorationResults {
+type EdgeHandle struct {
+	Id  zecs.Entity
+	Def components.Connection
+}
+
+func (this *ExplorableWorld) ExploreAvailableEdges(xplr *Exploration) ExplorationResults {
 	var results ExplorationResults
-	for current := range nodeiter(xplr.Workset).UntilEmpty {
+	for current := range nodeiter(xplr.Pending).UntilEmpty {
 		neighbors, err := this.Graph.Successors(current)
 		internal.PanicOnError(err)
 		neighbors = neighbors.Difference(*xplr.Visited)
 
 		for neighbor := range nodeiter(&neighbors).All {
-			if xplr.CanTransit(ctx, this, current, neighbor) {
+			if xplr.CanTransit(this, current, neighbor) {
 				bitset32.Unset(&neighbors, neighbor)
-				bitset32.Set(xplr.Workset, neighbor)
+				bitset32.Set(xplr.Pending, neighbor)
 				bitset32.Set(&results.Reached, neighbor)
 				bitset32.Set(xplr.Visited, neighbor)
 			}
+
+			edge, _ := this.Edge(current, neighbor)
+			results.Edges = append(results.Edges, EdgeHandle{
+				Def: edge.Conn,
+				Id:  edge.Entity,
+			})
 		}
 
 		if !neighbors.IsEmpty() {

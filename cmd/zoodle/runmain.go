@@ -13,7 +13,6 @@ import (
 	"sudonters/libzootr/zecs"
 	"text/tabwriter"
 
-	"github.com/etc-sudonters/substrate/skelly/bitset32"
 	"github.com/etc-sudonters/substrate/slipup"
 
 	"github.com/etc-sudonters/substrate/dontio"
@@ -51,28 +50,29 @@ func runMain(ctx context.Context, std *dontio.Std, opts *cliOptions) stageleft.E
 
 	internal.PanicOnError(PrintInventory(std.Out, generation.Inventory, tokenNames))
 
-	adult := Search{
-		Workset:    generation.World.Graph.Roots(),
+	adult := magicbean.Search{
+		Pending:    generation.World.Graph.Roots(),
 		Generation: &generation,
-		Age:        AgeAdult,
+		Age:        magicbean.AgeAdult,
 	}
-	child := Search{
-		Workset:    generation.World.Graph.Roots(),
+	child := magicbean.Search{
+		Pending:    generation.World.Graph.Roots(),
 		Generation: &generation,
-		Age:        AgeChild,
+		Age:        magicbean.AgeChild,
 	}
 	var i int
 	for {
 		i++
 		std.WriteLineOut("")
 		std.WriteLineOut("Sphere %d", i)
-		adultReached := adult.Visit(ctx)
-		childReached := child.Visit(ctx)
-		reached := adultReached.Union(childReached)
+		adultResult := adult.Visit()
+		childResult := child.Visit()
+		reached := adultResult.Reached.Union(childResult.Reached)
 		if reached.Len() == 0 {
 			std.WriteLineOut("did not reach more nodes in either age")
 			break
 		}
+		precollect := magicbean.CopyInventory(generation.Inventory)
 		internal.PanicOnError(magicbean.CollectTokensFrom(
 			&generation.Ocm,
 			reached,
@@ -80,34 +80,16 @@ func runMain(ctx context.Context, std *dontio.Std, opts *cliOptions) stageleft.E
 		))
 
 		std.WriteLineOut("Inventory after collection")
-		internal.PanicOnError(PrintInventory(std.Out, generation.Inventory, tokenNames))
+		internal.PanicOnError(PrintInventory(std.Out, magicbean.DiffInventories(precollect, generation.Inventory), tokenNames))
 
 		tabber := tabwriter.NewWriter(std.Out, 8, 2, 1, ' ', 0)
 		fmt.Fprintf(tabber, "\tAdult\tChild\n")
 		fmt.Fprintf(tabber, "Visited\t%3d\t%3d\n", adult.Visited.Len(), child.Visited.Len())
-		fmt.Fprintf(tabber, "Reached\t%3d\t%3d\n", adultReached.Len(), childReached.Len())
-		fmt.Fprintf(tabber, "Pending\t%3d\t%3d\n", adult.Workset.Len(), child.Workset.Len())
+		fmt.Fprintf(tabber, "Reached\t%3d\t%3d\n", adultResult.Reached.Len(), childResult.Reached.Len())
+		fmt.Fprintf(tabber, "Pending\t%3d\t%3d\n", adult.Pending.Len(), child.Pending.Len())
 		tabber.Flush()
 	}
 	return stageleft.ExitCode(0)
-}
-
-type Search struct {
-	Visited    bitset32.Bitset
-	Workset    bitset32.Bitset
-	Generation *magicbean.Generation
-	Age        Age
-}
-
-func (this *Search) Visit(ctx context.Context) (reached bitset32.Bitset) {
-	xplr := magicbean.Exploration{
-		Visited: &this.Visited,
-		Workset: &this.Workset,
-	}
-
-	results := explore(ctx, &xplr, this.Generation, this.Age)
-	this.Workset = results.Pending
-	return results.Reached
 }
 
 func FinalizeSettings(these *settings.Model) {

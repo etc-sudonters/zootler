@@ -15,8 +15,6 @@ func explorableworldfrom(ocm *zecs.Ocm) (magicbean.ExplorableWorld, error) {
 		zecs.Load[components.RuleCompiled],
 		zecs.Load[components.EdgeKind],
 		zecs.Load[components.Connection],
-		zecs.Load[components.Name],
-		zecs.Optional[components.RuleSource],
 	)
 
 	rows, err := q.Execute()
@@ -42,14 +40,7 @@ func explorableworldfrom(ocm *zecs.Ocm) (magicbean.ExplorableWorld, error) {
 			Entity: entity,
 			Rule:   tup.Values[0].(components.RuleCompiled),
 			Kind:   tup.Values[1].(components.EdgeKind),
-			Name:   tup.Values[3].(components.Name),
 		}
-
-		src := tup.Values[4]
-		if src != nil {
-			edge.Src = src.(components.RuleSource)
-		}
-
 		world.Edges[trans] = edge
 	}
 
