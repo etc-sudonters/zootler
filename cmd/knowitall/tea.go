@@ -9,12 +9,13 @@ import (
 	"sudonters/libzootr/components"
 	"sudonters/libzootr/magicbean"
 	"sudonters/libzootr/magicbean/tracking"
+	"sudonters/libzootr/mido"
+	"sudonters/libzootr/playthrough"
 	"sudonters/libzootr/settings"
 	"sudonters/libzootr/zecs"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/etc-sudonters/substrate/dontio"
-	"github.com/etc-sudonters/substrate/skelly/bitset32"
 	"github.com/etc-sudonters/substrate/slipup"
 	"github.com/etc-sudonters/substrate/stageleft"
 )
@@ -49,18 +50,18 @@ func runMain(ctx context.Context, std *dontio.Std, opts *cliOptions) error {
 		return stageleft.AttachExitCode(slipup.Describe(genErr, "failed to boot zootr engine"), 101)
 	}
 
-	roots := gen.World.Graph.Roots()
-	search := map[magicbean.Age]*magicbean.Search{
-		magicbean.AgeAdult: &magicbean.Search{
-			Pending:    bitset32.Copy(roots),
-			Generation: &gen,
-			Age:        magicbean.AgeAdult,
-		},
-		magicbean.AgeChild: &magicbean.Search{
-			Pending:    bitset32.Copy(roots),
-			Generation: &gen,
-			Age:        magicbean.AgeChild,
-		},
+	vms := [2]mido.VM{
+		magicbean.CreateVMForAge(&gen, magicbean.AgeAdult),
+		magicbean.CreateVMForAge(&gen, magicbean.AgeChild),
+	}
+	searchers := [2]playthrough.Search{
+		playthrough.SearchFromRoots(&vms[0], &gen.World),
+		playthrough.SearchFromRoots(&vms[1], &gen.World),
+	}
+
+	searches := generation.Searches{
+		Adult: &searchers[0],
+		Child: &searchers[1],
 	}
 
 	nametable, nametableErr := tracking.NameTableFrom(&gen.Ocm, zecs.With[components.Name])
@@ -68,7 +69,7 @@ func runMain(ctx context.Context, std *dontio.Std, opts *cliOptions) error {
 		return stageleft.AttachExitCode(slipup.Describe(nametableErr, "failed to create nametable"), 102)
 	}
 
-	mount := generation.New(&gen, nametable, search)
+	mount := generation.New(&gen, nametable, searches)
 	app := leaves.NewApp(ctx, std, mount)
 	p := tea.NewProgram(app)
 	final, err := p.Run()

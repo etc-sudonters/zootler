@@ -96,6 +96,15 @@ type Table struct {
 	indexes map[ColumnId]Index
 }
 
+func (this *Table) MembersOfColumns(id ColumnId) (bitset32.Bitset, error) {
+	if int(id) > len(this.cols) {
+		return bitset32.Bitset{}, fmt.Errorf("column %d not found", id)
+	}
+
+	col := this.cols[id]
+	return col.Column().Membership(), nil
+}
+
 func (this *Table) Column(id ColumnId) (ColumnData, error) {
 	if int(id) > len(this.cols) {
 		return ColumnData{}, fmt.Errorf("column %d not found", id)

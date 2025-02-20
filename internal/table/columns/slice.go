@@ -2,9 +2,10 @@ package columns
 
 import (
 	"fmt"
-	"github.com/etc-sudonters/substrate/skelly/bitset32"
 	"reflect"
 	"sudonters/libzootr/internal/table"
+
+	"github.com/etc-sudonters/substrate/skelly/bitset32"
 )
 
 func SliceColumn[T any]() *table.ColumnBuilder {
@@ -95,6 +96,10 @@ func (row Slice) Len() int {
 
 func (row Slice) Capacity() int {
 	return len(row.components)
+}
+
+func (row Slice) Membership() bitset32.Bitset {
+	return bitset32.Copy(*row.members)
 }
 
 func (row Slice) scanMembers(v table.Value) (b bitset32.Bitset) {

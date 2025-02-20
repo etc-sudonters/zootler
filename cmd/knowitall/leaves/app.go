@@ -21,12 +21,11 @@ func NewApp(ctx context.Context, std *dontio.Std, mount tea.Model) App {
 }
 
 type App struct {
-	maybeQuitting bool
-	mounted       tea.Model
-	std           *dontio.Std
-	ctx           context.Context
-	cancelCause   context.CancelCauseFunc
-	Err           error
+	mounted     tea.Model
+	std         *dontio.Std
+	ctx         context.Context
+	cancelCause context.CancelCauseFunc
+	Err         error
 }
 
 type StdOutMsg string
@@ -81,23 +80,13 @@ func (this App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return this, tea.Batch(tea.Quit, cmd)
 		}
 		return this, nil
+	case tea.WindowSizeMsg:
+		cmd = WriteToStdErrF("resized: %dx%d", msg.Width, msg.Height)
+		break
 	case tea.KeyMsg:
 		switch msg.Type {
 		case tea.KeyCtrlC:
 			return this, tea.Batch(tea.Quit, WriteToStdErrF("ctrl+c interrupt, exiting immediately"))
-		case tea.KeyRunes:
-			str := string(msg.Runes)
-			wasQuiting := this.maybeQuitting
-			if wasQuiting && str == "!" {
-				return this, tea.Batch(tea.Quit, WriteToStdErrF("graceful shutdown requested"))
-			}
-
-			this.maybeQuitting = "Q" == str
-			if this.maybeQuitting {
-				cmd = tea.Batch(cmd, WriteToStdErrF("maybe quiting..."))
-			} else if wasQuiting {
-				cmd = tea.Batch(cmd, WriteToStdErrF("not quitting"))
-			}
 		}
 	}
 

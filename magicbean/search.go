@@ -16,12 +16,14 @@ type Search struct {
 }
 
 func (this *Search) Visit() SearchResult {
+	vm := CreateVMForAge(this.Generation, this.Age)
 	xplr := Exploration{
 		Visited: &this.Visited,
 		Pending: &this.Pending,
+		VM:      &vm,
 	}
+	results := this.Generation.World.ExploreAvailableEdges(&xplr)
 
-	results := explore(&xplr, this.Generation, this.Age)
 	this.Pending = results.Pending
 	return SearchResult{
 		Reached: results.Reached,
@@ -46,7 +48,7 @@ func (this Age) String() string {
 	return "Child"
 }
 
-func explore(xplr *Exploration, generation *Generation, age Age) ExplorationResults {
+func CreateVMForAge(generation *Generation, age Age) mido.VM {
 	pockets := NewPockets(generation.Inventory, &generation.Ocm)
 
 	funcs := BuiltIns{}
@@ -56,7 +58,7 @@ func explore(xplr *Exploration, generation *Generation, age Age) ExplorationResu
 	funcs.IsChild = ConstBool(age == AgeChild)
 	funcs.IsStartingAge = ConstBool(age == Age(generation.Settings.Logic.Spawns.StartAge))
 
-	vm := mido.VM{
+	return mido.VM{
 		Objects: &generation.Objects,
 		Funcs:   funcs.Table(),
 		Std: &dontio.Std{
@@ -66,9 +68,8 @@ func explore(xplr *Exploration, generation *Generation, age Age) ExplorationResu
 		},
 		ChkQty: funcs.Has,
 	}
+}
 
-	xplr.VM = vm
-	xplr.Objects = &generation.Objects
-
-	return generation.World.ExploreAvailableEdges(xplr)
+func explore(xplr *Exploration, generation *Generation, age Age) ExplorationResults {
+	panic("")
 }

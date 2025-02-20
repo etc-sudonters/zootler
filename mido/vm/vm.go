@@ -33,7 +33,7 @@ func (this *VM) Execute(bytecode compiler.Bytecode) (obj objects.Object, err err
 				err = fmt.Errorf(str)
 			}
 
-			err = fmt.Errorf("PANIC!!!! %w\n%s", err, debug.Stack())
+			this.Std.WriteLineErr("VM panicked: %s\n%s", err, debug.Stack())
 		}
 	}()
 
@@ -130,6 +130,9 @@ loop:
 
 	if err == nil && unit.stack.ptr > 0 {
 		result = unit.stack.pop()
+	}
+	if err != nil {
+		this.Std.WriteLineErr("VM Error: %s", err)
 	}
 	return result, err
 }

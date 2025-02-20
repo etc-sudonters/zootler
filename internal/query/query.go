@@ -3,12 +3,13 @@ package query
 import (
 	"errors"
 	"fmt"
-	"github.com/etc-sudonters/substrate/skelly/bitset32"
 	"reflect"
 	"sudonters/libzootr/internal"
 	"sudonters/libzootr/internal/bundle"
 	"sudonters/libzootr/internal/table"
 	"sudonters/libzootr/internal/table/columns"
+
+	"github.com/etc-sudonters/substrate/skelly/bitset32"
 
 	"github.com/etc-sudonters/substrate/mirrors"
 	"github.com/etc-sudonters/substrate/slipup"
@@ -238,6 +239,57 @@ func (e engine) RetrieveWithOptions(b Query, opts RetrieveOptions) (bundle.Inter
 		columns = append(columns, column)
 	}
 
+	bundler := opts.Bundler
+	if bundler == nil {
+		bundler = bundle.Bundle
+	}
+	return bundler(fill, columns)
+}
+
+func (e engine) columnBundle(colIds table.ColumnIds) table.Columns {
+	var columns table.Columns
+	for _, col := range colIds {
+		column, err := e.tbl.Column(col)
+		internal.PanicOnError(err)
+		columns = append(columns, column)
+	}
+
+	return columns
+}
+
+func (e engine) ExperimentalRetrieve(b Query, opts RetrieveOptions) (bundle.Interface, error) {
+	q, ok := b.(*query)
+	if !ok {
+		return nil, fmt.Errorf("%T: %w", b, ErrInvalidQuery)
+	}
+
+	predicate := makePredicate(q)
+
+	colId := predicate.exists.Pop()
+	fill, colDoesNotExist := e.tbl.MembersOfColumns(table.ColumnId(colId))
+	if colDoesNotExist != nil {
+		return nil, colDoesNotExist
+	}
+
+	for colId := range bitset32.IterT[table.ColumnId](&predicate.exists).All {
+		members, colDoesNotExist := e.tbl.MembersOfColumns(colId)
+		if colDoesNotExist != nil {
+			return nil, colDoesNotExist
+		}
+
+		fill = fill.Intersect(members)
+	}
+
+	for colId := range bitset32.IterT[table.ColumnId](&predicate.notExists).All {
+		members, colDoesNotExist := e.tbl.MembersOfColumns(colId)
+		if colDoesNotExist != nil {
+			return nil, colDoesNotExist
+		}
+
+		fill = fill.Difference(members)
+	}
+
+	columns := e.columnBundle(q.cols)
 	bundler := opts.Bundler
 	if bundler == nil {
 		bundler = bundle.Bundle

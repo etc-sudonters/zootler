@@ -33,10 +33,9 @@ func (this ExplorableWorld) Edge(from, to graph32.Node) (ExplorableEdge, bool) {
 }
 
 type Exploration struct {
-	VM      mido.VM
+	VM      *mido.VM
 	Visited *bitset32.Bitset
 	Pending *bitset32.Bitset
-	Objects *objects.Table
 }
 
 func (this *Exploration) evaluateRule(bytecode compiler.Bytecode) bool {

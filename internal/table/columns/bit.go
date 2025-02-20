@@ -1,8 +1,9 @@
 package columns
 
 import (
-	"github.com/etc-sudonters/substrate/skelly/bitset32"
 	"sudonters/libzootr/internal/table"
+
+	"github.com/etc-sudonters/substrate/skelly/bitset32"
 )
 
 func NewBit(singleton table.Value) *Bit {
@@ -45,6 +46,10 @@ func (m *Bit) ScanFor(c table.Value) bitset32.Bitset {
 
 func (m *Bit) Len() int {
 	return m.members.Len()
+}
+
+func (m *Bit) Membership() bitset32.Bitset {
+	return bitset32.Copy(*m.members)
 }
 
 func BitColumnOf[T any]() *table.ColumnBuilder {

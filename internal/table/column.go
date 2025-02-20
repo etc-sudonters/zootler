@@ -20,6 +20,7 @@ type ColumnFactory func() Column
 
 // core column interface
 type Column interface {
+	Membership() bitset32.Bitset
 	Get(e RowId) Value
 	Set(e RowId, c Value)
 	Unset(e RowId)
