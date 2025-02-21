@@ -40,7 +40,7 @@ func Default(ctx context.Context, paths LoadPaths, settings *settings.Model) (ge
 		return
 	}
 
-	world, phase5Err := Phase5_CreateWorld(&ocm, settings, objects.TableFrom(compileEnv.Objects))
+	world, phase5Err := Phase5_CreateWorld(&ocm, settings, objects.TableFrom(compileEnv.Objects), &trackSet)
 	if phase5Err != nil {
 		setupErr = fmt.Errorf("phase 5: %w", phase5Err)
 		return
@@ -54,6 +54,7 @@ func Default(ctx context.Context, paths LoadPaths, settings *settings.Model) (ge
 	generation.Tokens = trackSet.Tokens
 	generation.Nodes = trackSet.Nodes
 	generation.Settings = settings
+	generation.Symbols = compileEnv.Symbols
 
 	return generation, nil
 }

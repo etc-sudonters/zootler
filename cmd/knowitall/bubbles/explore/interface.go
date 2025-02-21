@@ -2,6 +2,9 @@ package explore
 
 import (
 	"sudonters/libzootr/components"
+	"sudonters/libzootr/magicbean"
+	"sudonters/libzootr/mido/ast"
+	"sudonters/libzootr/mido/symbols"
 	"sudonters/libzootr/mido/vm"
 	"sudonters/libzootr/playthrough"
 	"sudonters/libzootr/zecs"
@@ -10,6 +13,12 @@ import (
 )
 
 type sphereSelected int
+
+func selectSphere(which int) tea.Cmd {
+	return func() tea.Msg {
+		return sphereSelected(which)
+	}
+}
 
 type NamedToken struct {
 	Id   zecs.Entity
@@ -28,11 +37,14 @@ type NamedNode struct {
 }
 
 type NamedSphere struct {
-	I      int
-	Error  error
-	Edges  []NamedEdge
-	Nodes  []NamedNode
-	Tokens []NamedToken
+	I         int
+	Error     error
+	Edges     []NamedEdge
+	Nodes     []NamedNode
+	Tokens    []NamedToken
+	AllTokens []NamedToken
+
+	TokenMap map[zecs.Entity]NamedToken
 
 	Adult playthrough.SearchSphere
 	Child playthrough.SearchSphere
@@ -58,6 +70,10 @@ type RuleDisassembled struct {
 	Err         error
 	Name        string
 	Disassembly vm.Disassembly
+	Inventory   magicbean.Inventory
+	Source      string
+	Ast, Opt    ast.Node
+	Symbols     *symbols.Table
 }
 
 func RequestDisassembly(edge zecs.Entity) tea.Cmd {

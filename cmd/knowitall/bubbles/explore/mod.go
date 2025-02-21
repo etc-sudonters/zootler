@@ -53,7 +53,7 @@ func (this Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		return this, cmd
 	case sphereSelected:
 		this.tabs = newTabs(&this.spheres[int(msg)])
-		this.focusTab(TAB_SUMMARY)
+		this.focusTab(TAB_INVENTORY)
 		cmd := this.resizeChildren()
 		return this, cmd
 	case RuleDisassembled:
@@ -138,11 +138,12 @@ func (this *Model) resizeChildren() tea.Cmd {
 }
 
 func listDefaults(l *list.Model) {
+	l.DisableQuitKeybindings()
+	l.SetFilteringEnabled(false)
 	l.SetShowFilter(false)
-	l.SetShowStatusBar(false)
 	l.SetShowHelp(false)
 	l.SetShowPagination(false)
-	l.Title = ""
-	l.DisableQuitKeybindings()
+	l.SetShowStatusBar(false)
 	l.SetShowTitle(false)
+	l.Title = ""
 }

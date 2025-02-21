@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -26,9 +27,33 @@ type App struct {
 	std         *dontio.Std
 	ctx         context.Context
 	cancelCause context.CancelCauseFunc
-	status      string
-	statusStyle lipgloss.Style
 	Err         error
+	statusLine  appStatusLine
+}
+
+type appStatusLine struct {
+	msg   string
+	last  time.Time
+	style lipgloss.Style
+}
+
+func (this *appStatusLine) tick(now time.Time) {
+	if this.msg != "" && time.Now().Sub(this.last).Seconds() > 5 {
+		this.msg = ""
+		this.last = time.Time{}
+	}
+}
+
+func (this *appStatusLine) write(msg string, when time.Time) {
+	this.msg = msg
+	this.last = when
+}
+
+func (this *appStatusLine) view() string {
+	if this.msg != "" {
+		return fmt.Sprintf("%s: %s", this.last.Format(time.TimeOnly), this.msg)
+	}
+	return ""
 }
 
 type StatusMsg string
@@ -77,9 +102,11 @@ func (this App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return this, tea.Batch(tea.Quit, WriteToStdErrF("context canceled: %s", ctxErr))
 	}
 
+	this.statusLine.tick(time.Now())
+
 	switch msg := msg.(type) {
 	case StatusMsg:
-		this.status = string(msg)
+		this.statusLine.write(string(msg), time.Now())
 		return this, nil
 	case StdErrMsg:
 		return this, writeTo(this.std.Err, string(msg))
@@ -109,6 +136,5 @@ func (this App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (this App) View() string {
-	status := this.statusStyle.Render(this.status)
-	return lipgloss.JoinVertical(lipgloss.Left, this.mounted.View(), status)
+	return lipgloss.JoinVertical(lipgloss.Left, this.mounted.View(), this.statusLine.view())
 }

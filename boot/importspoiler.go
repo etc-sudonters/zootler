@@ -304,6 +304,8 @@ func readSetting(propertyName string, these *settings.Model, obj *json.ObjectPar
 		return json.ReadBoolInto(obj, &these.Generation.StartWithRupees)
 	case "starting_hearts":
 		return json.ReadIntInto(obj, &these.Logic.Spawns.Hearts)
+	case "skip_child_zelda":
+		return readBoolIntoFlags(obj, &these.Logic.Locations.Flags, settings.LocationSkipChildZelda)
 	case "skip_reward_from_rauru":
 		return readBoolIntoFlags(obj, &these.Logic.Locations.Flags, settings.LocationSkipRauruReward)
 	case "no_escape_sequence":

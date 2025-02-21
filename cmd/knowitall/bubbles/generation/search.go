@@ -13,13 +13,20 @@ import (
 	"github.com/etc-sudonters/substrate/skelly/bitset32"
 )
 
-func runSphere(msg explore.ExploreSphere, searches playthrough.Searches, names tracking.NameTable, gen *magicbean.Generation) tea.Cmd {
+func runSphere(msg explore.ExploreSphere, searches playthrough.Searches, nameTable tracking.NameTable, gen *magicbean.Generation) tea.Cmd {
 	return func() tea.Msg {
 		sphere := playthrough.SearchAndCollect(searches, gen)
 		named := explore.NamedSphere{Error: sphere.Err}
-		nameEdges(sphere, names, &named)
-		nameNodes(sphere, names, &named)
-		nameItems(sphere, names, &named)
+		nameEdges(sphere, nameTable, &named)
+		nameNodes(sphere, nameTable, &named)
+		nameSphereTokens(sphere, nameTable, &named)
+		nameAllTokens(gen.Inventory, nameTable, &named)
+		slices.SortFunc(named.Tokens, func(a, b explore.NamedToken) int {
+			return strings.Compare(string(a.Name), string(b.Name))
+		})
+		slices.SortFunc(named.AllTokens, func(a, b explore.NamedToken) int {
+			return strings.Compare(string(a.Name), string(b.Name))
+		})
 		return explore.SphereExplored{Sphere: named}
 	}
 }
@@ -48,6 +55,8 @@ func nameEdges(sphere playthrough.Sphere, names tracking.NameTable, named *explo
 		}
 	}
 
+	named.Adult.Edges.Total = sphere.AdultSearch.Edges.Total
+	named.Child.Edges.Total = sphere.ChildSearch.Edges.Total
 }
 
 func nameNodes(sphere playthrough.Sphere, names tracking.NameTable, named *explore.NamedSphere) {
@@ -74,13 +83,20 @@ func nameNodes(sphere playthrough.Sphere, names tracking.NameTable, named *explo
 	}
 }
 
-func nameItems(sphere playthrough.Sphere, names tracking.NameTable, named *explore.NamedSphere) {
+func nameSphereTokens(sphere playthrough.Sphere, names tracking.NameTable, named *explore.NamedSphere) {
 	named.Tokens = make([]explore.NamedToken, 0, len(sphere.Collected))
 	for id, qty := range sphere.Collected {
 		token := explore.NamedToken{Id: id, Qty: qty, Name: names[id]}
 		named.Tokens = append(named.Tokens, token)
 	}
-	slices.SortFunc(named.Tokens, func(a, b explore.NamedToken) int {
-		return strings.Compare(string(a.Name), string(b.Name))
-	})
+}
+
+func nameAllTokens(inventory magicbean.Inventory, names tracking.NameTable, named *explore.NamedSphere) {
+	named.TokenMap = make(map[zecs.Entity]explore.NamedToken, len(inventory))
+	named.AllTokens = make([]explore.NamedToken, 0, len(inventory))
+	for id, qty := range inventory {
+		token := explore.NamedToken{Id: id, Qty: qty, Name: names[id]}
+		named.TokenMap[id] = token
+		named.AllTokens = append(named.AllTokens, token)
+	}
 }

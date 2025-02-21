@@ -37,11 +37,9 @@ func (this Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case explore.ExploreSphere:
 		add(runSphere(msg, this.search, this.names, this.gen))
-		add(leaves.WriteStatusMsg("starting search"))
 		return this, tea.Batch(cmds...)
 	case explore.DisassembleRule:
 		add(disassemble(this.gen, msg.Id, this.discache))
-		add(leaves.WriteStatusMsg("starting disassembly of %06x", msg.Id))
 		return this, tea.Batch(cmds...)
 	case explore.RuleDisassembled:
 		if msg.Name == "" && msg.Id != 0 {
@@ -49,12 +47,9 @@ func (this Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if msg.Err != nil {
 			add(leaves.WriteStatusMsg("disassembly of %06x failed", msg.Id))
-		} else {
-			add(leaves.WriteStatusMsg("disassembly of %06x succeeded", msg.Id))
 		}
 		break
 	case explore.SphereExplored:
-		add(leaves.WriteStatusMsg("search concluded"))
 		break
 	}
 

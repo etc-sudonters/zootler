@@ -119,6 +119,15 @@ func Phase4_Compile(ocm *zecs.Ocm, compiler *mido.CodeGen) error {
 	return nil
 }
 
-func Phase5_CreateWorld(ocm *zecs.Ocm, settings *settings.Model, objects objects.Table) (magicbean.ExplorableWorld, error) {
+func Phase5_CreateWorld(
+	ocm *zecs.Ocm,
+	settings *settings.Model,
+	objects objects.Table,
+	trackset *tracking.Set,
+) (magicbean.ExplorableWorld, error) {
+	magicbean.PlaceAlwaysItems(trackset)
+	if err := magicbean.PromoteRemainingDefaultTokens(ocm); err != nil {
+		return magicbean.ExplorableWorld{}, err
+	}
 	return explorableworldfrom(ocm)
 }

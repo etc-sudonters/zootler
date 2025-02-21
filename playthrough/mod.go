@@ -52,7 +52,7 @@ func (this NodeSet) All() bitset32.Bitset {
 }
 
 type EdgeSet struct {
-	Crossed, Pended bitset32.Bitset
+	Crossed, Pended, Total bitset32.Bitset
 }
 
 func (this EdgeSet) All() bitset32.Bitset {

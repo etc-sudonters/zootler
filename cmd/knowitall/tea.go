@@ -30,9 +30,10 @@ func createGeneraion(ctx context.Context, std *dontio.Std, opts *cliOptions) (ma
 	}
 	these := settings.Default()
 	these.Seed = 0x76E76E14E9691280
-	these.Logic.Shuffling.Flags |= settings.ShuffleOcarinaNotes
 	these.Logic.Spawns.StartAge = settings.StartAgeChild
 	these.Logic.Connections.Flags |= settings.ConnectionOpenDoorOfTime
+	these.Logic.Minigames.TreasureChestGameKeys = settings.ShuffleKeysVanilla
+
 	generation, err := boot.Default(ctx, paths, &these)
 	if err != nil {
 		return generation, slipup.Describe(err, "failed to boot zootr engine")

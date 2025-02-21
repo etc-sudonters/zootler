@@ -94,7 +94,7 @@ func runMain(ctx context.Context, std *dontio.Std, opts *cliOptions) stageleft.E
 
 func FinalizeSettings(these *settings.Model) {
 	these.Seed = 0x76E76E14E9691280
-	these.Logic.Shuffling.Flags |= settings.ShuffleOcarinaNotes
+	these.Logic.Shuffling.Flags = settings.ShuffleOcarinaNotes
 	these.Logic.Spawns.StartAge = settings.StartAgeChild
 	these.Logic.Connections.Flags |= settings.ConnectionOpenDoorOfTime
 }

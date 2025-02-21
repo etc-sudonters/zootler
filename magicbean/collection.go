@@ -2,17 +2,18 @@ package magicbean
 
 import (
 	"fmt"
-	"github.com/etc-sudonters/substrate/skelly/bitset32"
 	"sudonters/libzootr/components"
+	"sudonters/libzootr/settings"
 	"sudonters/libzootr/zecs"
+
+	"github.com/etc-sudonters/substrate/skelly/bitset32"
 )
 
 func CollectTokensFrom(
 	ocm *zecs.Ocm,
 	from bitset32.Bitset,
-	into Inventory,
+	inventory Inventory,
 ) error {
-
 	q := ocm.Query()
 	q.Build(
 		zecs.Load[components.HoldsToken],
@@ -28,7 +29,7 @@ func CollectTokensFrom(
 
 	for entity, tup := range rows.All {
 		token := tup.Values[0].(components.HoldsToken)
-		into.CollectOne(zecs.Entity(token))
+		inventory.CollectOne(zecs.Entity(token))
 
 		proxy := ocm.Proxy(entity)
 		err := proxy.Attach(components.Collected{})
@@ -40,7 +41,7 @@ func CollectTokensFrom(
 	return nil
 }
 
-func CollectStartingItems(generation *Generation) error {
+func CollectStartingItems(generation *Generation, additional ...components.Name) error {
 	tokens := &generation.Tokens
 	these := generation.Settings
 	inventory := generation.Inventory
@@ -48,6 +49,21 @@ func CollectStartingItems(generation *Generation) error {
 	for name, qty := range these.Logic.Spawns.Items {
 		token := tokens.MustGet(components.Name(name))
 		inventory.Collect(token.Entity(), qty)
+	}
+
+	if these.Logic.Shuffling.Flags&settings.ShuffleOcarinaNotes != settings.ShuffleOcarinaNotes {
+		buttons := []zecs.Entity{
+			tokens.MustGet("Ocarina A Button").Entity(),
+			tokens.MustGet("Ocarina C left Button").Entity(),
+			tokens.MustGet("Ocarina C right Button").Entity(),
+			tokens.MustGet("Ocarina C up Button").Entity(),
+			tokens.MustGet("Ocarina C down Button").Entity(),
+		}
+		inventory.CollectOneEach(buttons)
+	}
+
+	for _, name := range additional {
+		inventory.CollectOne(tokens.MustGet(name).Entity())
 	}
 
 	ocm := &generation.Ocm

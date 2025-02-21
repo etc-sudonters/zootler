@@ -19,7 +19,7 @@ func (this *sidebar) pushSphere(sphere NamedSphere) tea.Cmd {
 	index := len(this.list.Items())
 	insert := this.list.InsertItem(math.MaxInt, intoSidebarSphere(sphere))
 	this.list.Select(index)
-	return tea.Batch(insert, func() tea.Msg { return sphereSelected(index) })
+	return tea.Batch(insert, selectSphere(index))
 }
 
 func (this sidebar) Init() tea.Cmd {
@@ -31,6 +31,10 @@ func (this sidebar) Update(msg tea.Msg) (sidebar, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		this.list.SetSize(msg.Width, msg.Height)
 		return this, nil
+	case tea.KeyMsg:
+		if msg.Type == tea.KeyEnter {
+			return this, selectSphere(this.list.Index())
+		}
 	}
 
 	var cmd tea.Cmd

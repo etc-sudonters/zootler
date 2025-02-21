@@ -26,6 +26,20 @@ type Search struct {
 	world *magicbean.ExplorableWorld
 
 	visited, pended bitset32.Bitset
+
+	crossed bitset32.Bitset
+}
+
+func (this *Search) Pending() bitset32.Bitset {
+	return bitset32.Copy(this.pended)
+}
+
+func (this *Search) Visited() bitset32.Bitset {
+	return bitset32.Copy(this.visited)
+}
+
+func (this *Search) Crossed() bitset32.Bitset {
+	return bitset32.Copy(this.crossed)
 }
 
 func (this *Search) Explore() SearchSphere {
@@ -40,6 +54,7 @@ func (this *Search) Explore() SearchSphere {
 				bitset32.Unset(&neighbors, neighbor)
 				bitset32.Set(&this.pended, neighbor)
 				bitset32.Set(&this.visited, neighbor)
+				bitset32.Set(&this.crossed, edge.Entity)
 				bitset32.Set(&sphere.Nodes.Reached, neighbor)
 				bitset32.Set(&sphere.Edges.Crossed, edge.Entity)
 			} else {
@@ -52,6 +67,7 @@ func (this *Search) Explore() SearchSphere {
 		}
 	}
 
+	sphere.Edges.Total = this.Crossed()
 	this.pended = bitset32.Copy(sphere.Nodes.Pended)
 	return sphere
 }

@@ -29,7 +29,7 @@ func newEdges(sphere *NamedSphere, age magicbean.Age) edges {
 			edgeSet = crossed.Union(pended)
 		}
 		new.crossed = crossed.Len()
-		new.pended = crossed.Len()
+		new.pended = pended.Len()
 		items = make([]list.Item, 0, edgeSet.Len())
 		for index := range bitset32.Iter(&edgeSet).UntilEmpty {
 			items = append(items, edgeItem{
@@ -40,6 +40,9 @@ func newEdges(sphere *NamedSphere, age magicbean.Age) edges {
 	}
 	new.list = list.New(items, edgeItemDelegate{}, 0, 0)
 	listDefaults(&new.list)
+	new.list.SetShowFilter(true)
+	new.list.SetFilteringEnabled(true)
+	new.list.SetShowPagination(true)
 	return new
 }
 
@@ -62,9 +65,15 @@ func (this edges) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return this, batch()
 	case tea.KeyMsg:
 		if msg.Type == tea.KeyEnter {
-			item := this.list.SelectedItem()
-			edge := item.(edgeItem)
-			return this, RequestDisassembly(edge.edge.Id)
+			if this.list.FilterState() == list.Filtering {
+				var cmd tea.Cmd
+				this.list, cmd = this.list.Update(msg)
+				return this, cmd
+			} else if len(this.list.Items()) > 0 {
+				item := this.list.SelectedItem()
+				edge := item.(edgeItem)
+				return this, RequestDisassembly(edge.edge.Id)
+			}
 		}
 	}
 
@@ -88,7 +97,9 @@ type edgeItem struct {
 	crossed bool
 }
 
-func (_ edgeItem) FilterValue() string { return "" }
+func (this edgeItem) FilterValue() string {
+	return string(this.edge.Name)
+}
 
 type edgeItemDelegate struct{}
 

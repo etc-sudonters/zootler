@@ -39,8 +39,13 @@ func (this Inventory) CollectOne(entity zecs.Entity) {
 }
 
 func (this Inventory) Collect(entity zecs.Entity, n int) {
-	has := this[entity]
-	this[entity] = has + n
+	this[entity] += n
+}
+
+func (this Inventory) CollectOneEach(entities []zecs.Entity) {
+	for _, entity := range entities {
+		this.Collect(entity, 1)
+	}
 }
 
 func (this Inventory) Remove(entity zecs.Entity, n int) int {

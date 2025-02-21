@@ -60,6 +60,10 @@ func (this LoadPaths) readrelationsdir(store func(relations) error) error {
 			return nil
 		}
 
+		if strings.Contains(path, "mq") {
+			return nil
+		}
+
 		relations, relationsErr := readrelations(path)
 		if relationsErr != nil {
 			slipup.Describef(err, "while reading %s", path)

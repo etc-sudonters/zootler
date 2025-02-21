@@ -6,6 +6,7 @@ import (
 	"sudonters/libzootr/settings"
 
 	"sudonters/libzootr/mido/objects"
+	"sudonters/libzootr/mido/symbols"
 	"sudonters/libzootr/zecs"
 )
 
@@ -18,4 +19,5 @@ type Generation struct {
 	Settings  *settings.Model
 	Tokens    tracking.Tokens
 	Nodes     tracking.Nodes
+	Symbols   *symbols.Table
 }

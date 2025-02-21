@@ -14,7 +14,7 @@ func newTabs(sphere *NamedSphere) tabs {
 			{"INVENTORY", newCollected(sphere)},
 			{"ADULT", newEdges(sphere, magicbean.AgeAdult)},
 			{"CHILD", newEdges(sphere, magicbean.AgeChild)},
-			{"DISASSEMBLY", disassembly{}},
+			{"DISASSEMBLY", newDisassembly(sphere)},
 			{"SEARCH", search{}},
 		},
 	}
@@ -31,6 +31,8 @@ type tabs struct {
 
 	tabWidth    int
 	displaySize tea.WindowSizeMsg
+
+	childIsFiltering bool
 }
 
 func (this tabs) Init() tea.Cmd {
@@ -47,13 +49,31 @@ func (this tabs) Update(msg tea.Msg) (tabs, tea.Cmd) {
 		cmd := this.resize(msg)
 		return this, cmd
 	case RuleDisassembled:
-		return this, nil
+		var cmd tea.Cmd
+		tab := &this.tabs[TAB_DISASSEMBLY]
+		tab.mount, cmd = tab.mount.Update(msg)
+		return this, cmd
 	case tea.KeyMsg:
+		if this.childIsFiltering {
+			cmd := this.updateActiveTab(msg)
+			switch msg.Type {
+			case tea.KeyEnter, tea.KeyEsc:
+				this.childIsFiltering = false
+			}
+			return this, cmd
+		}
+
+		if msg.String() == "/" && this.canFilter() {
+			this.childIsFiltering = true
+			cmd := this.updateActiveTab(msg)
+			return this, cmd
+		}
+
 		switch msg.String() {
-		case "left", "l":
+		case "right", "l":
 			this.next()
 			return this, nil
-		case "right", "h":
+		case "left", "h":
 			this.prev()
 			return this, nil
 		case "I":
@@ -122,6 +142,10 @@ func (this *tabs) prev() {
 
 func (this *tabs) focus(tab int) {
 	this.curr = tab
+}
+
+func (this *tabs) canFilter() bool {
+	return this.curr == TAB_ADULT || this.curr == TAB_CHILD || this.curr == TAB_INVENTORY
 }
 
 func (this tabs) renderTabs() string {
@@ -193,21 +217,6 @@ func (this summary) View() string {
 	}
 
 	return "SPHERE LOADED"
-}
-
-type disassembly struct {
-	dis RuleDisassembled
-}
-
-func (_ disassembly) Init() tea.Cmd { return nil }
-
-func (this disassembly) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	_ = msg
-	return this, nil
-}
-
-func (this disassembly) View() string {
-	return "DISASSEMBLY"
 }
 
 type search struct {

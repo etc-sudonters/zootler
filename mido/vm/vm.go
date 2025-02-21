@@ -208,7 +208,7 @@ func (this Constant) String() string {
 	case objects.STR_PTR32:
 		ptr := this.Value.(objects.Ptr32)
 		fmt.Fprintf(&view, "\tname:\t%q\n", this.Name)
-		fmt.Fprintf(&view, "\ttag:\t%s\n\tptr:\t%04X\n", ptr.Tag, ptr.Addr)
+		fmt.Fprintf(&view, "\ttag:\t%s\tptr:\t%04X\n", ptr.Tag, ptr.Addr)
 		break
 	case objects.STR_STR32:
 		fmt.Fprintf(&view, "\tvalue:\t%q\n", this.Value.(string))
