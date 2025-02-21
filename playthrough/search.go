@@ -10,6 +10,11 @@ import (
 	"github.com/etc-sudonters/substrate/skelly/graph32"
 )
 
+type Searches struct {
+	Adult *Search
+	Child *Search
+}
+
 func SearchFromRoots(vm *mido.VM, world *magicbean.ExplorableWorld) Search {
 	search := Search{vm: vm, world: world}
 	search.pended = world.Graph.Roots()
@@ -21,27 +26,6 @@ type Search struct {
 	world *magicbean.ExplorableWorld
 
 	visited, pended bitset32.Bitset
-}
-
-type SearchSphere struct {
-	Nodes NodeSet
-	Edges EdgeSet
-}
-
-type NodeSet struct {
-	Reached, Pended bitset32.Bitset
-}
-
-func (this NodeSet) All() bitset32.Bitset {
-	return this.Reached.Union(this.Pended)
-}
-
-type EdgeSet struct {
-	Crossed, Pended bitset32.Bitset
-}
-
-func (this EdgeSet) All() bitset32.Bitset {
-	return this.Crossed.Union(this.Pended)
 }
 
 func (this *Search) Explore() SearchSphere {

@@ -75,11 +75,11 @@ func (_ sidebarDelegate) Render(w io.Writer, m list.Model, index int, item list.
 		style = latestStyle
 	}
 
-	style = style.Padding(0, 1)
+	style = style.Padding(0, 1, 0, 1)
 
 	repr := strings.Builder{}
 	fmt.Fprintf(&repr, "Sphere %3d\n", sphere.number)
-	fmt.Fprintf(&repr, "C: %3d P: %3d N: %3d\n", sphere.crossed, sphere.pended, sphere.new)
+	fmt.Fprintf(&repr, "C: %3d P: %3d N: %3d I: %3d\n", sphere.crossed, sphere.pended, sphere.new, sphere.collected)
 	if sphere.errMsg != "" {
 		fmt.Fprint(&repr, "Err:", sphere.errMsg)
 	}
@@ -90,13 +90,7 @@ func (_ sidebarDelegate) Render(w io.Writer, m list.Model, index int, item list.
 
 func newSidebar() sidebar {
 	l := list.New(nil, sidebarDelegate{}, 0, 0)
-	l.SetShowFilter(false)
-	l.SetShowStatusBar(false)
-	l.SetShowHelp(false)
-	//	l.SetShowPagination(false)
-	l.Title = ""
-	l.DisableQuitKeybindings()
-	l.SetShowTitle(false)
+	listDefaults(&l)
 	return sidebar{l}
 }
 
@@ -106,6 +100,10 @@ func intoSidebarSphere(sphere NamedSphere) sidebarSphere {
 	sidebar.crossed = sphere.Adult.Edges.Crossed.Len() + sphere.Child.Edges.Crossed.Len()
 	sidebar.pended = sphere.Adult.Edges.Pended.Len() + sphere.Child.Edges.Pended.Len()
 	sidebar.new = sphere.Adult.Nodes.Reached.Len() + sphere.Child.Nodes.Reached.Len()
+
+	for _, tokens := range sphere.Tokens {
+		sidebar.collected += tokens.Qty
+	}
 
 	if sphere.Error != nil {
 		msg := sphere.Error.Error()

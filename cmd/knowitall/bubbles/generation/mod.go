@@ -2,20 +2,15 @@ package generation
 
 import (
 	"sudonters/libzootr/cmd/knowitall/bubbles/explore"
+	"sudonters/libzootr/cmd/knowitall/leaves"
 	"sudonters/libzootr/magicbean"
 	"sudonters/libzootr/magicbean/tracking"
 	"sudonters/libzootr/playthrough"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 )
 
-type Searches struct {
-	Adult *playthrough.Search
-	Child *playthrough.Search
-}
-
-func New(gen *magicbean.Generation, names tracking.NameTable, searches Searches) Model {
+func New(gen *magicbean.Generation, names tracking.NameTable, searches playthrough.Searches) Model {
 	return Model{
 		gen:      gen,
 		search:   searches,
@@ -26,37 +21,46 @@ func New(gen *magicbean.Generation, names tracking.NameTable, searches Searches)
 }
 
 type Model struct {
-	gen        *magicbean.Generation
-	names      tracking.NameTable
-	search     Searches
-	discache   discache
-	explore    explore.Model
-	statusLine string
+	gen      *magicbean.Generation
+	names    tracking.NameTable
+	search   playthrough.Searches
+	discache discache
+	explore  explore.Model
 }
 
 func (this Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
+	add := func(c tea.Cmd) {
+		cmds = append(cmds, c)
+	}
 
 	switch msg := msg.(type) {
 	case explore.ExploreSphere:
-		this.statusLine = "running search"
-		return this, runSearch(msg, this.search, this.names)
+		add(runSphere(msg, this.search, this.names, this.gen))
+		add(leaves.WriteStatusMsg("starting search"))
+		return this, tea.Batch(cmds...)
 	case explore.DisassembleRule:
-		this.statusLine = "disassembling"
-		return this, disassemble(this.gen, msg.Id, this.discache)
+		add(disassemble(this.gen, msg.Id, this.discache))
+		add(leaves.WriteStatusMsg("starting disassembly of %06x", msg.Id))
+		return this, tea.Batch(cmds...)
 	case explore.RuleDisassembled:
 		if msg.Name == "" && msg.Id != 0 {
 			msg.Name = string(this.names[msg.Id])
 		}
+		if msg.Err != nil {
+			add(leaves.WriteStatusMsg("disassembly of %06x failed", msg.Id))
+		} else {
+			add(leaves.WriteStatusMsg("disassembly of %06x succeeded", msg.Id))
+		}
 		break
 	case explore.SphereExplored:
-		this.statusLine = "search concluded"
+		add(leaves.WriteStatusMsg("search concluded"))
 		break
 	}
 
 	var xplrCmd tea.Cmd
 	this.explore, xplrCmd = this.explore.Update(msg)
-	cmds = append(cmds, xplrCmd)
+	add(xplrCmd)
 	return this, tea.Batch(cmds...)
 }
 
@@ -65,6 +69,5 @@ func (this Model) Init() tea.Cmd {
 }
 
 func (this Model) View() string {
-	xplr := this.explore.View()
-	return lipgloss.JoinVertical(lipgloss.Left, xplr, this.statusLine)
+	return this.explore.View()
 }

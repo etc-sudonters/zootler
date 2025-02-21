@@ -11,6 +11,12 @@ import (
 
 type sphereSelected int
 
+type NamedToken struct {
+	Id   zecs.Entity
+	Name components.Name
+	Qty  int
+}
+
 type NamedEdge struct {
 	Id   zecs.Entity
 	Name components.Name
@@ -22,12 +28,14 @@ type NamedNode struct {
 }
 
 type NamedSphere struct {
-	I     int
-	Error error
+	I      int
+	Error  error
+	Edges  []NamedEdge
+	Nodes  []NamedNode
+	Tokens []NamedToken
+
 	Adult playthrough.SearchSphere
 	Child playthrough.SearchSphere
-	Edges []NamedEdge
-	Nodes []NamedNode
 }
 
 type SphereExplored struct {

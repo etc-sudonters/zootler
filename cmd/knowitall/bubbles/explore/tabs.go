@@ -11,7 +11,7 @@ func newTabs(sphere *NamedSphere) tabs {
 	return tabs{
 		tabs: []tab{
 			{"SUMMARY", summary{sphere}},
-			{"INVENTORY", collected{}},
+			{"INVENTORY", newCollected(sphere)},
 			{"ADULT", newEdges(sphere, magicbean.AgeAdult)},
 			{"CHILD", newEdges(sphere, magicbean.AgeChild)},
 			{"DISASSEMBLY", disassembly{}},
@@ -44,7 +44,9 @@ func (this tabs) Init() tea.Cmd {
 func (this tabs) Update(msg tea.Msg) (tabs, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		this.resize(msg)
+		cmd := this.resize(msg)
+		return this, cmd
+	case RuleDisassembled:
 		return this, nil
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -81,13 +83,22 @@ func (this tabs) View() string {
 	return lipgloss.JoinVertical(lipgloss.Left, tabs, body)
 }
 
-func (this *tabs) resize(msg tea.WindowSizeMsg) {
+func (this *tabs) resize(msg tea.WindowSizeMsg) tea.Cmd {
 	this.tabWidth = sizeTab(msg.Width, len(tabTpl))
 	tabs := this.renderTabs()
 	this.displaySize = tea.WindowSizeMsg{
 		Width:  lipgloss.Width(tabs) - windowStyle.GetHorizontalFrameSize(),
 		Height: msg.Height - 2,
 	}
+	cmds := make([]tea.Cmd, len(this.tabs))
+	for i := range this.tabs {
+		this.tabs[i].mount, cmds[i] = this.tabs[i].mount.Update(tea.WindowSizeMsg{
+			Width:  this.displaySize.Width - 10,
+			Height: this.displaySize.Height - 10,
+		})
+	}
+
+	return tea.Batch(cmds...)
 }
 
 func sizeTab(width int, tabCount int) int {
@@ -182,34 +193,6 @@ func (this summary) View() string {
 	}
 
 	return "SPHERE LOADED"
-}
-
-func newEdges(*NamedSphere, magicbean.Age) edges { return edges{} }
-
-type edges struct {
-}
-
-func (_ edges) Init() tea.Cmd { return nil }
-
-func (this edges) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	_ = msg
-	return this, nil
-}
-
-func (this edges) View() string {
-	return "EDGES"
-}
-
-type collected struct{}
-
-func (_ collected) Init() tea.Cmd { return nil }
-
-func (this collected) Update(tea.Msg) (tea.Model, tea.Cmd) {
-	return this, nil
-}
-
-func (this collected) View() string {
-	return "INVENTORY"
 }
 
 type disassembly struct {

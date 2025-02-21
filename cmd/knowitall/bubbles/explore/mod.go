@@ -1,6 +1,7 @@
 package explore
 
 import (
+	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -134,4 +135,14 @@ func (this *Model) resizeChildren() tea.Cmd {
 	this.sidebar, cmds[0] = this.sidebar.Update(this.sidebarSize)
 	this.tabs, cmds[1] = this.tabs.Update(this.tabsSize)
 	return tea.Batch(cmds...)
+}
+
+func listDefaults(l *list.Model) {
+	l.SetShowFilter(false)
+	l.SetShowStatusBar(false)
+	l.SetShowHelp(false)
+	l.SetShowPagination(false)
+	l.Title = ""
+	l.DisableQuitKeybindings()
+	l.SetShowTitle(false)
 }

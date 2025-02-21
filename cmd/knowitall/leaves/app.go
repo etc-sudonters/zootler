@@ -6,6 +6,7 @@ import (
 	"io"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/etc-sudonters/substrate/dontio"
 	"github.com/etc-sudonters/substrate/slipup"
 )
@@ -25,9 +26,12 @@ type App struct {
 	std         *dontio.Std
 	ctx         context.Context
 	cancelCause context.CancelCauseFunc
+	status      string
+	statusStyle lipgloss.Style
 	Err         error
 }
 
+type StatusMsg string
 type StdOutMsg string
 type StdErrMsg string
 type Wrote struct {
@@ -44,6 +48,12 @@ func WriteToStdOutF(msg string, v ...any) tea.Cmd {
 func WriteToStdErrF(msg string, v ...any) tea.Cmd {
 	return func() tea.Msg {
 		return StdErrMsg(fmt.Sprintf(msg, v...))
+	}
+}
+
+func WriteStatusMsg(msg string, v ...any) tea.Cmd {
+	return func() tea.Msg {
+		return StatusMsg(fmt.Sprintf(msg, v...))
 	}
 }
 
@@ -68,6 +78,9 @@ func (this App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	switch msg := msg.(type) {
+	case StatusMsg:
+		this.status = string(msg)
+		return this, nil
 	case StdErrMsg:
 		return this, writeTo(this.std.Err, string(msg))
 	case StdOutMsg:
@@ -96,5 +109,6 @@ func (this App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (this App) View() string {
-	return this.mounted.View()
+	status := this.statusStyle.Render(this.status)
+	return lipgloss.JoinVertical(lipgloss.Left, this.mounted.View(), status)
 }

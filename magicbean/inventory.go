@@ -76,3 +76,10 @@ func (this Inventory) Sum(entities []zecs.Entity) int {
 
 	return total
 }
+
+func (this Inventory) AddFrom(new Inventory) {
+	for item, qty := range new {
+		has := this[item]
+		this[item] = has + qty
+	}
+}

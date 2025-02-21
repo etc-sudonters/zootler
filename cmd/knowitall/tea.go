@@ -59,7 +59,7 @@ func runMain(ctx context.Context, std *dontio.Std, opts *cliOptions) error {
 		playthrough.SearchFromRoots(&vms[1], &gen.World),
 	}
 
-	searches := generation.Searches{
+	searches := playthrough.Searches{
 		Adult: &searchers[0],
 		Child: &searchers[1],
 	}
