@@ -81,3 +81,16 @@ func RequestDisassembly(edge zecs.Entity) tea.Cmd {
 		return DisassembleRule{edge}
 	}
 }
+
+type EditRule struct {
+	Source components.RuleSource
+	Err    error
+}
+
+type LoadRuleSource zecs.Entity
+
+func startEditingRule(id zecs.Entity) tea.Cmd {
+	return func() tea.Msg {
+		return LoadRuleSource(id)
+	}
+}

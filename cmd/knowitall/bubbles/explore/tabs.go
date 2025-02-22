@@ -15,6 +15,7 @@ func newTabs(sphere *NamedSphere) tabs {
 			{"ADULT", newEdges(sphere, magicbean.AgeAdult)},
 			{"CHILD", newEdges(sphere, magicbean.AgeChild)},
 			{"DISASSEMBLY", newDisassembly(sphere)},
+			{"EDITOR", newEditor()},
 			{"SEARCH", search{}},
 		},
 	}
@@ -32,7 +33,7 @@ type tabs struct {
 	tabWidth    int
 	displaySize tea.WindowSizeMsg
 
-	childIsFiltering bool
+	childWantsKeys bool
 }
 
 func (this tabs) Init() tea.Cmd {
@@ -52,19 +53,26 @@ func (this tabs) Update(msg tea.Msg) (tabs, tea.Cmd) {
 		var cmd tea.Cmd
 		tab := &this.tabs[TAB_DISASSEMBLY]
 		tab.mount, cmd = tab.mount.Update(msg)
+		this.focus(TAB_DISASSEMBLY)
+		return this, cmd
+	case EditRule:
+		var cmd tea.Cmd
+		tab := &this.tabs[TAB_EDITOR]
+		tab.mount, cmd = tab.mount.Update(msg)
+		this.focus(TAB_EDITOR)
 		return this, cmd
 	case tea.KeyMsg:
-		if this.childIsFiltering {
+		if this.childWantsKeys {
 			cmd := this.updateActiveTab(msg)
 			switch msg.Type {
 			case tea.KeyEnter, tea.KeyEsc:
-				this.childIsFiltering = false
+				this.childWantsKeys = false
 			}
 			return this, cmd
 		}
 
-		if msg.String() == "/" && this.canFilter() {
-			this.childIsFiltering = true
+		if (msg.String() == "/" && this.canFilter()) || (msg.String() == "i" && this.canPassRawKeys()) {
+			this.childWantsKeys = true
 			cmd := this.updateActiveTab(msg)
 			return this, cmd
 		}
@@ -90,6 +98,9 @@ func (this tabs) Update(msg tea.Msg) (tabs, tea.Cmd) {
 			return this, nil
 		case "D":
 			this.focus(TAB_DISASSEMBLY)
+			return this, nil
+		case "E":
+			this.focus(TAB_EDITOR)
 			return this, nil
 		}
 	}
@@ -144,6 +155,10 @@ func (this *tabs) focus(tab int) {
 	this.curr = tab
 }
 
+func (this *tabs) canPassRawKeys() bool {
+	return this.curr == TAB_EDITOR
+}
+
 func (this *tabs) canFilter() bool {
 	return this.curr == TAB_ADULT || this.curr == TAB_CHILD || this.curr == TAB_INVENTORY
 }
@@ -189,7 +204,8 @@ const (
 	TAB_ADULT       = 2
 	TAB_CHILD       = 3
 	TAB_DISASSEMBLY = 4
-	TAB_SEARCH      = 5
+	TAB_EDITOR      = 5
+	TAB_SEARCH      = 6
 )
 
 var tabTpl []tea.Model = []tea.Model{
@@ -198,6 +214,7 @@ var tabTpl []tea.Model = []tea.Model{
 	(*edges)(nil), // adult
 	(*edges)(nil), // child
 	(*disassembly)(nil),
+	(*editor)(nil),
 	(*search)(nil),
 }
 

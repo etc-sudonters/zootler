@@ -11,6 +11,17 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+func loadRuleSource(msg explore.LoadRuleSource, gen *magicbean.Generation) tea.Cmd {
+	return func() tea.Msg {
+		values, err := gen.Ocm.GetValues(zecs.Entity(msg), zecs.Get[components.RuleSource])
+		src, _ := values[0].(components.RuleSource)
+		return explore.EditRule{
+			Err:    err,
+			Source: src,
+		}
+	}
+}
+
 type discache map[zecs.Entity]explore.RuleDisassembled
 
 func disassemble(gen *magicbean.Generation, edge zecs.Entity, cache discache) tea.Cmd {

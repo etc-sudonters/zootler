@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"sudonters/libzootr/cmd/knowitall/leaves"
 	"sudonters/libzootr/magicbean"
 
 	"github.com/charmbracelet/bubbles/list"
@@ -64,15 +65,20 @@ func (this edges) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		this.list.SetSize(msg.Width, msg.Height)
 		return this, batch()
 	case tea.KeyMsg:
-		if msg.Type == tea.KeyEnter {
-			if this.list.FilterState() == list.Filtering {
-				var cmd tea.Cmd
-				this.list, cmd = this.list.Update(msg)
-				return this, cmd
-			} else if len(this.list.Items()) > 0 {
+		if this.list.FilterState() == list.Filtering {
+			break
+		}
+		if len(this.list.Items()) > 0 {
+			if msg.Type == tea.KeyEnter {
 				item := this.list.SelectedItem()
 				edge := item.(edgeItem)
 				return this, RequestDisassembly(edge.edge.Id)
+			}
+			if msg.String() == "e" {
+				item := this.list.SelectedItem()
+				edge := item.(edgeItem)
+				cmd := tea.Batch(startEditingRule(edge.edge.Id), leaves.WriteStatusMsg("editing rule %04x", edge.edge.Id))
+				return this, cmd
 			}
 		}
 	}

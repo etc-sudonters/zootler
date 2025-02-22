@@ -41,6 +41,8 @@ func (this Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case explore.DisassembleRule:
 		add(disassemble(this.gen, msg.Id, this.discache))
 		return this, tea.Batch(cmds...)
+	case explore.LoadRuleSource:
+		return this, loadRuleSource(msg, this.gen)
 	case explore.RuleDisassembled:
 		if msg.Name == "" && msg.Id != 0 {
 			msg.Name = string(this.names[msg.Id])
