@@ -1,15 +1,18 @@
 package explore
 
 import (
+	"sudonters/libzootr/mido"
+
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
 
-func New() Model {
+func New(codegen *mido.CodeGen) Model {
 	var m Model
+	m.codegen = codegen
 	m.sidebar = newSidebar()
-	m.tabs = newTabs(nil)
+	m.tabs = newTabs(nil, codegen)
 	m.focusTabs()
 
 	if len(m.tabs.tabs) == 0 {
@@ -27,6 +30,7 @@ const (
 
 type Model struct {
 	spheres []NamedSphere
+	codegen *mido.CodeGen
 
 	focused mainFocus
 	sidebar sidebar
@@ -52,7 +56,7 @@ func (this Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		cmd := this.sidebar.pushSphere(msg.Sphere)
 		return this, cmd
 	case sphereSelected:
-		this.tabs = newTabs(&this.spheres[int(msg)])
+		this.tabs = newTabs(&this.spheres[int(msg)], this.codegen)
 		this.focusTab(TAB_INVENTORY)
 		cmd := this.resizeChildren()
 		return this, cmd

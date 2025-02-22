@@ -3,6 +3,7 @@ package magicbean
 import (
 	"math/rand/v2"
 	"sudonters/libzootr/magicbean/tracking"
+	"sudonters/libzootr/mido"
 	"sudonters/libzootr/settings"
 
 	"sudonters/libzootr/mido/objects"
@@ -20,4 +21,5 @@ type Generation struct {
 	Tokens    tracking.Tokens
 	Nodes     tracking.Nodes
 	Symbols   *symbols.Table
+	CodeGen   mido.CodeGen
 }

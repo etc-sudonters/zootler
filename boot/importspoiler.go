@@ -273,6 +273,8 @@ func readSetting(propertyName string, these *settings.Model, obj *json.ObjectPar
 		return readBoolIntoFlags(obj, &these.Logic.Shuffling.Flags, settings.ShuffleFrogRupees)
 	case "shuffle_individual_ocarina_notes":
 		return readBoolIntoFlags(obj, &these.Logic.Shuffling.Flags, settings.ShuffleOcarinaNotes)
+	case "warp_songs":
+		return readBoolIntoFlags(obj, &these.Logic.Connections.Flags, settings.ConnectionShuffleWarpSongDestinations)
 	case "shuffle_loach_reward":
 		return json.ParseStringInto(obj, &these.Logic.Shuffling.Loach, settings.ParseShuffleLoachReward)
 	case "shopsanity":
@@ -404,8 +406,7 @@ func readSetting(propertyName string, these *settings.Model, obj *json.ObjectPar
 		"shuffle_gerudo_fortress_heart_piece", "shuffle_grotto_entrances",
 		"shuffle_dungeon_entrances", "shuffle_bosses", "shuffle_ganon_tower",
 		"shuffle_overworld_entrances", "shuffle_gerudo_valley_river_exit",
-		"owl_drops", "warp_songs", "spawn_positions":
-
+		"owl_drops", "spawn_positions":
 		return obj.DiscardValue()
 
 	default:

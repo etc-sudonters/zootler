@@ -1007,6 +1007,7 @@ type ConnectionFlag uint64
 const (
 	ConnectionOpenDoorOfTime ConnectionFlag = 1 << iota
 	ConnectionShuffleHideoutEntrances
+	ConnectionShuffleWarpSongDestinations
 )
 
 type ShuffleSongComposition uint8

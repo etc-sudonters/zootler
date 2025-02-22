@@ -47,7 +47,7 @@ func (this Reader) String(name string) (string, error) {
 	case "shuffle_dungeon_rewards":
 		val = this.Logic.Shuffling.DungeonRewards.String()
 	case "shuffle_tcgkeys":
-		val = this.Logic.Dungeon.Keys.String()
+		val = this.Logic.Minigames.TreasureChestGameKeys.String()
 	case "hints":
 		val = this.Logic.HintsRevealed.String()
 	case "damage_multiplier":
@@ -159,6 +159,11 @@ func (this Reader) Bool(name string) (bool, error) {
 		val = HasFlag(this.Logic.Shuffling.Flags, ShuffleEmptyPots)
 	case "fix_broken_drops":
 		val = this.Logic.FixBrokenDrops
+	case "warp_songs":
+		val = HasFlag(this.Logic.Connections.Flags, ConnectionShuffleWarpSongDestinations)
+	case "disable_trade_revert":
+		//self.shuffle_interior_entrances or settings.shuffle_overworld_entrances or settings.adult_trade_shuffle
+		val = this.Logic.Connections.Interior != 0 || this.Logic.Connections.Overworld != 0 || this.Logic.Trade.AdultTradeShuffle
 
 	default:
 		return val, unknown(name)

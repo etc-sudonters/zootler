@@ -126,6 +126,7 @@ func newinliner(these SettingReader, symbols *symbols.Table) settinginline {
 		"chicken_count_random":             boolean,
 		"clearer_hints":                    boolean,
 		"complete_mask_quest":              boolean,
+		"disable_trade_revert":             boolean,
 		"easier_fire_arrow_entry":          boolean,
 		"enhance_map_compass":              boolean,
 		"fast_chests":                      boolean,

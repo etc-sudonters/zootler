@@ -16,7 +16,7 @@ func New(gen *magicbean.Generation, names tracking.NameTable, searches playthrou
 		search:   searches,
 		names:    names,
 		discache: make(discache, 32),
-		explore:  explore.New(),
+		explore:  explore.New(&gen.CodeGen),
 	}
 }
 

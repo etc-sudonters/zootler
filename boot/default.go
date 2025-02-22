@@ -55,6 +55,7 @@ func Default(ctx context.Context, paths LoadPaths, settings *settings.Model) (ge
 	generation.Nodes = trackSet.Nodes
 	generation.Settings = settings
 	generation.Symbols = compileEnv.Symbols
+	generation.CodeGen = codegen
 
 	return generation, nil
 }

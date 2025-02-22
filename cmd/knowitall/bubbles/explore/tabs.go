@@ -2,12 +2,13 @@ package explore
 
 import (
 	"sudonters/libzootr/magicbean"
+	"sudonters/libzootr/mido"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
 
-func newTabs(sphere *NamedSphere) tabs {
+func newTabs(sphere *NamedSphere, codegen *mido.CodeGen) tabs {
 	return tabs{
 		tabs: []tab{
 			{"SUMMARY", summary{sphere}},
@@ -15,7 +16,7 @@ func newTabs(sphere *NamedSphere) tabs {
 			{"ADULT", newEdges(sphere, magicbean.AgeAdult)},
 			{"CHILD", newEdges(sphere, magicbean.AgeChild)},
 			{"DISASSEMBLY", newDisassembly(sphere)},
-			{"EDITOR", newEditor()},
+			{"EDITOR", newEditor(codegen)},
 			{"SEARCH", search{}},
 		},
 	}
