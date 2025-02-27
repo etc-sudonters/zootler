@@ -6,327 +6,322 @@ import (
 	"strconv"
 
 	"github.com/etc-sudonters/substrate/peruse"
+	"github.com/etc-sudonters/substrate/slipup"
 )
 
-var grammar = NewGrammar()
-
-func ParseString(script string) (Ast, error) {
-	lexer := NewLexer(script)
-	parser := peruse.NewParser(grammar, lexer)
-	return parser.ParseAt(peruse.LOWEST)
+func assert(cond bool, msg string, v ...any) {
+	if !cond {
+		panic(fmt.Errorf(msg, v...))
+	}
 }
 
-func NewGrammar() peruse.Grammar[Ast] {
-	g := peruse.NewGrammar[Ast]()
-	mapping := map[TokenType]peruse.Parselet[Ast]{
-		//TOKEN_ASSIGN:    parseAssign,
-		TOKEN_FIND:    parseFind,
-		TOKEN_INSERT:  parseInsert,
-		TOKEN_COMMENT: parseComment,
-	}
+var grammar Grammar = NewGrammar()
 
-	for tok, fn := range mapping {
+type Parser = peruse.Parser[AstNode]
+type Grammar = peruse.Grammar[AstNode]
+type Parselet = peruse.Parselet[AstNode]
+
+func NewGrammar() Grammar {
+	g := peruse.NewGrammar[AstNode]()
+	parslets := map[TokenType]Parselet{
+		TOKEN_FIND:   astParseFind,
+		TOKEN_INSERT: astParseInsert,
+	}
+	for tok, fn := range parslets {
 		g.Parse(tok, fn)
 	}
 	return g
 }
 
-func unexpectedToken(expected, actual TokenType, pos peruse.Pos) error {
-	return fmt.Errorf("unexpected token at %d: expected %s but found %s", pos, TokenTypeString(expected), TokenTypeString(actual))
+func traceErr(err error, during string) error {
+	return slipup.Describef(err, "while parsing %s", during)
 }
 
-func parseBracketExpr[T Ast](p *peruse.Parser[Ast], expect TokenType, parselet peruse.Parselet[Ast]) ([]T, error) {
-	var elems []T
-	var empT T
+func astParseFind(p *Parser) (AstNode, error) {
+	find := new(FindNode)
 
-	if !p.Expect(TOKEN_OPEN_BRACKET) {
-		return nil, unexpectedToken(TOKEN_OPEN_BRACKET, p.Next.Type, p.Next.Pos)
-	}
-
-	for p.Expect(expect) {
-		elem, err := parselet(p)
-		if err != nil {
-			return nil, fmt.Errorf("while parsing bracket-expr: %w", err)
-		}
-
-		t, isT := elem.(T)
-		if !isT {
-			return nil, fmt.Errorf("expected to parse %T but parsed %T instead", empT, elem)
-		}
-		elems = append(elems, t)
-	}
-
-	if !p.Expect(TOKEN_CLOSE_BRACKET) {
-		return elems, unexpectedToken(TOKEN_CLOSE_BRACKET, p.Next.Type, p.Next.Pos)
-	}
-
-	return elems, nil
-}
-
-func parseVariables(p *peruse.Parser[Ast]) ([]Variable, error) {
-	return parseBracketExpr[Variable](p, TOKEN_VARIABLE, parseVariable)
-}
-
-func parseTriplets(p *peruse.Parser[Ast]) ([]Triplet, error) {
-	return parseBracketExpr[Triplet](p, TOKEN_OPEN_BRACKET, parseTriplet)
-}
-
-func parseConstraints(p *peruse.Parser[Ast]) ([]Constraint, error) {
-	elms, err := parseBracketExpr[Ast](p, TOKEN_OPEN_BRACKET, parseConstraint)
-	constraints := make([]Constraint, len(elms))
-	for i := range elms {
-		constraints[i] = elms[i].(Constraint)
-	}
-	return constraints, err
-}
-
-func parseFind(p *peruse.Parser[Ast]) (Ast, error) {
-	var find Find
-	start := p.Cur.Pos
-
-	returning, returnErr := parseVariables(p)
-	if returnErr != nil {
-		return nil, fmt.Errorf("while parsing find at pos %d: %w", start, returnErr)
+	returning, returningErr := astParseVariables(p)
+	if returningErr != nil {
+		return nil, traceErr(returningErr, "find.Finding")
 	}
 	find.Finding = returning
-
-	if !p.Expect(TOKEN_WHERE) {
-		return nil, unexpectedToken(TOKEN_WHERE, p.Next.Type, p.Next.Pos)
+	if err := p.ExpectOrError(TOKEN_WHERE); err != nil {
+		return nil, traceErr(err, "find.Clauses")
 	}
-
-	constraints, constraintErr := parseConstraints(p)
-	if constraintErr != nil {
-		return nil, fmt.Errorf("failed to parse constraint: %w", constraintErr)
+	clauses, clauseErr := astParseClauses(p)
+	if clauseErr != nil {
+		return nil, traceErr(clauseErr, "find.Clauses")
 	}
-
-	find.Constraints = constraints
-
+	find.Clauses = clauses
 	if p.Expect(TOKEN_RULES) {
-		derivations, derivationsErr := parseBracketExpr[DerivationDecl](p, TOKEN_OPEN_BRACKET, parseDerivationDecl)
-		if derivationsErr != nil {
-			return nil, fmt.Errorf("failed to parse derivation: %w", derivationsErr)
+		decls, declErrs := astParseRuleDecls(p)
+		if declErrs != nil {
+			return nil, traceErr(declErrs, "find.Rules")
 		}
-		find.Derivations = derivations
+		find.Rules = decls
 	}
-
 	return find, nil
 }
 
-func parseVarOr[T TripletPart](p *peruse.Parser[Ast], expect TokenType, parse peruse.Parselet[Ast]) (MaybeVar[T], error) {
-	var empT MaybeVar[T]
-	if p.Cur.Type == expect {
-		parsed, err := parse(p)
-		if err != nil {
-			return empT, fmt.Errorf("while parsing literal: %w", err)
-		}
-		t := parsed.(T)
-		return MaybeVar[T]{Part: t}, nil
-	}
-	if p.Cur.Type == TOKEN_VARIABLE {
-		variable, err := parseVariable(p)
-		if err != nil {
-			return empT, fmt.Errorf("while parsing variable: %w", err)
-		}
-		return MaybeVar[T]{Var: variable.(Variable)}, nil
-	}
+func astParseInsert(p *Parser) (AstNode, error) {
+	insert := new(InsertNode)
 
-	return empT, fmt.Errorf("expected to parse %s or variable, but found %s", TokenTypeString(expect), TokenTypeString(p.Cur.Type))
-}
-
-func parseVarOrLiteral(p *peruse.Parser[Ast]) (MaybeVar[Literal], error) {
-	if p.Cur.Type == TOKEN_VARIABLE {
-		variable, _ := parseVariable(p)
-		return MaybeVar[Literal]{Var: variable.(Variable)}, nil
-	} else if p.Cur.Type == TOKEN_STRING {
-		str, _ := parseString(p)
-		return MaybeVar[Literal]{Part: str.(Literal)}, nil
-	} else if p.Cur.Type == TOKEN_NUMBER {
-		num, err := parseNumber(p)
-		if err != nil {
-			return MaybeVar[Literal]{}, err
-		}
-		return MaybeVar[Literal]{Part: num.(Literal)}, nil
-	} else if p.Cur.Type == TOKEN_NIL {
-		nil_, _ := parseNil(p)
-		return MaybeVar[Literal]{Part: nil_.(Literal)}, nil
-	} else if p.Cur.Type == TOKEN_TRUE || p.Cur.Type == TOKEN_FALSE {
-		bool_, _ := parseBool(p)
-		return MaybeVar[Literal]{Part: bool_.(Literal)}, nil
-	}
-
-	return MaybeVar[Literal]{}, unexpectedToken(TOKEN_VARIABLE, p.Cur.Type, p.Cur.Pos)
-}
-
-func parseConstraint(p *peruse.Parser[Ast]) (Ast, error) {
-	if p.Expect(TOKEN_DERIVE) {
-		derive, err := parseDerivationInvocation(p)
-		if err != nil {
-			err = fmt.Errorf("while parsing derivation constraint: %w", err)
-		}
-		return Constraint(derive.(DerivationInvoke)), err
-	}
-
-	if p.Expect(TOKEN_NUMBER) || p.Expect(TOKEN_VARIABLE) {
-		triplet, err := parseTriplet(p)
-		if err != nil {
-			err = fmt.Errorf("while parsing triplet constraint: %w", err)
-		}
-		return Constraint(triplet.(Triplet)), err
-	}
-
-	return nil, fmt.Errorf("expected %s or %s but found %s at pos %d", "derivation", "triplet", TokenTypeString(p.Next.Type), p.Next.Pos)
-}
-
-func parseTriplet(p *peruse.Parser[Ast]) (Ast, error) {
-	var triplet Triplet
-	id, idErr := parseVarOr[Number](p, TOKEN_NUMBER, parseNumber)
-	if idErr != nil {
-		return triplet, fmt.Errorf("failed to parse triplet[0]: %w", idErr)
-	}
-	p.Consume()
-	attr, attrErr := parseAttribute(p)
-	if attrErr != nil {
-		return triplet, fmt.Errorf("failed to parse triplet[1]: %w", attrErr)
-	}
-	p.Consume()
-	value, valueErr := parseVarOrLiteral(p)
-	if valueErr != nil {
-		return triplet, fmt.Errorf("failed to parse triplet[2]: %w", valueErr)
-	}
-
-	if !p.Expect(TOKEN_CLOSE_BRACKET) {
-		return triplet, unexpectedToken(TOKEN_CLOSE_BRACKET, p.Next.Type, p.Next.Pos)
-	}
-	triplet.Id = id
-	triplet.Attr = attr.(Attribute)
-	triplet.Value = value
-	return triplet, nil
-}
-
-func parseDerivationInvocation(p *peruse.Parser[Ast]) (Ast, error) {
-	// [:the-name $maybe-var "maybe-literal"]
-	var invoke DerivationInvoke
-
-	// we're already here
-	invoke.Name = p.Cur.Literal
-	if p.Expect(TOKEN_CLOSE_BRACKET) {
-		return nil, errors.New("expected at least one variable in derivation")
-	}
-
-	for !p.Expect(TOKEN_CLOSE_BRACKET) {
-		p.Consume()
-		val, valErr := parseVarOrLiteral(p)
-		if valErr != nil {
-			return nil, fmt.Errorf("while parsing derivation invocation: %w", valErr)
-		}
-		invoke.Accept = append(invoke.Accept, val)
-	}
-
-	return invoke, nil
-}
-
-func parseDerivationDecl(p *peruse.Parser[Ast]) (Ast, error) {
-	/*
-	   [ [:name $accept1 $accept2] [triplet, ...] ]
-	*/
-	var derive DerivationDecl
-
-	if !p.Expect(TOKEN_DERIVE) {
-		return nil, fmt.Errorf("while parsing derivation decl: %w", unexpectedToken(TOKEN_DERIVE, p.Next.Type, p.Next.Pos))
-
-	}
-
-	derive.Name = p.Cur.Literal
-	for !p.Expect(TOKEN_CLOSE_BRACKET) {
-		p.Consume()
-		val, valErr := parseVariable(p)
-		if valErr != nil {
-			return nil, fmt.Errorf("while parsing derivation accepting: %w", valErr)
-		}
-		derive.Accepting = append(derive.Accepting, val.(Variable))
-	}
-
-	// TODO allow a bare constraint iff its the only thing that follows
-	constraints, constraintErr := parseConstraints(p)
-	if constraintErr != nil {
-		return nil, fmt.Errorf("while parsing derivation constraints: %w", constraintErr)
-	}
-	derive.Constraints = constraints
-	return derive, nil
-}
-
-func parseInsert(p *peruse.Parser[Ast]) (Ast, error) {
-	var insert Insert
-
-	triplets, tripletErr := parseTriplets(p)
-	if tripletErr != nil {
-		return nil, tripletErr
+	triplets, tripletsErr := astParseInsertTripletNodes(p)
+	if tripletsErr != nil {
+		return nil, traceErr(tripletsErr, "insert.Inserting")
 	}
 	insert.Inserting = triplets
 
 	if p.Expect(TOKEN_WHERE) {
-		constraints, constraintErr := parseConstraints(p)
-		if constraintErr != nil {
-			return nil, fmt.Errorf("failed to parse constraints: %w", constraintErr)
+		clauses, clauseErr := astParseClauses(p)
+		if clauseErr != nil {
+			return nil, traceErr(clauseErr, "insert.Clauses")
 		}
-
-		insert.Constraints = constraints
-	}
-
-	if len(insert.Constraints) == 0 {
-		return insert, nil
-	}
-
-	if p.Expect(TOKEN_RULES) {
-		derivations, derivationsErr := parseBracketExpr[DerivationDecl](p, TOKEN_OPEN_BRACKET, parseDerivationDecl)
-		if derivationsErr != nil {
-			return nil, fmt.Errorf("failed to parse derivations: %w", derivationsErr)
+		insert.Clauses = clauses
+		if p.Expect(TOKEN_RULES) {
+			decls, declErrs := astParseRuleDecls(p)
+			if declErrs != nil {
+				return nil, traceErr(declErrs, "insert.Rules")
+			}
+			insert.Rules = decls
 		}
-		insert.Derivations = derivations
 	}
 
 	return insert, nil
-
 }
 
-func parseBool(p *peruse.Parser[Ast]) (Ast, error) {
-	lit := Literal{Value: p.Cur.Literal == trueWord, Kind: LiteralKindBool}
-	return lit, nil
+func astParseRuleDecl(p *Parser) (*RuleDeclNode, error) {
+	decl := new(RuleDeclNode)
+	if err := p.ExpectOrError(TOKEN_RULE); err != nil {
+		return nil, err
+	}
+
+	decl.Name = p.Cur.Literal
+	args := make([]*VarNode, 0)
+	for p.Expect(TOKEN_VARIABLE) {
+		arg, err := astParseVariable(p)
+		if err != nil {
+			return nil, traceErr(err, "ruledecl.Args."+decl.Name)
+		}
+		args = append(args, arg)
+	}
+	if err := p.ExpectOrError(TOKEN_CLOSE_BRACKET); err != nil {
+		return nil, traceErr(err, "ruledecl.Args."+decl.Name)
+	}
+
+	decl.Args = args
+	clauses, clausesErr := astParseClauses(p)
+	if clausesErr != nil {
+		return nil, traceErr(clausesErr, "ruledecl.Clauses."+decl.Name)
+	}
+	decl.Clauses = clauses
+	return decl, nil
 }
 
-func parseNil(_ *peruse.Parser[Ast]) (Ast, error) {
-	lit := Literal{Value: nil, Kind: LiteralKindNil}
-	return lit, nil
-}
-
-func parseDiscard(_ *peruse.Parser[Ast]) (Ast, error) {
-	return Discard, nil
-}
-
-func parseVariable(p *peruse.Parser[Ast]) (Ast, error) {
-	variable := Variable(p.Cur.Literal)
+func astParseVariable(p *Parser) (*VarNode, error) {
+	variable := new(VarNode)
+	variable.Name = p.Cur.Literal
 	return variable, nil
 }
 
-func parseAttribute(p *peruse.Parser[Ast]) (Ast, error) {
-	attr := Attribute(p.Cur.Literal)
+func astParseAttribute(p *Parser) (*AttrNode, error) {
+	attr := new(AttrNode)
+	attr.Name = p.Cur.Literal
 	return attr, nil
 }
 
-func parseString(p *peruse.Parser[Ast]) (Ast, error) {
-	lit := Literal{Value: p.Cur.Literal, Kind: LiteralKindString}
-	return lit, nil
+func astParseString(p *Parser) (*StringNode, error) {
+	str := new(StringNode)
+	str.Value = p.Cur.Literal
+	return str, nil
 }
 
-func parseNumber(p *peruse.Parser[Ast]) (Ast, error) {
+func astParseNumber(p *Parser) (*NumberNode, error) {
 	n, err := strconv.ParseFloat(p.Cur.Literal, 64)
 	if err != nil {
-		return nil, fmt.Errorf("cannot parse %q as number", p.Cur)
+		return nil, traceErr(err, "number")
 	}
-	return Literal{Value: n, Kind: LiteralKindNumber}, nil
+	node := new(NumberNode)
+	node.Value = n
+	return node, nil
 }
 
-func parseComment(p *peruse.Parser[Ast]) (Ast, error) {
-	comment := Comment(p.Cur.Literal)
-	return comment, nil
+func astParseBool(p *Parser) (*BoolNode, error) {
+	b := new(BoolNode)
+	b.Value = (p.Cur.Literal == trueWord)
+	return b, nil
+}
+
+func astParseClause(p *Parser) (ClauseNode, error) {
+	var clause ClauseNode
+	var err error
+	switch p.Next.Type {
+	case TOKEN_RULE:
+		clause, err = astParserRuleClauseNode(p)
+	case TOKEN_NUMBER, TOKEN_VARIABLE:
+		clause, err = astParseTripletClauseNode(p)
+	default:
+		return nil, fmt.Errorf("unexpected token %#v", p.Cur)
+	}
+
+	return clause, err
+}
+
+func astParserRuleClauseNode(p *Parser) (*RuleClauseNode, error) {
+	clause := new(RuleClauseNode)
+	if err := p.ExpectOrError(TOKEN_RULE); err != nil {
+		return nil, traceErr(err, "rule-name")
+	}
+
+	clause.Name = p.Cur.Literal
+	if p.Expect(TOKEN_CLOSE_BRACKET) {
+		return nil, errors.New("at least one argument is needed")
+	}
+
+	values, valErr := astParseRemainingAsValues(p)
+	if valErr != nil {
+		return nil, traceErr(valErr, "ruleclause.Args."+clause.Name)
+	}
+	clause.Args = values
+	return clause, nil
+}
+
+func astParseTriplet(p *Parser) (TripletNode, error) {
+	triplet := TripletNode{}
+	entity, entityErr := astParseEntity(p)
+	if entityErr != nil {
+		return triplet, traceErr(entityErr, "triplet.Entity")
+	}
+	if err := p.ExpectOrError(TOKEN_ATTRIBUTE); err != nil {
+		return triplet, traceErr(err, "triplet.Attribute")
+	}
+	attr, attrErr := astParseAttribute(p)
+	if attrErr != nil {
+		return triplet, traceErr(attrErr, "triplet.Attribute")
+	}
+	value, valueErr := astParseValue(p)
+	if valueErr != nil {
+		return triplet, traceErr(valueErr, "triplet.Value")
+	}
+	p.Consume()
+
+	triplet.Id = entity
+	triplet.Attribute = attr
+	triplet.Value = value
+	assert(p.Cur.Is(TOKEN_CLOSE_BRACKET), "expected to end on close bracket")
+	return triplet, nil
+}
+
+func astParseEntity(p *Parser) (*EntityNode, error) {
+	entity := new(EntityNode)
+	if p.Expect(TOKEN_NUMBER) {
+		num, err := astParseNumber(p)
+		if err != nil {
+			return nil, traceErr(err, "entity.Id")
+		}
+		entity.Value = uint32(num.Value)
+		return entity, nil
+	} else if p.Expect(TOKEN_VARIABLE) {
+		variable, err := astParseVariable(p)
+		if err != nil {
+			return nil, traceErr(err, "entity.Var")
+		}
+		entity.Var = variable
+		return entity, nil
+	} else {
+		return nil, fmt.Errorf("unexpected token %#v", p.Cur)
+	}
+}
+
+func astParseTripletClauseNode(p *Parser) (*TripletClauseNode, error) {
+	clause := new(TripletClauseNode)
+	triplet, err := astParseTriplet(p)
+	clause.TripletNode = triplet
+	return clause, err
+}
+
+func astParseInsertTripletNode(p *Parser) (*InsertTripletNode, error) {
+	insert := new(InsertTripletNode)
+	triplet, err := astParseTriplet(p)
+	insert.TripletNode = triplet
+	return insert, err
+}
+
+func astParseValue(p *Parser) (ValueNode, error) {
+	var value ValueNode
+	var err error
+	if p.Expect(TOKEN_VARIABLE) {
+		value, err = astParseVariable(p)
+	} else if p.Expect(TOKEN_NUMBER) {
+		value, err = astParseNumber(p)
+	} else if p.Expect(TOKEN_STRING) {
+		value, err = astParseString(p)
+	} else if p.Expect(TOKEN_TRUE) || p.Expect(TOKEN_FALSE) {
+		value, err = astParseBool(p)
+	} else {
+		return nil, fmt.Errorf("unexpected token %#v", p.Cur)
+	}
+	return value, err
+}
+
+func astParseVariables(p *Parser) ([]*VarNode, error) {
+	return astParseMany(p, TOKEN_VARIABLE, astParseVariable)
+}
+
+func astParseClauses(p *Parser) ([]ClauseNode, error) {
+	return astParseMany(p, TOKEN_OPEN_BRACKET, astParseClause)
+}
+
+func astParseRuleDecls(p *Parser) ([]*RuleDeclNode, error) {
+	return astParseMany(p, TOKEN_OPEN_BRACKET, astParseRuleDecl)
+}
+
+func astParseInsertTripletNodes(p *Parser) ([]*InsertTripletNode, error) {
+	return astParseMany(p, TOKEN_OPEN_BRACKET, astParseInsertTripletNode)
+}
+
+func astParseRemainingAsValues(p *Parser) ([]ValueNode, error) {
+	return astParseManyUntil(p, TOKEN_CLOSE_BRACKET, astParseValue)
+}
+
+func astParseManyUntil[T AstNode](p *Parser, until TokenType, fn func(*Parser) (T, error)) ([]T, error) {
+	var elms []T
+
+	var i int64
+	for !p.Expect(until) {
+		if i > 99 {
+			panic("stuck")
+		}
+		elm, err := fn(p)
+		if err != nil {
+			return elms, traceErr(err, strconv.FormatInt(i, 10))
+		}
+		elms = append(elms, elm)
+		i++
+	}
+
+	return elms, nil
+
+}
+
+func astParseMany[T AstNode](p *Parser, expect TokenType, fn func(*Parser) (T, error)) ([]T, error) {
+	var elms []T
+
+	if err := p.ExpectOrError(TOKEN_OPEN_BRACKET); err != nil {
+		return elms, err
+	}
+
+	for p.Expect(expect) {
+		elm, err := fn(p)
+		if err != nil {
+			return elms, err
+		}
+		elms = append(elms, elm)
+	}
+
+	if err := p.ExpectOrError(TOKEN_CLOSE_BRACKET); err != nil {
+		return nil, err
+	}
+
+	return elms, nil
 }

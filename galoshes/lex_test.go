@@ -26,7 +26,7 @@ rules [
 		t.Fatalf("failed to parse: POS %d %q", last.Pos, last.Literal)
 	}
 
-	expected := expect().Comment(" where is the kokri sword placed?").
+	expected := expect().
 		Find().OpenBracket().Variable("place-id").Variable("place-name").CloseBracket().
 		Where().OpenBracket().
 		OpenBracket().Variable("place-id").Attribute("world/placement/holds").Variable("token-id").CloseBracket().
@@ -118,7 +118,7 @@ func (this *ExpectedTokens) Discard() *ExpectedTokens      { return this.add(TOK
 func (this *ExpectedTokens) Assign() *ExpectedTokens       { return this.add(TOKEN_ASSIGN, ":-") }
 
 func (this *ExpectedTokens) Invoke(name string) *ExpectedTokens {
-	return this.add(TOKEN_DERIVE, name)
+	return this.add(TOKEN_RULE, name)
 }
 func (this *ExpectedTokens) Variable(name string) *ExpectedTokens {
 	return this.add(TOKEN_VARIABLE, name)
@@ -131,7 +131,4 @@ func (this *ExpectedTokens) String(content string) *ExpectedTokens {
 }
 func (this *ExpectedTokens) Number(content string) *ExpectedTokens {
 	return this.add(TOKEN_NUMBER, content)
-}
-func (this *ExpectedTokens) Comment(content string) *ExpectedTokens {
-	return this.add(TOKEN_COMMENT, content)
 }

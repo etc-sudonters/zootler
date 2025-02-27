@@ -1,196 +1,276 @@
 package galoshes
 
 import (
-	"fmt"
+	"sync"
 )
 
-type Ast interface {
+var _ AstNode = (*FindNode)(nil)
+var _ AstNode = (*InsertNode)(nil)
+var _ AstNode = (*RuleDeclNode)(nil)
+var _ AstNode = (*InsertTripletNode)(nil)
+var _ ClauseNode = (*TripletClauseNode)(nil)
+var _ ClauseNode = (*RuleClauseNode)(nil)
+var _ ValueNode = (*VarNode)(nil)
+var _ ValueNode = (*EntityNode)(nil)
+var _ ValueNode = (*BoolNode)(nil)
+var _ ValueNode = (*NumberNode)(nil)
+var _ ValueNode = (*StringNode)(nil)
+
+type AttrId uint32
+type AstKind uint8
+type AstNode interface {
+	NodeKind() AstKind
+	GetType() Type
+}
+type ValueNode interface {
+	AstNode
+	isValue()
+}
+type ClauseNode interface {
+	AstNode
+	isClause()
 }
 
-type Constraint interface {
-	Ast
-	isConstraint() bool
-}
-
-type Find struct {
-	Finding     []Variable
-	Constraints []Constraint
-	Derivations []DerivationDecl
-}
-
-type Insert struct {
-	Inserting   []Triplet
-	Constraints []Constraint
-	Derivations []DerivationDecl
-}
-
-type DerivationDecl struct {
-	Name        string
-	Accepting   []Variable
-	Constraints []Constraint
-}
-
-type DerivationInvoke struct {
-	Name   string
-	Accept []MaybeVar[Literal] // TODO accept attributes as well
-}
-
-func (this DerivationInvoke) isConstraint() bool { return true }
-
-func Invoke(name string, accept ...MaybeVar[Literal]) DerivationInvoke {
-	return DerivationInvoke{name, accept}
-}
-
-func (this DerivationInvoke) Eq(other DerivationInvoke) bool {
-	if this.Name != other.Name {
-		return false
-	}
-
-	if len(this.Accept) != len(other.Accept) {
-		return false
-	}
-
-	for i, ours := range this.Accept {
-		theirs := other.Accept[i]
-		if !ours.Eq(theirs) {
-			return false
-		}
-	}
-
-	return true
-}
-
-type Triplet struct {
-	Id    MaybeVar[Number]
-	Attr  Attribute
-	Value MaybeVar[Literal]
-}
-
-func (this Triplet) Eq(other Triplet) bool {
-	return this.Id.Eq(other.Id) && this.Attr == other.Attr && this.Value.Eq(other.Value)
-}
-
-func (this Triplet) isConstraint() bool { return true }
-
-type MaybeVar[T TripletPart] struct {
-	Part T
-	Var  Variable
-}
-
-func VarOf[T TripletPart](name string) MaybeVar[T] {
-	return MaybeVar[T]{Var: Variable(name)}
-}
-
-func Part[T TripletPart](part T) MaybeVar[T] {
-	return MaybeVar[T]{Part: part}
-}
-
-func (this MaybeVar[T]) Eq(other MaybeVar[T]) bool {
-	if this.Var != other.Var {
-		return false
-	}
-	return areEqualPart(this.Part, other.Part)
-}
-
-func areEqualPart(ours, theirs any) bool {
-	switch ours := ours.(type) {
-	case Literal:
-		theirs, isLiteral := theirs.(Literal)
-		return isLiteral && ours.Eq(theirs)
-	case Attribute:
-		theirs, isAttr := theirs.(Attribute)
-
-		return isAttr && ours == theirs
-	case Number:
-		theirs, isNum := theirs.(Number)
-		return isNum && ours == theirs
-	default:
-		panic(fmt.Errorf("unknown part type %#v", ours))
-	}
-}
-
-type TripletPart interface {
-	Number | Attribute | Literal
-	Ast
-}
-
-type Variable string
-
-type Attribute string
-
-func (this Attribute) String() string {
-	return string(this)
-}
-
-type LiteralKind string
-type Literal struct {
-	Kind  LiteralKind
-	Value any
-}
-
-func (this Literal) String() string {
-	return fmt.Sprintf("Literal{%v}", this.Value)
-}
-
-func (this Literal) Eq(other Literal) bool {
-	return this == other
-}
-
-type literals interface {
-	String | Number | Boolean | Nil
-}
-
-type String string
-
-func (this String) String() string {
-	return fmt.Sprintf("%q", string(this))
-}
-
-type Number float64
-
-func (this Number) String() string {
-	return fmt.Sprintf("%f", this)
-}
-
-type Boolean bool
-
-func (this Boolean) String() string {
-	return fmt.Sprintf("%t", this)
-}
-
-type Nil struct{}
-
-func (this Nil) String() string {
-	return "nil"
-}
-
-type Comment string
-
-func (this Comment) String() string {
-	return ";" + string(this)
+type AstVisitor interface {
+	VisitFindNode(*FindNode)
+	VisitInsertNode(*InsertNode)
+	VisitInsertTripletNode(*InsertTripletNode)
+	VisitRuleDeclNode(*RuleDeclNode)
+	VisitClauseNode(ClauseNode)
+	VisitTripletClauseNode(*TripletClauseNode)
+	VisitRuleClauseNode(*RuleClauseNode)
+	VisitAttrNode(*AttrNode)
+	VisitValueNode(ValueNode)
+	VisitVarNode(*VarNode)
+	VisitEntityNode(*EntityNode)
+	VisitNumber(*NumberNode)
+	VisitBoolNode(*BoolNode)
+	VisitStringNode(*StringNode)
 }
 
 const (
-	LiteralKindBool   = "bool"
-	LiteralKindString = "string"
-	LiteralKindNumber = "number"
-	LiteralKindNil    = "nil"
-
-	Discard Variable = "_"
+	_ AstKind = iota
+	AST_FIND
+	AST_INSERT
+	AST_RULE_DECL
+	AST_INSERT_TRIPLET
+	AST_TRIPLET_CLAUSE
+	AST_RULE_CLAUSE
+	AST_VAR
+	AST_ENTITY
+	AST_ATTR
+	AST_NUMBER
+	AST_BOOL
+	AST_STRING
 )
 
-func LiteralString(str string) Literal {
-	return Literal{Kind: LiteralKindString, Value: str}
+func NewAstEnv() *AstEnv {
+	env := new(AstEnv)
+	env.names = make(map[string]Type)
+	env.InitialSubstitutions = make(Substitutions)
+	return env
 }
 
-func LiteralBool(b bool) Literal {
-	return Literal{Kind: LiteralKindBool, Value: b}
+type AstEnv struct {
+	names map[string]Type
+
+	InitialSubstitutions Substitutions
 }
 
-func LiteralNumber(num float64) Literal {
-	return Literal{Kind: LiteralKindNumber, Value: num}
+var nextTypeVar TypeVar = 1
+var typeVarLock = &sync.Mutex{}
+
+func NextTypeVar() TypeVar {
+	typeVarLock.Lock()
+	defer typeVarLock.Unlock()
+	curr := nextTypeVar
+	nextTypeVar++
+	return curr
 }
 
-func LiteralNil() Literal {
-	return Literal{Kind: LiteralKindNil, Value: Nil{}} // distguinish from an _actual_ nil
+func (this *AstEnv) GetNamed(name string) Type {
+	return this.names[name]
 }
+
+func (this *AstEnv) AddNamed(name string, ty Type) {
+	this.names[name] = ty
+}
+
+type FindNode struct {
+	Type    Type
+	Env     AstEnv
+	Finding []*VarNode
+	Clauses []ClauseNode
+	Rules   []*RuleDeclNode
+}
+
+func (this *FindNode) GetType() Type {
+	return this.Type
+}
+
+func (this *FindNode) NodeKind() AstKind {
+	return AST_FIND
+}
+
+type InsertNode struct {
+	Type      Type
+	Env       AstEnv
+	Inserting []*InsertTripletNode
+	Clauses   []ClauseNode
+	Rules     []*RuleDeclNode
+}
+
+func (this *InsertNode) NodeKind() AstKind {
+	return AST_INSERT
+}
+
+func (this *InsertNode) GetType() Type {
+	return this.Type
+}
+
+type RuleDeclNode struct {
+	Type    Type
+	Env     AstEnv
+	Name    string
+	Args    []*VarNode
+	Clauses []ClauseNode
+}
+
+func (this *RuleDeclNode) NodeKind() AstKind {
+	return AST_RULE_DECL
+}
+
+func (this *RuleDeclNode) GetType() Type {
+	return this.Type
+}
+
+type TripletNode struct {
+	Type      Type
+	Id        *EntityNode
+	Attribute *AttrNode
+	Value     ValueNode
+}
+
+func (this *TripletNode) GetType() Type {
+	return this.Type
+}
+
+type TripletClauseNode struct {
+	TripletNode
+}
+
+func (this *TripletClauseNode) NodeKind() AstKind {
+	return AST_TRIPLET_CLAUSE
+}
+
+func (this *TripletClauseNode) isClause() {}
+
+type InsertTripletNode struct {
+	TripletNode
+}
+
+func (this *InsertTripletNode) NodeKind() AstKind {
+	return AST_INSERT_TRIPLET
+}
+
+type RuleClauseNode struct {
+	Type Type
+	Name string
+	Args []ValueNode
+}
+
+func (this *RuleClauseNode) NodeKind() AstKind {
+	return AST_RULE_CLAUSE
+}
+
+func (this *RuleClauseNode) GetType() Type {
+	return this.Type
+}
+
+func (this *RuleClauseNode) isClause() {}
+
+type VarNode struct {
+	Name string
+	Type Type
+}
+
+func (this *VarNode) NodeKind() AstKind {
+	return AST_VAR
+}
+
+func (this *VarNode) GetType() Type {
+	return this.Type
+}
+
+func (this *VarNode) isValue() {}
+
+type EntityNode struct {
+	Value uint32
+	Var   *VarNode
+	Type  Type
+}
+
+func (this *EntityNode) NodeKind() AstKind {
+	return AST_ENTITY
+}
+func (this *EntityNode) isValue() {}
+
+func (this *EntityNode) GetType() Type {
+	return this.Type
+}
+
+type AttrNode struct {
+	Type Type
+	Name string
+	Id   AttrId
+}
+
+func (this *AttrNode) NodeKind() AstKind {
+	return AST_ATTR
+}
+func (this *AttrNode) isValue() {}
+func (this *AttrNode) GetType() Type {
+	return this.Type
+}
+
+type NumberNode struct {
+	Value float64
+}
+
+func (this *NumberNode) NodeKind() AstKind {
+	return AST_NUMBER
+}
+
+func (this *NumberNode) isValue() {}
+
+func (this *NumberNode) GetType() Type {
+	return TypeNumber{}
+}
+
+type BoolNode struct {
+	Value bool
+}
+
+func (this *BoolNode) NodeKind() AstKind {
+	return AST_BOOL
+}
+
+func (this *BoolNode) isValue() {}
+
+func (this *BoolNode) GetType() Type {
+	return TypeBool{}
+}
+
+type StringNode struct {
+	Value string
+}
+
+func (this *StringNode) NodeKind() AstKind {
+	return AST_STRING
+}
+
+func (this *StringNode) GetType() Type {
+	return TypeString{}
+}
+
+func (this *StringNode) isValue() {}

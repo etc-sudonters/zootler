@@ -31,7 +31,7 @@ const (
 	TOKEN_CLOSE_PAREN   // )
 	TOKEN_DISCARD       // _
 	TOKEN_ASSIGN        // :-
-	TOKEN_DERIVE        // :[a-z-]+
+	TOKEN_RULE          // :[a-z-]+
 	TOKEN_VARIABLE      // \$[a-z-]+
 	TOKEN_ATTRIBUTE     // [a-z-]+(/[a-z-])*
 	TOKEN_STRING        // "[^"]"
@@ -83,8 +83,8 @@ func TokenTypeString(t TokenType) string {
 		return "<DISCARD>"
 	case TOKEN_ASSIGN:
 		return "<ASSIGN>"
-	case TOKEN_DERIVE:
-		return "<DERIVE>"
+	case TOKEN_RULE:
+		return "<RULE>"
 	case TOKEN_VARIABLE:
 		return "<VARIABLE>"
 	case TOKEN_ATTRIBUTE:
@@ -267,7 +267,7 @@ func lexVariable(l *peruse.StringLexer, _ any) peruse.LexFn {
 func lexInvoke(l *peruse.StringLexer, _ any) peruse.LexFn {
 	l.Discard()
 	l.AcceptWhile(isIdentRune)
-	return l.Emit(TOKEN_DERIVE)
+	return l.Emit(TOKEN_RULE)
 }
 
 func isDigit(r rune) bool {

@@ -116,13 +116,13 @@ func (this TypeAnnotator) VisitFindNode(node *FindNode) {
 	tv := NextTypeVar()
 	node.Type = tv
 	for i := range node.Finding {
-		this.VisitVarNode(&node.Finding[i])
+		this.VisitVarNode(node.Finding[i])
 	}
 	for _, clause := range node.Clauses {
 		this.VisitClauseNode(clause)
 	}
 	for i := range node.Rules {
-		this.VisitRuleDeclNode(&node.Rules[i])
+		this.VisitRuleDeclNode(node.Rules[i])
 	}
 
 	tt := make([]Type, len(node.Finding))
@@ -138,13 +138,13 @@ func (this TypeAnnotator) VisitInsertNode(node *InsertNode) {
 	node.Type = tv
 	this.addSubstitution(tv, TypeVoid{})
 	for i := range node.Inserting {
-		this.VisitInsertTripletNode(&node.Inserting[i])
+		this.VisitInsertTripletNode(node.Inserting[i])
 	}
 	for _, clause := range node.Clauses {
 		this.VisitClauseNode(clause)
 	}
 	for i := range node.Rules {
-		this.VisitRuleDeclNode(&node.Rules[i])
+		this.VisitRuleDeclNode(node.Rules[i])
 	}
 	node.Env = *(this.popEnv())
 }
@@ -166,7 +166,7 @@ func (this TypeAnnotator) VisitRuleDeclNode(node *RuleDeclNode) {
 	node.Type, _ = this.getOrTV(node.Name)
 	this.pushEnv()
 	for i := range node.Args {
-		this.VisitVarNode(&node.Args[i])
+		this.VisitVarNode(node.Args[i])
 	}
 
 	for i := range node.Clauses {
@@ -232,8 +232,8 @@ func (this TypeAnnotator) VisitStringNode(node *StringNode) {}
 func (this TypeAnnotator) visitTriplet(node *TripletNode) {
 	tv := NextTypeVar()
 	node.Type = tv
-	this.VisitEntityNode(&node.Id)
-	this.VisitAttrNode(&node.Attribute)
+	this.VisitEntityNode(node.Id)
+	this.VisitAttrNode(node.Attribute)
 	this.VisitValueNode(node.Value)
 
 	this.addSubstitution(tv, TypeTuple{[]Type{
