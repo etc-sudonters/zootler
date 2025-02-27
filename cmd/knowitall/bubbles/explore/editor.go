@@ -155,5 +155,6 @@ func (this *editor) insertMode() tea.Cmd {
 
 func (this *editor) normalMode() tea.Cmd {
 	this.writing = false
+	this.text.Blur()
 	return leaves.WriteStatusMsg("normal mode")
 }

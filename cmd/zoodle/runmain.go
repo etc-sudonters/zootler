@@ -40,7 +40,7 @@ func runMain(ctx context.Context, std *dontio.Std, opts *cliOptions) stageleft.E
 
 	generation, err := boot.Default(ctx, paths, &theseSettings)
 	if err != nil {
-		fmt.Fprintf(std.Err, "failed to boot zootr engine: %w", err)
+		fmt.Fprintf(std.Err, "failed to boot zootr engine: %s", err)
 		return 5
 	}
 	magicbean.CollectStartingItems(&generation)
