@@ -1,11 +1,11 @@
-package galoshes
+package parse
 
 import (
 	"sync"
 )
 
-var _ AstNode = (*FindNode)(nil)
-var _ AstNode = (*InsertNode)(nil)
+var _ QueryNode = (*FindNode)(nil)
+var _ QueryNode = (*InsertNode)(nil)
 var _ AstNode = (*RuleDeclNode)(nil)
 var _ AstNode = (*InsertTripletNode)(nil)
 var _ ClauseNode = (*TripletClauseNode)(nil)
@@ -29,6 +29,10 @@ type ValueNode interface {
 type ClauseNode interface {
 	AstNode
 	isClause()
+}
+type QueryNode interface {
+	AstNode
+	isQuery()
 }
 
 type AstVisitor interface {
@@ -101,6 +105,8 @@ type FindNode struct {
 	Rules   []*RuleDeclNode
 }
 
+func (this *FindNode) isQuery() {}
+
 func (this *FindNode) GetType() Type {
 	return this.Type
 }
@@ -116,6 +122,8 @@ type InsertNode struct {
 	Clauses   []ClauseNode
 	Rules     []*RuleDeclNode
 }
+
+func (this *InsertNode) isQuery() {}
 
 func (this *InsertNode) NodeKind() AstKind {
 	return AST_INSERT

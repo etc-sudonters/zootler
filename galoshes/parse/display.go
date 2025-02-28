@@ -1,4 +1,4 @@
-package galoshes
+package parse
 
 import (
 	"fmt"

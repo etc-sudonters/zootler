@@ -1,4 +1,4 @@
-package galoshes
+package parse
 
 import (
 	"fmt"
@@ -66,6 +66,12 @@ func Substitute(t Type, subs Substitutions) Type {
 	default:
 		panic(fmt.Errorf("unknown type %#v", t))
 	}
+}
+
+func NewSubstituter(subs Substitutions) *subber {
+	s := new(subber)
+	s.subs = subs
+	return s
 }
 
 type subber struct {

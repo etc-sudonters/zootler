@@ -1,4 +1,4 @@
-package galoshes
+package parse
 
 import (
 	"strings"
@@ -52,7 +52,7 @@ rules [
 
 	expected := TypeTuple{[]Type{TypeNumber{}, TypeString{}}}
 	originalFind := find.Type
-	subber := subber{ta.subsitutions}
+	subber := subber{ta.Substitutions}
 	subber.VisitFindNode(find)
 	ts.Sink.Reset()
 	ts.VisitFindNode(find)

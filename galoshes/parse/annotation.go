@@ -1,4 +1,4 @@
-package galoshes
+package parse
 
 import (
 	"fmt"
@@ -6,9 +6,13 @@ import (
 )
 
 func NewAnnotator() *TypeAnnotator {
+	return AnnotatorWith(make(Substitutions))
+}
+
+func AnnotatorWith(subs Substitutions) *TypeAnnotator {
 	ta := new(TypeAnnotator)
 	ta.envs = skelly.NewStack[*AstEnv](4)
-	ta.subsitutions = make(Substitutions)
+	ta.Substitutions = subs
 	ta.pushEnv()
 	return ta
 }
@@ -16,7 +20,7 @@ func NewAnnotator() *TypeAnnotator {
 type TypeAnnotator struct {
 	envs skelly.Stack[*AstEnv]
 
-	subsitutions Substitutions
+	Substitutions Substitutions
 }
 
 func (this *TypeAnnotator) pushEnv() {
@@ -60,7 +64,7 @@ func (this *TypeAnnotator) getOrTV(name string) (Type, isTypeVarEnum) {
 }
 
 func (this *TypeAnnotator) addSubstitution(tv TypeVar, t Type) {
-	this.subsitutions[tv] = t
+	this.Substitutions[tv] = t
 }
 
 func (this *TypeAnnotator) VisitFindNode(node *FindNode) {
@@ -82,12 +86,12 @@ func (this *TypeAnnotator) VisitFindNode(node *FindNode) {
 	tv := NextTypeVar()
 	node.Type = tv
 	this.addSubstitution(tv, TypeTuple{tt})
-	subsitutions, err := Unify(node.Type, TypeTuple{tt}, this.subsitutions)
+	subsitutions, err := Unify(node.Type, TypeTuple{tt}, this.Substitutions)
 	if err != nil {
 		panic(err)
 	}
 
-	this.subsitutions = this.subsitutions.Combine(subsitutions)
+	this.Substitutions = this.Substitutions.Combine(subsitutions)
 	node.Env = *(this.popEnv())
 }
 
@@ -160,12 +164,12 @@ func (this *TypeAnnotator) VisitRuleClauseNode(node *RuleClauseNode) {
 		args[i] = node.Args[i].GetType()
 	}
 
-	subsitutions, err := Unify(node.Type, TypeTuple{args}, this.subsitutions)
+	subsitutions, err := Unify(node.Type, TypeTuple{args}, this.Substitutions)
 	if err != nil {
 		panic(err)
 	}
 
-	this.subsitutions = this.subsitutions.Combine(subsitutions)
+	this.Substitutions = this.Substitutions.Combine(subsitutions)
 }
 
 func (this *TypeAnnotator) VisitValueNode(node ValueNode) {
