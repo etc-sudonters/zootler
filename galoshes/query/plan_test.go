@@ -17,7 +17,7 @@ where [
 ]
 rules [
     [:holding $place $token] [ [$place world/placement/holds $token] ]
-    [:named $id $name] [ [$id names $name] ]
+    [:named $id $name] [ [$id global/name $name] ]
     [:is-named $id $name] [ [:has-name $id $name]]
     [:has-name $id $name] [ [:named $id $name]]
 ]

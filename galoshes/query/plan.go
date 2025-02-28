@@ -2,6 +2,7 @@ package query
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"sudonters/libzootr/galoshes/parse"
 	"sudonters/libzootr/internal/table"
@@ -66,11 +67,12 @@ func (this QueryPlan) String() string {
 type planner struct {
 	qp    *QueryPlan
 	decls map[string]*parse.RuleDeclNode
+	calls []string
 }
 
 func BuildQueryPlan(ast parse.QueryNode) QueryPlan {
 	var qp QueryPlan
-	planner := planner{&qp, nil}
+	planner := planner{&qp, nil, nil}
 	planner.planQuery(ast)
 	return qp
 }
@@ -120,6 +122,10 @@ func (this *planner) applyRuleClause(clause *parse.RuleClauseNode) {
 }
 
 func (this *planner) produceTriplets(clause *parse.RuleClauseNode, env map[string]parse.ValueNode) []triplet {
+	if slices.Contains(this.calls, clause.Name) {
+		panic("recursive & mutually recursive calls are not supported and should be caught in ast, build query requires a correct query tree")
+	}
+	this.calls = append(this.calls, clause.Name)
 	var triplets []triplet
 	decl := this.decls[clause.Name]
 	args := make(map[string]parse.ValueNode, len(decl.Args))
@@ -143,6 +149,11 @@ func (this *planner) produceTriplets(clause *parse.RuleClauseNode, env map[strin
 		}
 		triplets = append(triplets, produced...)
 	}
+	last := len(this.calls) - 1
+	if this.calls[last] != clause.Name {
+		panic(fmt.Errorf("last call changed some how %q -> %q", clause.Name, this.calls[last]))
+	}
+	this.calls = this.calls[:last]
 	return triplets
 }
 
