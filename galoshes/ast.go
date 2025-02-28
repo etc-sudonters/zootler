@@ -67,14 +67,11 @@ const (
 func NewAstEnv() *AstEnv {
 	env := new(AstEnv)
 	env.names = make(map[string]Type)
-	env.InitialSubstitutions = make(Substitutions)
 	return env
 }
 
 type AstEnv struct {
 	names map[string]Type
-
-	InitialSubstitutions Substitutions
 }
 
 var nextTypeVar TypeVar = 1
