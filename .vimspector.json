@@ -1,15 +1,17 @@
 {
     "configurations": {
-        "zootler": {
+        "zoodle": {
             "adapter": "vscode-go",
             "configuration": {
                 "request": "launch",
-                "program": "${workspaceRoot}/cmd/zootler/",
+                "program": "${workspaceRoot}/cmd/zoodle/",
                 "args": [
                     "-d",
                     "${workspaceRoot}/.data/data/",
                     "-l",
-                    "${workspaceRoot}/.data/logic/glitchless"
+                    "${workspaceRoot}/.data/logic/glitchless",
+                    "-s",
+                    "${workspaceRoot}/.data/spoiler.json"
                 ],
                 "mode": "debug",
                 "dlvToolPath": "$GOPATH/bin/dlv"

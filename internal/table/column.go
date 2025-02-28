@@ -2,9 +2,9 @@ package table
 
 import (
 	"fmt"
+	"github.com/etc-sudonters/substrate/skelly/bitset32"
 	"math"
 	"reflect"
-	"sudonters/libzootr/internal/skelly/bitset32"
 
 	"github.com/etc-sudonters/substrate/mirrors"
 )
@@ -20,6 +20,7 @@ type ColumnFactory func() Column
 
 // core column interface
 type Column interface {
+	Membership() bitset32.Bitset
 	Get(e RowId) Value
 	Set(e RowId, c Value)
 	Unset(e RowId)
